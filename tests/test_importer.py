@@ -75,7 +75,7 @@ async def test_import_endpoint(client):
         break
 
     cookies_resp = await client.post(
-        "/auth/login",
+        "/login",
         data={"email": "importadmin@test.cl", "password": "pass"},
         follow_redirects=False,
     )

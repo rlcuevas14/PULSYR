@@ -2,13 +2,15 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Agent-native backlog manager for solo-preneurs.** Manage multiple projects from one self-hosted instance. Claude Code connects via MCP and keeps your backlog up to date as it works — no manual updates.
+**Agent-native backlog manager for solo-preneurs.** Manage multiple projects from one self-hosted instance. Your coding agent connects over MCP and keeps the backlog up to date as it works, with no manual updates.
 
 ---
 
 ## How it works
 
-You run Pulsyr on your own server (or locally). Claude Code connects to it as an MCP server. As the agent codes, it reads context, creates items, advances statuses, and closes completed work — automatically.
+You run Pulsyr on your own server (or locally). Your agent connects to it as an MCP server over HTTP. As it codes, it reads context, creates items, advances statuses and closes completed work on its own.
+
+Pulsyr is an MCP server, not a Claude Code plugin: it is built and used daily with Claude Code, and works the same with Codex CLI, Grok CLI, Cursor, Windsurf, Zed, or anything else that speaks MCP over HTTP.
 
 Each project gets its own MCP token. The agent cannot write to the wrong project.
 
@@ -24,7 +26,7 @@ cd PULSYR
 cp .env.example .env
 ```
 
-Edit `.env` — at minimum set `SECRET_KEY` and `DB_PASSWORD`:
+Edit `.env`: at minimum set `SECRET_KEY` and `DB_PASSWORD`:
 
 ```bash
 SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
@@ -36,21 +38,30 @@ docker compose up -d
 ```
 
 The compose file pulls the prebuilt public image
-[`ghcr.io/rlcuevas14/pulsyr`](https://github.com/rlcuevas14/PULSYR/pkgs/container/pulsyr) —
+[`ghcr.io/rlcuevas14/pulsyr`](https://github.com/rlcuevas14/PULSYR/pkgs/container/pulsyr) -
 no local build needed.
 
 Open **http://localhost:8000** → redirects to `/setup` to create your account, first project, and write token in one step.
 
-### Connect Claude Code
+### Connect your agent
 
-After setup, go to **Projects → Settings** → copy the `claude mcp add` command shown there. It looks like:
+After setup, go to **Projects → Settings**. It shows the two values any MCP client needs:
+
+```
+URL:    http://localhost:8000/mcp
+Header: Authorization: Bearer <TOKEN>
+```
+
+Claude Code has a one-liner for it, also shown on that page:
 
 ```bash
 claude mcp add --transport http my-project http://localhost:8000/mcp \
   --header "Authorization: Bearer <TOKEN>"
 ```
 
-Restart Claude Code. Call `pulsyr_context` at the start of any session to get your current priorities, blockers, and open incidents.
+For other clients, put the same URL and header wherever they keep MCP servers (see
+[docs/MCP.md](docs/MCP.md)). Restart the client, then call `pulsyr_context` at the start
+of a session to get your current priorities, blockers and open incidents.
 
 ---
 
@@ -64,7 +75,7 @@ Restart Claude Code. Call `pulsyr_context` at the start of any session to get yo
 | `pulsyr_areas` | List areas (groupings) with item counts |
 | `pulsyr_create` | Create a backlog item; auto-creates the area if needed |
 | `pulsyr_advance` | Transition an item's status (lifecycle-validated) |
-| `pulsyr_complete` | Mark an item done — reports newly unblocked items |
+| `pulsyr_complete` | Mark an item done: reports newly unblocked items |
 | `pulsyr_link` | Add a graph edge between items (`blocks` / `requires` / `conflicts` / `related` / `part_of`) |
 | `pulsyr_move_area` | Move an item to a different area |
 | `pulsyr_thread_create` | Create a Thread (funnel for heavy features) |
@@ -97,23 +108,24 @@ idea → backlog → spec → in-progress → in-review → done
                           discarded  (available from any state)
 ```
 
-Transitions are validated — the agent can't make illegal moves. Terminal states (`done` / `discarded`) require a reason. Blocking is **derived**: an item is blocked when it has an open `blocks` arc incoming; no manual flag needed.
+Transitions are validated: the agent can't make illegal moves. Terminal states (`done` / `discarded`) require a reason. Blocking is **derived**: an item is blocked when it has an open `blocks` arc incoming; no manual flag needed.
 
 ---
 
 ## Features
 
-- **Dependency graph** — typed edges between items. Blocked status computed in real time, never stale.
-- **Priority matrix** — impact × effort, AI-estimated via Claude Haiku. Quick wins surface automatically on the dashboard.
-- **Multi-project** — N projects, one database. Token-level isolation: each MCP token is bound to exactly one project.
-- **Threads** — a lightweight funnel for features too big to go straight to the backlog (idea → investigation → stories → spec → in-development → review → done).
-- **Sentry integration** — errors land in a dedicated incident container. AI triage pre-classifies noise. You (or the agent) promote real issues to the backlog manually.
-- **GitHub webhook** — include `pulsyr:ITEM-UUID` in any commit message to auto-close the referenced item.
-- **AI enrichment** — impact/effort estimation via Claude Haiku. Optional; degrades gracefully without `ANTHROPIC_API_KEY`.
-- **Semantic search** — embedding-based neighbor lookup via Gemini + pgvector. Optional; requires both `GEMINI_API_KEY` and a Postgres instance with pgvector.
-- **No Node.js** — Tailwind and HTMX load from CDN. Server renders HTML; HTMX handles partial updates.
-- **Multilingual UI** — English (default), Spanish, and French, switchable from the navbar. Adding a language = one JSON file in `app/i18n/locales/` (CI enforces catalog completeness).
-- **Archive** — closed items grouped by ISO week with close reasons and linked commits, plus an on-demand AI weekly summary.
+- **Dependency graph**: typed edges between items. Blocked status computed in real time, never stale.
+- **Priority matrix**: impact × effort, AI-estimated via Claude Haiku. Quick wins surface automatically on the dashboard.
+- **Multi-project**: N projects, one database. Token-level isolation: each MCP token is bound to exactly one project.
+- **Threads**: a lightweight funnel for features too big to go straight to the backlog (idea → investigation → stories → spec → in-development → review → done).
+- **Sentry integration**: errors land in a dedicated incident container. AI triage pre-classifies noise. You (or the agent) promote real issues to the backlog manually.
+- **GitHub webhook**: include `pulsyr:ITEM-UUID` in any commit message to auto-close the referenced item.
+- **AI enrichment**: impact/effort estimation via Claude Haiku. Optional; degrades gracefully without `ANTHROPIC_API_KEY`.
+- **Semantic search**: embedding-based neighbor lookup via Gemini + pgvector. Optional; requires both `GEMINI_API_KEY` and a Postgres instance with pgvector.
+- **No Node.js**: Tailwind and HTMX load from CDN. Server renders HTML; HTMX handles partial updates.
+- **Sign-in**: email and password out of the box. Optionally "Continue with GitHub/Google", which also removes the need for this app to ever send email: the provider vouches for the address, so there is no confirmation mail and no password reset to build. With no OAuth keys set, the buttons never render.
+- **Multilingual UI**: English (default), Spanish, and French, switchable from the navbar. Adding a language = one JSON file in `app/i18n/locales/` (CI enforces catalog completeness).
+- **Archive**: closed items grouped by ISO week with close reasons and linked commits, plus an on-demand AI weekly summary.
 
 ---
 
@@ -123,6 +135,10 @@ Transitions are validated — the agent can't make illegal moves. Terminal state
 |----------|----------|-------------|
 | `SECRET_KEY` | Yes | Session signing key. Generate: `python -c "import secrets; print(secrets.token_hex(32))"` |
 | `DB_PASSWORD` | Yes | Postgres password |
+| `BASE_URL` | No | Public URL of this instance. Required for OAuth: the callback is derived from it |
+| `OAUTH_GITHUB_CLIENT_ID` / `_SECRET` | No | Enables "Continue with GitHub". Callback: `BASE_URL` + `/callback/github` |
+| `OAUTH_GOOGLE_CLIENT_ID` / `_SECRET` | No | Enables "Continue with Google". Callback: `BASE_URL` + `/callback/google` |
+| `PUBLIC_SIGNUP` | No | `true` lets anyone with a provider account register. Default `false` |
 | `ANTHROPIC_API_KEY` | No | Enables AI impact/effort estimation and Sentry triage |
 | `GEMINI_API_KEY` | No | Enables semantic neighbor search (requires pgvector) |
 | `SENTRY_CLIENT_SECRET` | No | HMAC secret for Sentry webhook signature verification |
@@ -143,7 +159,7 @@ See `.env.example` for all defaults.
 ```bash
 pip install -e ".[dev]"
 
-# Run tests (Postgres required — any empty database works; pgvector NOT required.
+# Run tests (Postgres required: any empty database works; pgvector NOT required.
 # DEBUG=true is mandatory: without it the session cookie is `secure` and UI tests 303-redirect)
 TEST_DATABASE_URL="postgresql+asyncpg://user:pass@localhost:5432/pulsyr_test" \
   DEBUG=true SECRET_KEY=any-test-secret \
@@ -159,7 +175,7 @@ python -m mypy app/
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
 ```
-Then re-run pytest — it recreates everything from scratch.
+Then re-run pytest: it recreates everything from scratch.
 
 ---
 
@@ -184,12 +200,12 @@ FastAPI · SQLAlchemy async (asyncpg) · Alembic · Jinja2 · HTMX 2 · Tailwind
 
 ## Contributing & security
 
-Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). To report a
+Contributions welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). To report a
 security vulnerability privately, see [SECURITY.md](SECURITY.md).
 
 ## License
 
 [MIT](LICENSE) © 2026 Avonlea Systems SpA
 
-The code is MIT. The **name and logo** are trademarks — fork freely, but ship it
+The code is MIT. The **name and logo** are trademarks: fork freely, but ship it
 under your own name. See [TRADEMARK.md](TRADEMARK.md).

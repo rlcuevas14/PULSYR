@@ -1,12 +1,12 @@
 # Contributing to Pulsyr
 
-Thanks for your interest! Pulsyr is a small, focused codebase — most
+Thanks for your interest! Pulsyr is a small, focused codebase: most
 contributions land fast if they follow the conventions below.
 
 ## Development setup
 
 Requirements: Python 3.12+ and a local Postgres (pgvector NOT required for
-development — the embedding column is migration-only and degrades gracefully).
+development: the embedding column is migration-only and degrades gracefully).
 
 ```bash
 git clone https://github.com/rlcuevas14/PULSYR
@@ -47,13 +47,13 @@ test coverage**. Every feature or bugfix brings its own tests.
   error messages, commit messages, and docs.
 - **i18n**: never hardcode user-visible strings in templates or UI routers.
   Use the `t("domain.key")` / `tn()` Jinja globals and add the key to **all
-  three** catalogs (`app/i18n/locales/{en,es,fr}.json`) — `tests/test_i18n.py`
+  three** catalogs (`app/i18n/locales/{en,es,fr}.json`): `tests/test_i18n.py`
   fails CI otherwise. English is the source of truth.
 - **Audit trail**: every item mutation must emit an `ItemEvent`.
 - **UI design system**: all tokens and `.p-*` component classes live in
   `app/templates/partials/_head.html`. Never hardcode gray/blue palette
   classes; never use opacity modifiers on semantic tokens (`bg-canvas/50`
-  silently breaks — allowed only on `brand-*`/`success`/`warning`/`error`).
+  silently breaks: allowed only on `brand-*`/`success`/`warning`/`error`).
   Forms hitting handlers that return `204 + HX-Refresh` must use `hx-post`.
 - **LLM calls** always go through `app/ai/llm.py` (isolated and mockable;
   must degrade without an API key).
@@ -63,5 +63,5 @@ test coverage**. Every feature or bugfix brings its own tests.
 
 ## Reporting security issues
 
-See [SECURITY.md](SECURITY.md) — please don't open public issues for
+See [SECURITY.md](SECURITY.md): please don't open public issues for
 vulnerabilities.

@@ -23,6 +23,17 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     gemini_api_key: str = ""
 
+    # Optional — OAuth sign-in. Same contract as the AI keys: with no keys set the
+    # buttons never render and the password form is the only way in, so a
+    # self-hosted instance is unaffected by this feature existing.
+    oauth_github_client_id: str = ""
+    oauth_github_client_secret: str = ""
+    oauth_google_client_id: str = ""
+    oauth_google_client_secret: str = ""
+    # Open registration. Off by default: being reachable on the internet is not a
+    # reason to accept strangers into someone's self-hosted backlog.
+    public_signup: bool = False
+
     # Global fallbacks for webhook secrets (move to per-project settings in a future version)
     sentry_client_secret: str = ""
     github_webhook_secret: str = ""

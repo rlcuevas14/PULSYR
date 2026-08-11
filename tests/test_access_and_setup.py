@@ -53,7 +53,7 @@ async def test_session_user_no_selection_falls_back(client: AsyncClient):
     async for db in client.app.dependency_overrides[get_db]():
         await create_user(db, email, "FB", "password", "admin")  # auto-account + Default project
         break
-    await client.post("/auth/login", data={"email": email, "password": "password"},
+    await client.post("/login", data={"email": email, "password": "password"},
                       follow_redirects=False)
     # no /ui/project/switch performed → resolver falls back to the user's first project
     r = await client.get("/api/v1/scopes")

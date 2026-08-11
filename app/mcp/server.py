@@ -1,7 +1,9 @@
 """MCP-over-HTTP endpoint for Pulsyr (Streamable HTTP, JSON mode).
 
-Implements the MCP 2025-03-26 subset used by Claude Code over HTTP
+Implements the MCP 2025-03-26 subset that HTTP clients use over plain
 request/response (no SSE): initialize, tools/list, tools/call, prompts, resources.
+Client-agnostic by construction: Claude Code, Codex CLI, Grok CLI and Cursor all
+speak to this same endpoint with a Bearer token.
 Bearer auth required; write tools require scope='write'.
 Every token must have a project_id — tools fail-safe if not.
 """

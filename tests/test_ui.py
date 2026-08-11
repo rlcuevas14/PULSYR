@@ -26,7 +26,7 @@ async def _login(client: AsyncClient, role: str = "admin"):
         uid, pid = user.id, proj.id
         break
     resp = await client.post(
-        "/auth/login", data={"email": email, "password": "password"}, follow_redirects=False
+        "/login", data={"email": email, "password": "password"}, follow_redirects=False
     )
     assert resp.status_code == 303
     return uid, pid
@@ -192,7 +192,7 @@ async def test_switch_project_and_admin_screens(client: AsyncClient):
 async def test_unauthenticated_redirects_to_login(client: AsyncClient):
     r = await client.get("/", follow_redirects=False)
     assert r.status_code in (302, 303)
-    assert "/auth/login" in r.headers.get("location", "")
+    assert "/login" in r.headers.get("location", "")
 
 
 @pytest.mark.asyncio
@@ -594,19 +594,19 @@ async def test_registro_in_nav_and_dashboard_homecard(client: AsyncClient):
 async def test_lang_default_english_and_switch(client: AsyncClient):
     from app.auth.service import create_user
 
-    # Sin usuarios /auth/login redirige a /setup — crea uno para ver el login real.
+    # Sin usuarios /login redirige a /setup — crea uno para ver el login real.
     async for db in client.app.dependency_overrides[get_db]():
         await create_user(db, f"lang{uuid.uuid4().hex[:6]}@t.cl", "Lang User", "password")
         break
 
-    r = await client.get("/auth/login")
+    r = await client.get("/login")
     assert r.status_code == 200
     assert 'lang="en"' in r.text and "Sign in" in r.text
 
-    r_es = await client.get("/ui/lang/es?next=/auth/login", follow_redirects=True)
+    r_es = await client.get("/ui/lang/es?next=/login", follow_redirects=True)
     assert 'lang="es"' in r_es.text and "Entrar" in r_es.text
 
-    r_fr = await client.get("/ui/lang/fr?next=/auth/login", follow_redirects=True)
+    r_fr = await client.get("/ui/lang/fr?next=/login", follow_redirects=True)
     assert 'lang="fr"' in r_fr.text and "Se connecter" in r_fr.text
 
 
@@ -763,24 +763,24 @@ async def test_change_password_flow(client: AsyncClient):
     async for db in client.app.dependency_overrides[get_db]():
         await create_user(db, email, "PW User", "password", "admin")
         break
-    await client.post("/auth/login", data={"email": email, "password": "password"})
-    page = await client.get("/auth/password")
+    await client.post("/login", data={"email": email, "password": "password"})
+    page = await client.get("/password")
     assert page.status_code == 200
-    bad = await client.post("/auth/password", data={
+    bad = await client.post("/password", data={
         "current_password": "wrong", "new_password": "newpassword1", "confirm_password": "newpassword1",
     })
     assert bad.status_code == 422
-    short = await client.post("/auth/password", data={
+    short = await client.post("/password", data={
         "current_password": "password", "new_password": "short", "confirm_password": "short",
     })
     assert short.status_code == 422
-    ok = await client.post("/auth/password", data={
+    ok = await client.post("/password", data={
         "current_password": "password", "new_password": "newpassword1", "confirm_password": "newpassword1",
     }, follow_redirects=False)
     assert ok.status_code == 303
-    await client.post("/auth/logout")
+    await client.post("/logout")
     relog = await client.post(
-        "/auth/login", data={"email": email, "password": "newpassword1"}, follow_redirects=False
+        "/login", data={"email": email, "password": "newpassword1"}, follow_redirects=False
     )
     assert relog.status_code == 303
 

@@ -25,7 +25,7 @@ async def _setup(client: AsyncClient):
         break
 
     resp = await client.post(
-        "/auth/login",
+        "/login",
         data={"email": f"itemadmin{suffix}@test.cl", "password": "pass"},
         follow_redirects=False,
     )

@@ -27,7 +27,7 @@ async def _login(client: AsyncClient, role: str = "admin"):
         uid, pid = user.id, proj.id
         break
     resp = await client.post(
-        "/auth/login", data={"email": email, "password": "password"}, follow_redirects=False
+        "/login", data={"email": email, "password": "password"}, follow_redirects=False
     )
     assert resp.status_code == 303
     return uid, pid

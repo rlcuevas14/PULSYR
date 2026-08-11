@@ -22,6 +22,21 @@ from app.ui.flash import flash_success
 router = APIRouter(tags=["projects"])
 
 
+def _connect_snippet(project: ps.Project) -> str:
+    """How to point an agent at this project.
+
+    The endpoint and header come first because they are all any MCP client over
+    HTTP needs; the CLI line below is one client's shortcut, not the contract.
+    """
+    return (
+        f"URL:    {settings.base_url}/mcp\n"
+        f"Header: Authorization: Bearer <TOKEN>\n"
+        f"\n"
+        f"claude mcp add --transport http {project.slug} {settings.base_url}/mcp \\\n"
+        f'  --header "Authorization: Bearer <TOKEN>"'
+    )
+
+
 @router.get("/projects", response_class=HTMLResponse)
 async def projects_list(
     request: Request,
@@ -90,10 +105,7 @@ async def project_settings(
             ApiToken.revoked_at.is_(None),
         ).order_by(ApiToken.created_at.desc())
     )).scalars().all())
-    snippet = (
-        f"claude mcp add --transport http {project.slug} {settings.base_url}/mcp \\\n"
-        f'  --header "Authorization: Bearer <TOKEN>"'
-    )
+    snippet = _connect_snippet(project)
     return templates.TemplateResponse(request, "projects_settings.html", {
         "user": user, "project": project, "tokens": tokens, "can_write": can_write,
         "snippet": snippet, "new_token": request.session.pop("new_token", None),
@@ -134,10 +146,7 @@ async def project_settings_update(
                     ApiToken.revoked_at.is_(None),
                 ).order_by(ApiToken.created_at.desc())
             )).scalars().all())
-            snippet = (
-                f"claude mcp add --transport http {project.slug} {settings.base_url}/mcp \\\n"
-                f'  --header "Authorization: Bearer <TOKEN>"'
-            )
+            snippet = _connect_snippet(project)
             # Display-only echo of the submitted values; nothing below flushes, so the
             # in-memory mutation is discarded when the session closes without commit.
             project.name = name.strip() or project.name

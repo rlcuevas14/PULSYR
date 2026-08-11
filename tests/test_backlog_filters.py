@@ -24,7 +24,7 @@ async def _login_owner(client: AsyncClient):
         user = await create_user(db, email, "O", "password", "admin")
         account_id = user.account_id
         break
-    r = await client.post("/auth/login", data={"email": email, "password": "password"},
+    r = await client.post("/login", data={"email": email, "password": "password"},
                           follow_redirects=False)
     assert r.status_code == 303
     return account_id

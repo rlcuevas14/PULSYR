@@ -60,7 +60,7 @@ async def test_login_endpoint_sets_cookie(client):
         break
 
     resp = await client.post(
-        "/auth/login",
+        "/login",
         data={"email": "login@test.cl", "password": "login123"},
         follow_redirects=False,
     )
@@ -72,4 +72,4 @@ async def test_login_endpoint_sets_cookie(client):
 async def test_protected_route_without_cookie_redirects(client):
     resp = await client.get("/", follow_redirects=False)
     assert resp.status_code in (302, 303)
-    assert "/auth/login" in resp.headers.get("location", "")
+    assert "/login" in resp.headers.get("location", "")

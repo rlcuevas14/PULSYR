@@ -32,10 +32,10 @@ async def current_user_ui(
     """UI routes — redirect to login instead of 401."""
     user_id = request.session.get("user_id")
     if not user_id:
-        raise HTTPException(status_code=303, headers={"Location": "/auth/login"})
+        raise HTTPException(status_code=303, headers={"Location": "/login"})
     user = await get_user_by_id(db, uuid.UUID(user_id))
     if user is None:
-        raise HTTPException(status_code=303, headers={"Location": "/auth/login"})
+        raise HTTPException(status_code=303, headers={"Location": "/login"})
     return user
 
 

@@ -22,7 +22,7 @@ async def _owner(client: AsyncClient):
         )).scalars().first()
         out = (user.id, proj.id, proj.slug)
         break
-    r = await client.post("/auth/login", data={"email": email, "password": "password"},
+    r = await client.post("/login", data={"email": email, "password": "password"},
                           follow_redirects=False)
     assert r.status_code == 303
     return out
@@ -31,9 +31,9 @@ async def _owner(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_login_failure_and_logout(client: AsyncClient):
     await _owner(client)
-    logout = await client.post("/auth/logout", follow_redirects=False)
+    logout = await client.post("/logout", follow_redirects=False)
     assert logout.status_code == 303
-    bad = await client.post("/auth/login", data={"email": "nobody@t.cl", "password": "x"},
+    bad = await client.post("/login", data={"email": "nobody@t.cl", "password": "x"},
                             follow_redirects=False)
     assert bad.status_code == 401
 
@@ -202,7 +202,7 @@ async def test_member_viewer_cannot_write(client: AsyncClient):
         await db.refresh(it)
         pid, iid = proj.id, it.id
         break
-    await client.post("/auth/login", data={"email": memail, "password": "password"},
+    await client.post("/login", data={"email": memail, "password": "password"},
                       follow_redirects=False)
     await client.post("/ui/project/switch", data={"project_id": str(pid)}, follow_redirects=False)
     assert (await client.get("/backlog")).status_code == 200  # viewer can read

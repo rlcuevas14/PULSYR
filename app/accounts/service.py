@@ -32,21 +32,22 @@ async def create_account(
     name: str,
     owner_email: str,
     owner_name: str,
-    password: str,
+    password: str | None,
     *,
     is_superadmin: bool = False,
 ) -> tuple[Account, User]:
     """Create an account and its owner user in one transaction.
 
-    Reusable: the super-admin panel calls this today; a future public /signup
-    (pulsyr.io) calls the same function — no rearchitecture.
+    Reusable, as designed: the setup wizard and the super-admin panel pass a
+    password; the public OAuth signup passes None, because the provider holds the
+    credential and this side stores no secret for that user.
     """
     name = name.strip()
     if not name:
         raise AccountError("Account name cannot be empty.")
     if not owner_email.strip():
         raise AccountError("Owner email cannot be empty.")
-    if len(password) < 8:
+    if password is not None and len(password) < 8:
         raise AccountError("Password must be at least 8 characters.")
     if await db.scalar(select(User.id).where(User.email == owner_email)):
         raise AccountError("A user with that email already exists.")
@@ -57,7 +58,7 @@ async def create_account(
     owner = User(
         email=owner_email,
         name=owner_name,
-        password_hash=hash_password(password),
+        password_hash=hash_password(password) if password is not None else None,
         account_id=acc.id,
         account_role="owner",
         is_superadmin=is_superadmin,

@@ -1,26 +1,31 @@
-# Connecting Claude Code to Pulsyr (MCP over HTTP)
+# Connecting your agent to Pulsyr (MCP over HTTP)
 
 Pulsyr exposes an MCP endpoint at `https://<your-pulsyr-host>/mcp` (Streamable HTTP, JSON mode).
-Any Claude Code instance connects with just a token — nothing to install locally.
+Nothing to install locally: any MCP client that speaks HTTP connects with just a token.
+That includes Claude Code, Codex CLI, Grok CLI, Cursor, Windsurf and Zed, among others.
+
+Everything a client needs is two values:
+
+| | |
+|---|---|
+| **URL** | `https://<your-pulsyr-host>/mcp` |
+| **Header** | `Authorization: Bearer <YOUR_TOKEN>` |
+
+The rest of this page is where to put them.
 
 ## 1. Generate a token
 
 Tokens are **project-scoped**: go to `https://<your-pulsyr-host>/projects/<slug>/settings` →
-**Generate MCP token** (scope `write` to create/close items from a session). Copy the token —
+**Generate MCP token** (scope `write` to create/close items from a session). Copy the token -
 it is shown only once.
 
 > Do NOT use `/admin` to mint MCP tokens: tokens created there have no `project_id` and the
 > MCP endpoint rejects them.
 
-## 2. Register the server in Claude Code
+## 2. Register the server in your agent
 
-**Option A — command (writes to `~/.claude.json`, local scope):**
-```bash
-claude mcp add --transport http my-project https://<your-pulsyr-host>/mcp \
-  --header "Authorization: Bearer <YOUR_TOKEN>"
-```
-
-**Option B — `.mcp.json` checked into the repo root (shared with the team):**
+**A `.mcp.json` in the repo root** is understood by most clients and is the one form
+worth learning:
 ```json
 {
   "mcpServers": {
@@ -32,8 +37,22 @@ claude mcp add --transport http my-project https://<your-pulsyr-host>/mcp \
   }
 }
 ```
-Claude Code expands `${PULSYR_TOKEN}` from the environment (never commit the token).
-Verify with `claude mcp list`. New tools appear only after **restarting** Claude Code.
+Clients that support it expand `${PULSYR_TOKEN}` from the environment, so the token
+stays out of git. Never commit the literal token.
+
+**Claude Code** also has a one-liner that writes the same thing to `~/.claude.json`:
+```bash
+claude mcp add --transport http my-project https://<your-pulsyr-host>/mcp \
+  --header "Authorization: Bearer <YOUR_TOKEN>"
+```
+Verify with `claude mcp list`.
+
+**Other clients** (Codex CLI, Grok CLI, Cursor, Windsurf, Zed) each keep their MCP
+servers in their own config file, with their own key names. Check your client's MCP
+documentation for where its server list lives, then give it the URL and the
+Authorization header from the table above. Pulsyr does not care which one asks.
+
+Whatever the client, newly added tools usually appear only after **restarting** it.
 
 ## 3. Available tools (26)
 
@@ -68,7 +87,7 @@ Verify with `claude mcp list`. New tools appear only after **restarting** Claude
 
 Prompts: `briefing`, `decision`. Resource templates: `pulsyr://area/{name}`, `pulsyr://graph/{item_id}`.
 
-## 4. Breaking change — tool rename (Spanish → English)
+## 4. Breaking change: tool rename (Spanish → English)
 
 Older Pulsyr versions exposed Spanish tool names. They were renamed once, before the first
 public release:
@@ -83,8 +102,8 @@ public release:
 | `pulsyr_completar` | `pulsyr_complete` |
 | `pulsyr_relacionar` | `pulsyr_link` |
 
-Enum values were also renamed (statuses, types, origins — e.g. `hecho` → `done`,
-`ia-sesion` → `ai-session`). If an old client sends Spanish values, calls fail validation —
+Enum values were also renamed (statuses, types, origins: e.g. `hecho` → `done`,
+`ia-sesion` → `ai-session`). If an old client sends Spanish values, calls fail validation -
 update the client; there is no compatibility shim.
 
 v0018 completed the rename for threads (same no-shim policy):
@@ -104,5 +123,5 @@ v0018 completed the rename for threads (same no-shim policy):
 
 - **Session start**: call `pulsyr_context` to get current priorities, blockers, and open incidents.
 - **During work**: `pulsyr_create` for anything worth tracking; `pulsyr_advance` as states change.
-- **Session end**: `pulsyr_complete` with `note` + `commit_sha` for everything shipped — the
+- **Session end**: `pulsyr_complete` with `note` + `commit_sha` for everything shipped: the
   commit links the item to code, and the note becomes the close reason shown in the Archive.

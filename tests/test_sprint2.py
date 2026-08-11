@@ -23,7 +23,7 @@ async def _setup(client: AsyncClient):
         scope_id = str(scope.id)
         break
     resp = await client.post(
-        "/auth/login", data={"email": f"s2admin{suffix}@test.cl", "password": "pass"},
+        "/login", data={"email": f"s2admin{suffix}@test.cl", "password": "pass"},
         follow_redirects=False,
     )
     return dict(resp.cookies), scope_id

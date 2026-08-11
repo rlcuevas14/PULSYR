@@ -314,7 +314,7 @@ async def _admin_cookies(client: AsyncClient) -> dict:
         await create_user(db, f"rest{suffix}@test.cl", "Rest", "pass", "admin")
         break
     login = await client.post(
-        "/auth/login", data={"email": f"rest{suffix}@test.cl", "password": "pass"},
+        "/login", data={"email": f"rest{suffix}@test.cl", "password": "pass"},
         follow_redirects=False,
     )
     return dict(login.cookies)

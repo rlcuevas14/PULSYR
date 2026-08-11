@@ -24,7 +24,9 @@ class User(Base):
     )
     account_role: Mapped[str] = mapped_column(String(20), nullable=False, default="member")
     is_superadmin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # NULL for users who signed in with GitHub/Google: they never had a password
+    # here, so there is nothing to store and nothing to reset.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()

@@ -59,7 +59,7 @@ async def test_search_finds_by_title(client: AsyncClient, test_engine):
         await s.commit()
 
     login = await client.post(
-        "/auth/login",
+        "/login",
         data={"email": email, "password": "pass"},
         follow_redirects=False,
     )

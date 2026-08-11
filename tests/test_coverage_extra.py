@@ -350,7 +350,7 @@ async def _owner_cookie(client) -> dict:
     async for db in client.app.dependency_overrides[get_db]():
         await create_user(db, email, "Own", "passw0rd", "admin")  # auto account+owner+Default project
         break
-    r = await client.post("/auth/login", data={"email": email, "password": "passw0rd"},
+    r = await client.post("/login", data={"email": email, "password": "passw0rd"},
                           follow_redirects=False)
     return dict(r.cookies)
 

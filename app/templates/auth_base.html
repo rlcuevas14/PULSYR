@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang() }}">
+<head>
+  <title>{% block title %}{{ t("login.title") }}{% endblock %}</title>
+  {% include "partials/_head.html" %}
+</head>
+<body class="bg-canvas text-body font-sans min-h-screen flex items-center justify-center p-4">
+  <div class="fixed top-4 right-4 flex items-center gap-1">
+    <details class="p-menu">
+      <summary class="p-2 rounded-xl text-muted hover:text-ink hover:bg-surface-strong flex items-center gap-1" aria-label="{{ t('nav.language') }}">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+        <span class="text-xs font-semibold uppercase">{{ current_lang() }}</span>
+      </summary>
+      <div class="p-menu-panel">
+        {% for code, label in LANGS %}
+        <a href="/ui/lang/{{ code }}?next={{ request.url.path | urlencode }}"
+           class="p-menu-item {% if current_lang() == code %}bg-surface-strong text-ink font-semibold{% endif %}">{{ label }}</a>
+        {% endfor %}
+      </div>
+    </details>
+    <button onclick="toggleTheme()" class="p-2 rounded-xl text-muted hover:text-ink hover:bg-surface-strong" aria-label="{{ t('nav.toggle_theme') }}">
+      <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="w-5 h-5 dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+    </button>
+  </div>
+
+  <div class="p-card w-full max-w-sm p-8">
+    <div class="flex items-center gap-2 mb-1">
+      <svg width="28" height="28" viewBox="0 0 48 48" fill="none" aria-hidden="true" class="text-ink">
+        <path d="M4 25 H11 L17 13 L24 36 L29 25 H33" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="41" cy="25" r="4.5" fill="#ff4d8b"/>
+      </svg>
+      <h1 class="text-2xl font-semibold tracking-tight text-ink">pulsyr</h1>
+    </div>
+    <p class="text-sm text-muted mb-6">{% block tagline %}{{ t("footer.tagline") }}{% endblock %}</p>
+
+    {% if error %}
+    <div class="bg-error/10 border border-error/30 text-error rounded-xl px-4 py-3 mb-4 text-sm">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    {% block card %}{% endblock %}
+  </div>
+</body>
+</html>

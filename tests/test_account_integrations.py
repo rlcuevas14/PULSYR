@@ -16,7 +16,7 @@ async def _owner_login(client: AsyncClient):
         await db.commit()
         acc_id = acc.id
         break
-    r = await client.post("/auth/login", data={"email": email, "password": "password"},
+    r = await client.post("/login", data={"email": email, "password": "password"},
                           follow_redirects=False)
     assert r.status_code == 303
     return acc_id
@@ -36,8 +36,8 @@ async def test_integrations_owner_only(client: AsyncClient):
         await create_member(db, acc_id, memail, "M", "password")
         await db.commit()
         break
-    await client.post("/auth/logout", follow_redirects=False)
-    await client.post("/auth/login", data={"email": memail, "password": "password"},
+    await client.post("/logout", follow_redirects=False)
+    await client.post("/login", data={"email": memail, "password": "password"},
                       follow_redirects=False)
     denied = await client.get("/account/integrations", follow_redirects=False)
     assert denied.status_code in (303, 403)

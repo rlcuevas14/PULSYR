@@ -111,7 +111,7 @@ async def test_manual_promote_creates_backlog_item(client: AsyncClient, monkeypa
         issue_id = str(issue.id)
         break
     login = await client.post(
-        "/auth/login", data={"email": f"inc{suffix}@test.cl", "password": "pass"},
+        "/login", data={"email": f"inc{suffix}@test.cl", "password": "pass"},
         follow_redirects=False,
     )
     cookies = dict(login.cookies)
@@ -274,7 +274,7 @@ async def test_backfill_from_sentry_api(client: AsyncClient, monkeypatch):
         await db.commit()
         break
     login = await client.post(
-        "/auth/login", data={"email": f"bf{suffix}@test.cl", "password": "pass"},
+        "/login", data={"email": f"bf{suffix}@test.cl", "password": "pass"},
         follow_redirects=False,
     )
     cookies = dict(login.cookies)

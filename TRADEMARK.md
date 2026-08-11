@@ -5,12 +5,12 @@ The Pulsyr **name and brand** are not.
 
 "Pulsyr", the pulse-and-dot symbol, and the Pulsyr logo are trademarks of
 **Avonlea Systems SpA** (Chile). This policy explains what you may do with them.
-It restricts branding only — it never restricts your use of the code.
+It restricts branding only: it never restricts your use of the code.
 
 ## You may, without asking
 
 - Use, modify, fork, and redistribute the software under the MIT License.
-- Run your own instance, publicly or privately, for yourself or your company —
+- Run your own instance, publicly or privately, for yourself or your company -
   including commercially.
 - Say truthfully that your project "works with Pulsyr", is "compatible with
   Pulsyr", or is "built on Pulsyr".
@@ -24,13 +24,13 @@ It restricts branding only — it never restricts your use of the code.
 - Offer a **hosted or managed service** under the Pulsyr name.
 - Register "Pulsyr" (or variants) as a domain, social handle, package name, or
   trademark.
-- Use the logo as your own logo, or modify it — no recolouring, stretching,
+- Use the logo as your own logo, or modify it: no recolouring, stretching,
   rotating, or recomposing. See the brand manual.
 - Imply sponsorship, affiliation, or endorsement by Avonlea Systems SpA.
 
 ## Forks
 
-Fork freely — that is the point of MIT. But if you distribute a modified version
+Fork freely: that is the point of MIT. But if you distribute a modified version
 publicly, **give it your own name and your own logo.** You may state that it is
 "a fork of Pulsyr". You may not call it Pulsyr.
 

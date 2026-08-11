@@ -54,7 +54,7 @@ async def _account_with_data(client: AsyncClient, label: str) -> dict:
 
 async def _login(client: AsyncClient, email: str) -> dict:
     r = await client.post(
-        "/auth/login", data={"email": email, "password": "password123"}, follow_redirects=False
+        "/login", data={"email": email, "password": "password123"}, follow_redirects=False
     )
     return dict(r.cookies)
 

@@ -12,7 +12,7 @@ async def _admin_cookie(client: AsyncClient, suffix: str = "") -> dict:
         await create_user(db, email, "Admin", "pass", "admin")
         break
     resp = await client.post(
-        "/auth/login",
+        "/login",
         data={"email": email, "password": "pass"},
         follow_redirects=False,
     )

@@ -45,6 +45,10 @@ async def authenticate(db: AsyncSession, email: str, password: str) -> User | No
     user = await get_user_by_email(db, email)
     if user is None:
         return None
+    # An OAuth-only user has no password. Refuse rather than fall through, so a
+    # NULL hash can never be coaxed into matching.
+    if user.password_hash is None:
+        return None
     if not verify_password(password, user.password_hash):
         return None
     return user
