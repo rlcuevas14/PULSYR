@@ -10,7 +10,7 @@
   </div>
 
   {% if not projects %}
-  <div class="px-4 py-12 text-center text-sm text-muted">{{ t("projects.empty") }} <a href="/projects/new" class="underline underline-offset-2" style="color:var(--accent)">{{ t("projects.create_one") }}</a>.</div>
+  <div class="px-4 py-12 text-center text-sm text-muted">{{ t("projects.empty") }} <a href="/projects/new" class="underline underline-offset-2" style="color:var(--accent-strong)">{{ t("projects.create_one") }}</a>.</div>
   {% endif %}
 
   <div class="space-y-3">
@@ -23,7 +23,7 @@
         {% if p.archived_at %}<span class="p-pill bg-surface-strong text-muted">{{ t("projects.archived") }}</span>{% endif %}
       </div>
       <div class="flex items-center gap-3 shrink-0">
-        <a href="/projects/{{ p.slug }}/settings" class="text-sm underline underline-offset-2" style="color:var(--accent)">{{ t("projects.settings") }}</a>
+        <a href="/projects/{{ p.slug }}/settings" class="text-sm underline underline-offset-2" style="color:var(--accent-strong)">{{ t("projects.settings") }}</a>
         {% if not p.archived_at %}
         {% if request.session.get("current_project_id") == p.id|string %}
         <span class="p-pill" style="background:var(--accent);color:var(--accent-fg)">{{ t("common.active") }}</span>

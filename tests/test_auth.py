@@ -65,7 +65,7 @@ async def test_login_endpoint_sets_cookie(client):
         follow_redirects=False,
     )
     assert resp.status_code in (302, 303)
-    assert "pulso_session" in resp.cookies
+    assert "pulsyr_session" in resp.cookies
 
 
 @pytest.mark.asyncio

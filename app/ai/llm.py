@@ -145,8 +145,8 @@ async def triage_sentry(title: str, context: str) -> dict[str, Any]:
         data = resp.json()
     text = "".join(b.get("text", "") for b in data.get("content", []))
     triage = str(_extract_json(text).get("triage", "")).strip()
-    if triage not in ("bug-real", "input-malo", "3rd-party", "ruido"):
-        triage = "bug-real"  # safe default: when in doubt, treat it as a real bug
+    if triage not in ("real-bug", "bad-input", "3rd-party", "noise"):
+        triage = "real-bug"  # safe default: when in doubt, treat it as a real bug
     return {"triage": triage}
 
 

@@ -134,11 +134,11 @@ async def test_mcp_thread_tools(client: AsyncClient):
     # Fresh area name: scopes.name is globally unique, so reusing _setup's scope name
     # (which lives in another project) would collide. The thread tool creates the area.
     r = await rpc("tools/call", {
-        "name": "pulso_thread_create",
+        "name": "pulsyr_thread_create",
         "arguments": {"title": "Hilo MCP", "area_name": f"mcp-area-{suffix}"},
     })
     created = json.loads(r.json()["result"]["content"][0]["text"])
     assert created["stage"] == "idea"
-    li = await rpc("tools/call", {"name": "pulso_thread_list", "arguments": {}})
+    li = await rpc("tools/call", {"name": "pulsyr_thread_list", "arguments": {}})
     listed = json.loads(li.json()["result"]["content"][0]["text"])
     assert any(t["title"] == "Hilo MCP" for t in listed)

@@ -1,5 +1,5 @@
 [project]
-name = "pulso"
+name = "pulsyr"
 version = "2026.7.10"
 description = "Agent-native backlog manager for solo-preneurs — Claude Code reads and writes your backlog via MCP."
 readme = "README.md"
@@ -24,8 +24,8 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/rlcuevas14/PULSO"
-Issues = "https://github.com/rlcuevas14/PULSO/issues"
+Repository = "https://github.com/rlcuevas14/PULSYR"
+Issues = "https://github.com/rlcuevas14/PULSYR/issues"
 
 [project.optional-dependencies]
 dev = [

@@ -1,4 +1,4 @@
-"""MCP tool implementations for Pulso.
+"""MCP tool implementations for Pulsyr.
 
 Each tool delegates to the service layer (lifecycle, graph, relationships) to avoid
 diverging from UI/REST behavior. Business errors propagate as ToolError → isError.
@@ -24,7 +24,7 @@ from app.management import service as mgmt
 from app.scopes import service as scopes_service
 from app.scopes.models import Scope
 
-logger = logging.getLogger("pulso.mcp.tools")
+logger = logging.getLogger("pulsyr.mcp.tools")
 
 _OPEN = list(OPEN_STATUSES)
 
@@ -148,7 +148,7 @@ def _item_brief(i: Item, scope_map: dict[str, str] | None = None) -> dict[str, A
 
 # ---------- Read tools ----------
 
-async def pulso_context(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_context(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     pid = _pid(token)
     area_name = args.get("area")
     work = args.get("work_description")
@@ -227,7 +227,7 @@ async def pulso_context(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     return result
 
 
-async def pulso_search(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
+async def pulsyr_search(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
     pid = _pid(token)
     q = args["q"]
     limit = int(args.get("limit", 10))
@@ -256,7 +256,7 @@ async def pulso_search(db: AsyncSession, token: ApiToken, args: dict) -> list[di
     ]
 
 
-async def pulso_list(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
+async def pulsyr_list(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
     pid = _pid(token)
     items = await service.list_items(
         db,
@@ -272,7 +272,7 @@ async def pulso_list(db: AsyncSession, token: ApiToken, args: dict) -> list[dict
     return [_item_brief(i, smap) for i in items]
 
 
-async def pulso_areas(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
+async def pulsyr_areas(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
     pid = _pid(token)
     rows = (await db.execute(text("""
         SELECT s.name, s.description,
@@ -295,7 +295,7 @@ async def pulso_areas(db: AsyncSession, token: ApiToken, args: dict) -> list[dic
 
 # ---------- Write tools ----------
 
-async def pulso_create(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_create(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     pid = _pid(token)
     title = (args.get("title") or "").strip()
     if not title:
@@ -362,7 +362,7 @@ async def pulso_create(db: AsyncSession, token: ApiToken, args: dict) -> dict:
             "already_existed": False, "area_created": area_created}
 
 
-async def pulso_advance(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_advance(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     pid = _pid(token)
     if "to_status" not in args:
         raise ToolError("Missing to_status (target status).")
@@ -382,7 +382,7 @@ async def pulso_advance(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     return out
 
 
-async def pulso_complete(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_complete(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     pid = _pid(token)
     item, warning = await _resolve_item_verbose(
         db, args.get("item_id"), args.get("search_query"),
@@ -401,7 +401,7 @@ async def pulso_complete(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     return out
 
 
-async def pulso_move_area(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_move_area(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     pid = _pid(token)
     if not (args.get("area_name") or "").strip():
         raise ToolError("Missing area_name (destination area).")
@@ -417,7 +417,7 @@ async def pulso_move_area(db: AsyncSession, token: ApiToken, args: dict) -> dict
     return out
 
 
-async def pulso_link(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_link(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     pid = _pid(token)
     if "relation" not in args:
         raise ToolError("Missing relation (edge type).")
@@ -449,14 +449,14 @@ def _thread_brief(t: Any) -> dict[str, Any]:
     return {"id": str(t.id), "title": t.title, "stage": t.stage, "scope_id": str(t.scope_id)}
 
 
-async def pulso_thread_create(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_thread_create(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     from app.threads import service as tservice
     pid = _pid(token)
     t = await tservice.create_thread(db, args["area_name"], args["title"], args.get("summary"), pid)
     return _thread_brief(t)
 
 
-async def pulso_thread_advance(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_thread_advance(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     from app.threads import service as tservice
     pid = _pid(token)
     t = await tservice.get_thread(db, _uuid_or_error(args.get("thread_id"), "thread_id"))
@@ -473,14 +473,14 @@ async def pulso_thread_advance(db: AsyncSession, token: ApiToken, args: dict) ->
     return _thread_brief(t)
 
 
-async def pulso_thread_list(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
+async def pulsyr_thread_list(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
     from app.threads import service as tservice
     pid = _pid(token)
     threads = await tservice.list_threads(db, args.get("stage"), args.get("area"), pid)
     return [_thread_brief(t) for t in threads]
 
 
-async def pulso_thread(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_thread(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     from app.threads.models import Thread, ThreadArtifact
     pid = _pid(token)
     thread = await db.get(Thread, _uuid_or_error(args.get("id"), "id"))
@@ -504,7 +504,7 @@ async def pulso_thread(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     }
 
 
-async def pulso_thread_link(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_thread_link(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     from app.threads.models import Thread
     pid = _pid(token)
     ref = args.get("thread_id")
@@ -529,7 +529,7 @@ async def pulso_thread_link(db: AsyncSession, token: ApiToken, args: dict) -> di
 
 # ---------- Incident tools ----------
 
-async def pulso_incidents(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
+async def pulsyr_incidents(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
     from app.webhooks.models import SentryIssue
     pid = _pid(token)
     q = select(SentryIssue).where(SentryIssue.project_id == pid).order_by(
@@ -550,7 +550,7 @@ async def pulso_incidents(db: AsyncSession, token: ApiToken, args: dict) -> list
     ]
 
 
-async def pulso_incident(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_incident(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     from app.webhooks import service as wservice
     from app.webhooks.models import SentryIssue
     pid = _pid(token)
@@ -574,14 +574,14 @@ async def pulso_incident(db: AsyncSession, token: ApiToken, args: dict) -> dict:
         out["stacktrace"] = detail.get("stacktrace")
         out["culprit"] = detail.get("culprit")
     except Exception as e:
-        logger.warning("pulso_incident: failed to fetch stack trace for %s: %s",
+        logger.warning("pulsyr_incident: failed to fetch stack trace for %s: %s",
                        issue.sentry_issue_id, e)
         out["stacktrace"] = None
         out["detail_error"] = f"Could not fetch stack trace: {str(e)[:160]}"
     return out
 
 
-async def pulso_incident_resolve(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_incident_resolve(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     from app.webhooks import service as wservice
     from app.webhooks.models import SentryIssue
     pid = _pid(token)
@@ -636,7 +636,7 @@ def _plan_task_brief(t: Any) -> dict[str, Any]:
 
 # --- documentos ---
 
-async def pulso_doc_list(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
+async def pulsyr_doc_list(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
     pid = _pid(token)
     comp_id = _uuid_or_error(args["compartment_id"], "compartment_id") if args.get("compartment_id") else None
     try:
@@ -650,7 +650,7 @@ async def pulso_doc_list(db: AsyncSession, token: ApiToken, args: dict) -> list[
     return [{**_deliverable_brief(d), "compartment": comps.get(str(d.compartment_id))} for d in rows]
 
 
-async def pulso_doc_get(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_doc_get(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     pid = _pid(token)
     did = _uuid_or_error(args.get("deliverable_id"), "deliverable_id")
     d = await mgmt.get_deliverable(db, pid, did)
@@ -675,7 +675,7 @@ async def pulso_doc_get(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     return out
 
 
-async def pulso_doc_put(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_doc_put(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     pid = _pid(token)
     b64 = args.get("content_base64")
     raw = args.get("content")
@@ -702,7 +702,7 @@ async def pulso_doc_put(db: AsyncSession, token: ApiToken, args: dict) -> dict:
 
 # --- pendientes ---
 
-async def pulso_pending_list(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
+async def pulsyr_pending_list(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
     pid = _pid(token)
     ptid = _uuid_or_error(args["plan_task_id"], "plan_task_id") if args.get("plan_task_id") else None
     rows = await mgmt.list_pendings(
@@ -712,7 +712,7 @@ async def pulso_pending_list(db: AsyncSession, token: ApiToken, args: dict) -> l
     return [_pending_brief(p) for p in rows]
 
 
-async def pulso_pending_upsert(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_pending_upsert(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     pid = _pid(token)
     pending_id = _uuid_or_error(args["pending_id"], "pending_id") if args.get("pending_id") else None
     due = _date_or_error(args["due_date"], "due_date") if args.get("due_date") else None
@@ -728,7 +728,7 @@ async def pulso_pending_upsert(db: AsyncSession, token: ApiToken, args: dict) ->
     return _pending_brief(p)
 
 
-async def pulso_pending_complete(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_pending_complete(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     pid = _pid(token)
     pending_id = _uuid_or_error(args.get("pending_id"), "pending_id")
     try:
@@ -740,7 +740,7 @@ async def pulso_pending_complete(db: AsyncSession, token: ApiToken, args: dict) 
 
 # --- gantt (plan) ---
 
-async def pulso_gantt_get(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_gantt_get(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     from app.management import gantt as _gantt
     pid = _pid(token)
     tasks = await mgmt.list_plan_tasks(db, pid)
@@ -752,7 +752,7 @@ async def pulso_gantt_get(db: AsyncSession, token: ApiToken, args: dict) -> dict
     }
 
 
-async def pulso_gantt_task_upsert(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_gantt_task_upsert(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     pid = _pid(token)
     task_id = _uuid_or_error(args["task_id"], "task_id") if args.get("task_id") else None
     parent_id = _uuid_or_error(args["parent_id"], "parent_id") if args.get("parent_id") else None
@@ -772,7 +772,7 @@ async def pulso_gantt_task_upsert(db: AsyncSession, token: ApiToken, args: dict)
     return _plan_task_brief(t)
 
 
-async def pulso_gantt_task_remove(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+async def pulsyr_gantt_task_remove(db: AsyncSession, token: ApiToken, args: dict) -> dict:
     pid = _pid(token)
     task_id = _uuid_or_error(args.get("task_id"), "task_id")
     try:

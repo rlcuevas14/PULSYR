@@ -1,7 +1,7 @@
 """Management (PMO) UI: /management/{documentos,plan,pendientes}.
 
 UI is a viewer + light editor: documents and pendings are editable here AND via MCP;
-the Gantt (plan) is read-only here and edited ONLY via MCP (pulso_gantt_*). Every write
+the Gantt (plan) is read-only here and edited ONLY via MCP (pulsyr_gantt_*). Every write
 re-uses the service layer (audit + validation) and the project-access chokepoint.
 """
 

@@ -2,7 +2,7 @@
 
 Cubre lo que el camino feliz no toca: validación de enums en las tools MCP, parseo de
 UUID, catch-all del endpoint /mcp, transporte JSON-RPC (Origin, body inválido, batch,
-tool desconocida), idempotencia de pulso_create, expiración de tokens, consistencia
+tool desconocida), idempotencia de pulsyr_create, expiración de tokens, consistencia
 enum↔CHECK, formato de stacktrace de Sentry y validación 422 del REST.
 
 NO se modifica app/ — estos tests solo ejercen el comportamiento ya implementado.
@@ -59,12 +59,12 @@ def _text(r) -> str:
 
 
 # --------------------------------------------------------------------------- #
-# COV-1: pulso_create con enums inválidos → isError (NO HTTP 500).
+# COV-1: pulsyr_create con enums inválidos → isError (NO HTTP 500).
 # --------------------------------------------------------------------------- #
 @pytest.mark.asyncio
 async def test_crear_type_invalido_lista_validos(client: AsyncClient):
     raw = await _token(client)
-    r = await _call(client, raw, "pulso_create",
+    r = await _call(client, raw, "pulsyr_create",
                     {"title": "x", "type": "deuda", "area_name": "s"})
     assert r.status_code == 200  # nunca 500
     assert _is_error(r)
@@ -77,7 +77,7 @@ async def test_crear_type_invalido_lista_validos(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_crear_origen_invalido(client: AsyncClient):
     raw = await _token(client)
-    r = await _call(client, raw, "pulso_create",
+    r = await _call(client, raw, "pulsyr_create",
                     {"title": "x", "type": "feature", "area_name": "s", "origin": "marciano"})
     assert _is_error(r)
     assert "origin" in _text(r)
@@ -86,7 +86,7 @@ async def test_crear_origen_invalido(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_crear_effort_ai_invalido(client: AsyncClient):
     raw = await _token(client)
-    r = await _call(client, raw, "pulso_create",
+    r = await _call(client, raw, "pulsyr_create",
                     {"title": "x", "type": "feature", "area_name": "s", "effort_ai": "ZZ"})
     assert _is_error(r)
     assert "effort_ai" in _text(r)
@@ -95,7 +95,7 @@ async def test_crear_effort_ai_invalido(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_crear_impact_ai_fuera_de_rango(client: AsyncClient):
     raw = await _token(client)
-    r = await _call(client, raw, "pulso_create",
+    r = await _call(client, raw, "pulsyr_create",
                     {"title": "x", "type": "feature", "area_name": "s", "impact_ai": 9})
     assert _is_error(r)
     assert "impact_ai" in _text(r)
@@ -104,7 +104,7 @@ async def test_crear_impact_ai_fuera_de_rango(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_crear_title_vacio(client: AsyncClient):
     raw = await _token(client)
-    r = await _call(client, raw, "pulso_create",
+    r = await _call(client, raw, "pulsyr_create",
                     {"title": "   ", "type": "feature", "area_name": "s"})
     assert _is_error(r)
     assert "title" in _text(r).lower() or "título" in _text(r).lower()
@@ -113,7 +113,7 @@ async def test_crear_title_vacio(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_crear_scope_name_vacio(client: AsyncClient):
     raw = await _token(client)
-    r = await _call(client, raw, "pulso_create",
+    r = await _call(client, raw, "pulsyr_create",
                     {"title": "tarea", "type": "feature", "area_name": ""})
     assert _is_error(r)
     assert "area" in _text(r).lower()
@@ -125,7 +125,7 @@ async def test_crear_scope_name_vacio(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_incidente_uuid_malformado(client: AsyncClient):
     raw = await _token(client)
-    r = await _call(client, raw, "pulso_incident", {"id": "no-soy-un-uuid"})
+    r = await _call(client, raw, "pulsyr_incident", {"id": "no-soy-un-uuid"})
     assert r.status_code == 200
     assert _is_error(r)
     assert "UUID" in _text(r)
@@ -134,7 +134,7 @@ async def test_incidente_uuid_malformado(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_hilo_uuid_malformado(client: AsyncClient):
     raw = await _token(client)
-    r = await _call(client, raw, "pulso_thread", {"id": "123-malo"})
+    r = await _call(client, raw, "pulsyr_thread", {"id": "123-malo"})
     assert _is_error(r)
     assert "UUID" in _text(r)
 
@@ -142,7 +142,7 @@ async def test_hilo_uuid_malformado(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_hilo_avanzar_uuid_malformado(client: AsyncClient):
     raw = await _token(client, "write")
-    r = await _call(client, raw, "pulso_thread_advance", {"thread_id": "xxx"})
+    r = await _call(client, raw, "pulsyr_thread_advance", {"thread_id": "xxx"})
     assert _is_error(r)
     assert "UUID" in _text(r)
 
@@ -150,7 +150,7 @@ async def test_hilo_avanzar_uuid_malformado(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_incidente_resolver_uuid_malformado(client: AsyncClient):
     raw = await _token(client, "write")
-    r = await _call(client, raw, "pulso_incident_resolve", {"id": "nope", "resolver_en_sentry": False})
+    r = await _call(client, raw, "pulsyr_incident_resolve", {"id": "nope", "resolver_en_sentry": False})
     assert _is_error(r)
     assert "UUID" in _text(r)
 
@@ -158,12 +158,12 @@ async def test_incidente_resolver_uuid_malformado(client: AsyncClient):
 # --------------------------------------------------------------------------- #
 # COV-d: catch-all / referencia inexistente. Un hilo_id que SÍ es UUID válido pero
 # no existe llega al chequeo de existencia (ToolError, no 500). Cubre el path de
-# resolución de hilo en pulso_create más allá del parseo de UUID.
+# resolución de hilo en pulsyr_create más allá del parseo de UUID.
 # --------------------------------------------------------------------------- #
 @pytest.mark.asyncio
 async def test_crear_hilo_inexistente(client: AsyncClient):
     raw = await _token(client)
-    r = await _call(client, raw, "pulso_create",
+    r = await _call(client, raw, "pulsyr_create",
                     {"title": "colgada de hilo fantasma", "type": "feature",
                      "area_name": "s", "thread_id": str(uuid.uuid4())})
     assert r.status_code == 200
@@ -174,7 +174,7 @@ async def test_crear_hilo_inexistente(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_completar_item_inexistente(client: AsyncClient):
     raw = await _token(client, "write")
-    r = await _call(client, raw, "pulso_complete", {"item_id": str(uuid.uuid4())})
+    r = await _call(client, raw, "pulsyr_complete", {"item_id": str(uuid.uuid4())})
     assert _is_error(r)
 
 
@@ -199,7 +199,7 @@ async def test_origin_permitido_ok(client: AsyncClient):
     raw = await _token(client)
     r = await client.post(
         "/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "initialize"},
-        headers={**_hdr(raw), "origin": "https://pulso.example.com"},
+        headers={**_hdr(raw), "origin": "https://pulsyr.example.com"},
     )
     assert r.status_code == 200
 
@@ -243,14 +243,14 @@ async def test_batch_solo_notificaciones_202(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_tool_desconocida_es_error(client: AsyncClient):
     raw = await _token(client)
-    r = await _call(client, raw, "pulso_no_existe", {})
+    r = await _call(client, raw, "pulsyr_no_existe", {})
     assert r.status_code == 200
     assert _is_error(r)
     assert "unknown" in _text(r).lower()
 
 
 # --------------------------------------------------------------------------- #
-# COV-f: idempotencia de pulso_create (mismo title+scope → already_existed, sin duplicar).
+# COV-f: idempotencia de pulsyr_create (mismo title+scope → already_existed, sin duplicar).
 # --------------------------------------------------------------------------- #
 @pytest.mark.asyncio
 async def test_crear_idempotente_no_duplica(client: AsyncClient):
@@ -264,12 +264,12 @@ async def test_crear_idempotente_no_duplica(client: AsyncClient):
     sname = f"idem-{uuid.uuid4().hex[:6]}"
     title = "tarea idempotente unica"
 
-    r1 = await _call(client, raw, "pulso_create",
+    r1 = await _call(client, raw, "pulsyr_create",
                      {"title": title, "type": "feature", "area_name": sname})
     first = json.loads(_text(r1))
     assert first["already_existed"] is False
 
-    r2 = await _call(client, raw, "pulso_create",
+    r2 = await _call(client, raw, "pulsyr_create",
                      {"title": title, "type": "feature", "area_name": sname})
     second = json.loads(_text(r2))
     assert second["already_existed"] is True
@@ -293,11 +293,11 @@ async def test_area_created_flag(client: AsyncClient):
     raw = await _token(client, "write")
     sname = f"nuevo-{uuid.uuid4().hex[:6]}"
 
-    r1 = await _call(client, raw, "pulso_create",
+    r1 = await _call(client, raw, "pulsyr_create",
                      {"title": "primera del scope", "type": "feature", "area_name": sname})
     assert json.loads(_text(r1))["area_created"] is True
 
-    r2 = await _call(client, raw, "pulso_create",
+    r2 = await _call(client, raw, "pulsyr_create",
                      {"title": "segunda del scope", "type": "feature", "area_name": sname})
     assert json.loads(_text(r2))["area_created"] is False
 

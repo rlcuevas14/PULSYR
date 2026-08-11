@@ -39,7 +39,7 @@ async def create_account(
     """Create an account and its owner user in one transaction.
 
     Reusable: the super-admin panel calls this today; a future public /signup
-    (pulso.io) calls the same function — no rearchitecture.
+    (pulsyr.io) calls the same function — no rearchitecture.
     """
     name = name.strip()
     if not name:

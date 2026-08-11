@@ -50,7 +50,7 @@
       if (!root || !root.dataset.canWrite || !window.Sortable) return;
       root.querySelectorAll("[data-board-col]").forEach(function (col) {
         instances.push(window.Sortable.create(col, {
-          group: "pulso-board",
+          group: "pulsyr-board",
           animation: 150,
           sort: false,                 // no reordering within a column (no stored rank yet)
           draggable: "[data-card]",

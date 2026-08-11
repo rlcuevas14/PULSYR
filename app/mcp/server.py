@@ -1,4 +1,4 @@
-"""MCP-over-HTTP endpoint for Pulso (Streamable HTTP, JSON mode).
+"""MCP-over-HTTP endpoint for Pulsyr (Streamable HTTP, JSON mode).
 
 Implements the MCP 2025-03-26 subset used by Claude Code over HTTP
 request/response (no SSE): initialize, tools/list, tools/call, prompts, resources.
@@ -34,11 +34,11 @@ from app.enums import (
 )
 from app.mcp import tools
 
-logger = logging.getLogger("pulso.mcp")
+logger = logging.getLogger("pulsyr.mcp")
 
 PROTOCOL_VERSION = "2025-03-26"
 
-# Non-terminal statuses — targets for pulso_advance; terminals go via pulso_complete.
+# Non-terminal statuses — targets for pulsyr_advance; terminals go via pulsyr_complete.
 _ADVANCE_STATUSES: tuple[str, ...] = tuple(s for s in ITEM_STATUSES if s not in TERMINAL)
 _INCIDENT_STATUSES: tuple[str, ...] = tuple(SENTRY_STATUSES) + ("all",)
 
@@ -111,21 +111,21 @@ _STR = {"type": "string"}
 _INT = {"type": "integer"}
 
 TOOLS: dict[str, Tool] = {
-    "pulso_context": Tool(
-        "pulso_context",
+    "pulsyr_context": Tool(
+        "pulsyr_context",
         "Session start summary: quick wins, blockers, unlinked Sentry bugs, active threads, "
         "graph neighborhood, and (if embeddings are available) semantically similar items.",
         _scope_obj({"area": _STR, "work_description": _STR}, []),
-        tools.pulso_context, write=False,
+        tools.pulsyr_context, write=False,
     ),
-    "pulso_search": Tool(
-        "pulso_search", "Full-text search across backlog items.",
+    "pulsyr_search": Tool(
+        "pulsyr_search", "Full-text search across backlog items.",
         _scope_obj({"q": _STR, "area": {**_STR, "description": "area name to filter by"},
                     "type": _enum(ITEM_TYPES, "filter by item type"), "limit": _INT}, ["q"]),
-        tools.pulso_search, write=False,
+        tools.pulsyr_search, write=False,
     ),
-    "pulso_list": Tool(
-        "pulso_list",
+    "pulsyr_list": Tool(
+        "pulsyr_list",
         "Filtered item list. order: impact|priority|topological|recent. quickwins: bool.",
         _scope_obj({"area": _STR,
                     "status": {"type": "array", "items": _enum(ITEM_STATUSES),
@@ -134,137 +134,143 @@ TOOLS: dict[str, Tool] = {
                     "order": _enum(LIST_ORDERS, "sort order (default impact)"),
                     "quickwins": {"type": "boolean"},
                     "limit": _INT}, []),
-        tools.pulso_list, write=False,
+        tools.pulsyr_list, write=False,
     ),
-    "pulso_areas": Tool(
-        "pulso_areas",
+    "pulsyr_areas": Tool(
+        "pulsyr_areas",
         "List areas (backlog groupings) with name, description, item count, and examples. "
         "Call this before creating an item to pick the right area.",
         _scope_obj({}, []),
-        tools.pulso_areas, write=False,
+        tools.pulsyr_areas, write=False,
     ),
-    "pulso_move_area": Tool(
-        "pulso_move_area",
+    "pulsyr_move_area": Tool(
+        "pulsyr_move_area",
         "Move an item to a different existing area (fixes miscategorization). "
         "Accepts item_id or text query.",
         _scope_obj({"item_id": _STR, "query": _STR, "area_name": _STR}, ["area_name"]),
-        tools.pulso_move_area, write=True,
+        tools.pulsyr_move_area, write=True,
     ),
-    "pulso_create": Tool(
-        "pulso_create",
+    "pulsyr_create": Tool(
+        "pulsyr_create",
         "Create a backlog item (status backlog, origin ai-session by default). "
-        "Creates the area if it doesn't exist. thread_id (optional): links it to a Thread.",
+        "Creates the area if it doesn't exist. thread_id (optional): links it to a Thread. "
+        "Always send effort_ai and impact_ai: you have just read the code, so your estimate "
+        "is better informed than the server-side one, which only ever sees title + summary. "
+        "An item without impact_ai has no place in the priority matrix until someone pays "
+        "for enrichment to backfill it.",
         _scope_obj({"title": _STR, "summary": _STR,
                     "type": _enum(ITEM_TYPES, "item type"),
                     "area_name": _STR,
-                    "effort_ai": _enum(EFFORTS, "estimated effort (optional)"),
-                    "impact_ai": {**_INT, "description": "impact 1-5 (optional)",
+                    "effort_ai": _enum(EFFORTS, "estimated effort — estimate it from the code "
+                                                "you just read; do not leave it null"),
+                    "impact_ai": {**_INT, "description": "impact 1-5 — estimate it yourself; "
+                                                         "without it the item is unprioritized",
                                   "minimum": 1, "maximum": 5},
                     "origin": _enum(ORIGENES, "item origin (default ai-session)"),
                     "thread_id": _STR},
                    ["title", "type", "area_name"]),
-        tools.pulso_create, write=True,
+        tools.pulsyr_create, write=True,
     ),
-    "pulso_advance": Tool(
-        "pulso_advance",
-        "Change item status (validated transition; terminals go via pulso_complete). "
+    "pulsyr_advance": Tool(
+        "pulsyr_advance",
+        "Change item status (validated transition; terminals go via pulsyr_complete). "
         "Accepts item_id or text query.",
         _scope_obj({"item_id": _STR, "query": _STR,
                     "to_status": _enum(_ADVANCE_STATUSES,
-                                       "target status (non-terminal; close with pulso_complete)")},
+                                       "target status (non-terminal; close with pulsyr_complete)")},
                    ["to_status"]),
-        tools.pulso_advance, write=True,
+        tools.pulsyr_advance, write=True,
     ),
-    "pulso_complete": Tool(
-        "pulso_complete",
+    "pulsyr_complete": Tool(
+        "pulsyr_complete",
         "Mark an item as done (with optional note and commit_sha). Reports newly unblocked items. "
         "Accepts item_id or search_query (aborts if ambiguous).",
         _scope_obj({"item_id": _STR, "search_query": _STR, "note": _STR, "commit_sha": _STR}, []),
-        tools.pulso_complete, write=True,
+        tools.pulsyr_complete, write=True,
     ),
-    "pulso_link": Tool(
-        "pulso_link",
+    "pulsyr_link": Tool(
+        "pulsyr_link",
         "Create a graph edge between two items. relation: blocks|requires|conflicts|related|part_of. "
         "Accepts ids or text queries.",
         _scope_obj({"source_id": _STR, "source_query": _STR, "target_id": _STR,
                     "target_query": _STR,
                     "relation": _enum(RELATIONS, "edge type"),
                     "note": _STR}, ["relation"]),
-        tools.pulso_link, write=True,
+        tools.pulsyr_link, write=True,
     ),
-    "pulso_thread_create": Tool(
-        "pulso_thread_create", "Create a Thread (heavy feature) at stage idea.",
+    "pulsyr_thread_create": Tool(
+        "pulsyr_thread_create", "Create a Thread (heavy feature) at stage idea.",
         _scope_obj({"title": _STR, "summary": _STR, "area_name": _STR}, ["title", "area_name"]),
-        tools.pulso_thread_create, write=True,
+        tools.pulsyr_thread_create, write=True,
     ),
-    "pulso_thread_advance": Tool(
-        "pulso_thread_advance",
+    "pulsyr_thread_advance": Tool(
+        "pulsyr_thread_advance",
         "Advance a Thread to the next stage; optionally saves an artifact "
         "{stage, content} from the current stage.",
         _scope_obj({"thread_id": _STR, "artifact": {"type": "object"}}, ["thread_id"]),
-        tools.pulso_thread_advance, write=True,
+        tools.pulsyr_thread_advance, write=True,
     ),
-    "pulso_thread_list": Tool(
-        "pulso_thread_list", "List Threads (optional filter by stage and area).",
+    "pulsyr_thread_list": Tool(
+        "pulsyr_thread_list", "List Threads (optional filter by stage and area).",
         _scope_obj({"stage": _enum(THREAD_STAGES, "filter by thread stage"),
                     "area": _STR}, []),
-        tools.pulso_thread_list, write=False,
+        tools.pulsyr_thread_list, write=False,
     ),
-    "pulso_thread": Tool(
-        "pulso_thread", "Thread detail: stage, artifacts, and linked items.",
+    "pulsyr_thread": Tool(
+        "pulsyr_thread", "Thread detail: stage, artifacts, and linked items.",
         _scope_obj({"id": _STR}, ["id"]),
-        tools.pulso_thread, write=False,
+        tools.pulsyr_thread, write=False,
     ),
-    "pulso_thread_link": Tool(
-        "pulso_thread_link",
+    "pulsyr_thread_link": Tool(
+        "pulsyr_thread_link",
         "Link an existing item to a Thread (sets thread_id). "
         "Accepts item_id or text query, and thread_id.",
         _scope_obj({"thread_id": _STR, "item_id": _STR, "query": _STR}, ["thread_id"]),
-        tools.pulso_thread_link, write=True,
+        tools.pulsyr_thread_link, write=True,
     ),
-    "pulso_incidents": Tool(
-        "pulso_incidents",
+    "pulsyr_incidents": Tool(
+        "pulsyr_incidents",
         "List Sentry errors in the incident container. status: new|linked|resolved|ignored|all "
         "(default new).",
         _scope_obj({"status": _enum(_INCIDENT_STATUSES, "filter by status (default new)"),
                     "limit": _INT}, []),
-        tools.pulso_incidents, write=False,
+        tools.pulsyr_incidents, write=False,
     ),
-    "pulso_incident": Tool(
-        "pulso_incident",
+    "pulsyr_incident": Tool(
+        "pulsyr_incident",
         "Incident detail WITH stack trace (exception, file:line, code) fetched from Sentry — "
         "what you need to locate and fix the error. id = incident id.",
         _scope_obj({"id": _STR}, ["id"]),
-        tools.pulso_incident, write=False,
+        tools.pulsyr_incident, write=False,
     ),
-    "pulso_incident_resolve": Tool(
-        "pulso_incident_resolve",
-        "Mark an incident as resolved in Pulso and (by default) in Sentry. "
+    "pulsyr_incident_resolve": Tool(
+        "pulsyr_incident_resolve",
+        "Mark an incident as resolved in Pulsyr and (by default) in Sentry. "
         "Use after fixing the bug. resolve_in_sentry: bool (default true).",
         _scope_obj({"id": _STR, "note": _STR, "commit_sha": _STR,
                     "resolve_in_sentry": {"type": "boolean"}}, ["id"]),
-        tools.pulso_incident_resolve, write=True,
+        tools.pulsyr_incident_resolve, write=True,
     ),
     # ----- Management: documentos -----
-    "pulso_doc_list": Tool(
-        "pulso_doc_list",
+    "pulsyr_doc_list": Tool(
+        "pulsyr_doc_list",
         "List deliverables (documents) in the Management tab. Metadata only (no bytes). "
         "Filter by compartment_id, status, or q (name/summary substring).",
         _scope_obj({"compartment_id": _STR,
                     "status": _enum(DELIVERABLE_STATUSES, "filter by status"),
                     "q": {**_STR, "description": "search name/summary"}}, []),
-        tools.pulso_doc_list, write=False,
+        tools.pulsyr_doc_list, write=False,
     ),
-    "pulso_doc_get": Tool(
-        "pulso_doc_get",
+    "pulsyr_doc_get": Tool(
+        "pulsyr_doc_get",
         "Deliverable detail: metadata + version history. include_content=true inlines the "
         "current version (text for md/html, base64 for binary) up to 256 KB; larger → download via UI.",
         _scope_obj({"deliverable_id": _STR, "include_content": {"type": "boolean"}},
                    ["deliverable_id"]),
-        tools.pulso_doc_get, write=False,
+        tools.pulsyr_doc_get, write=False,
     ),
-    "pulso_doc_put": Tool(
-        "pulso_doc_put",
+    "pulsyr_doc_put": Tool(
+        "pulsyr_doc_put",
         "Create a deliverable or append a new version (append-only; identical bytes are a no-op). "
         "Auto-creates the compartment. Pass content (text) for md/html or content_base64 (binary). "
         "doc_type ∈ docx|pdf|html|md|xlsx|pptx. Max 10 MB.",
@@ -276,19 +282,19 @@ TOOLS: dict[str, Tool] = {
                     "status": _enum(DELIVERABLE_STATUSES, "status (default draft)"),
                     "owner": _STR, "note": {**_STR, "description": "what changed in this version"}},
                    ["compartment", "name", "doc_type"]),
-        tools.pulso_doc_put, write=True,
+        tools.pulsyr_doc_put, write=True,
     ),
     # ----- Management: pendientes -----
-    "pulso_pending_list": Tool(
-        "pulso_pending_list",
+    "pulsyr_pending_list": Tool(
+        "pulsyr_pending_list",
         "List project pendings (action items) with owner + status. Filter by status, owner, "
         "overdue (bool), or plan_task_id.",
         _scope_obj({"status": _enum(PENDING_STATUSES, "filter by status"),
                     "owner": _STR, "overdue": {"type": "boolean"}, "plan_task_id": _STR}, []),
-        tools.pulso_pending_list, write=False,
+        tools.pulsyr_pending_list, write=False,
     ),
-    "pulso_pending_upsert": Tool(
-        "pulso_pending_upsert",
+    "pulsyr_pending_upsert": Tool(
+        "pulsyr_pending_upsert",
         "Create or update a pending. Omit pending_id to create (title required). "
         "status ∈ open|doing|blocked|done. due_date is ISO YYYY-MM-DD. "
         "plan_task_id links it to a Gantt task.",
@@ -296,23 +302,23 @@ TOOLS: dict[str, Tool] = {
                     "status": _enum(PENDING_STATUSES, "status"),
                     "due_date": {**_STR, "description": "ISO date YYYY-MM-DD"},
                     "plan_task_id": _STR}, []),
-        tools.pulso_pending_upsert, write=True,
+        tools.pulsyr_pending_upsert, write=True,
     ),
-    "pulso_pending_complete": Tool(
-        "pulso_pending_complete", "Mark a pending as done (sets closed_at).",
+    "pulsyr_pending_complete": Tool(
+        "pulsyr_pending_complete", "Mark a pending as done (sets closed_at).",
         _scope_obj({"pending_id": _STR}, ["pending_id"]),
-        tools.pulso_pending_complete, write=True,
+        tools.pulsyr_pending_complete, write=True,
     ),
     # ----- Management: gantt (plan) -----
-    "pulso_gantt_get": Tool(
-        "pulso_gantt_get",
+    "pulsyr_gantt_get": Tool(
+        "pulsyr_gantt_get",
         "Read the project plan (Gantt): all tasks with hierarchy (parent_id), dates, progress, "
         "milestones, and deps, plus the plan's start/end bounds. Read this before editing.",
         _scope_obj({}, []),
-        tools.pulso_gantt_get, write=False,
+        tools.pulsyr_gantt_get, write=False,
     ),
-    "pulso_gantt_task_upsert": Tool(
-        "pulso_gantt_task_upsert",
+    "pulsyr_gantt_task_upsert": Tool(
+        "pulsyr_gantt_task_upsert",
         "Create or update a Gantt task. Omit task_id to create (name required). parent_id nests "
         "it (max 3 levels: phase/sub-phase/task). Dates are ISO YYYY-MM-DD; progress 0-100; "
         "is_milestone renders a diamond at start_date; deps is a list of predecessor task ids; "
@@ -324,13 +330,13 @@ TOOLS: dict[str, Tool] = {
                     "is_milestone": {"type": "boolean"},
                     "deps": {"type": "array", "items": _STR, "description": "predecessor task ids"},
                     "sort_order": _INT}, []),
-        tools.pulso_gantt_task_upsert, write=True,
+        tools.pulsyr_gantt_task_upsert, write=True,
     ),
-    "pulso_gantt_task_remove": Tool(
-        "pulso_gantt_task_remove",
+    "pulsyr_gantt_task_remove": Tool(
+        "pulsyr_gantt_task_remove",
         "Delete a Gantt task (its children cascade).",
         _scope_obj({"task_id": _STR}, ["task_id"]),
-        tools.pulso_gantt_task_remove, write=True,
+        tools.pulsyr_gantt_task_remove, write=True,
     ),
 }
 
@@ -351,9 +357,9 @@ PROMPTS = {
 }
 
 RESOURCE_TEMPLATES = [
-    {"uriTemplate": "pulso://area/{area_name}", "name": "area",
+    {"uriTemplate": "pulsyr://area/{area_name}", "name": "area",
      "description": "Area view: items by status.", "mimeType": "application/json"},
-    {"uriTemplate": "pulso://graph/{item_id}", "name": "graph",
+    {"uriTemplate": "pulsyr://graph/{item_id}", "name": "graph",
      "description": "Item relationship subgraph.", "mimeType": "application/json"},
 ]
 
@@ -384,10 +390,10 @@ async def _dispatch(msg: dict, token: ApiToken, db: AsyncSession) -> dict | None
         return _ok(rpc_id, {
             "protocolVersion": PROTOCOL_VERSION,
             "capabilities": {"tools": {}, "prompts": {}, "resources": {}},
-            "serverInfo": {"name": "pulso", "version": "2.0"},
+            "serverInfo": {"name": "pulsyr", "version": "2.0"},
             "instructions": (
-                "Pulso backlog manager. Call pulso_context at session start "
-                "and pulso_complete when closing out an item."
+                "Pulsyr backlog manager. Call pulsyr_context at session start "
+                "and pulsyr_complete when closing out an item."
             ),
         })
 
@@ -461,9 +467,9 @@ async def _prompt_get(rpc_id: Any, params: dict, token: ApiToken, db: AsyncSessi
     name = params.get("name")
     args = params.get("arguments") or {}
     if name == "briefing":
-        ctx = await tools.pulso_context(db, token, args)
+        ctx = await tools.pulsyr_context(db, token, args)
         body = json.dumps(ctx, ensure_ascii=False, indent=2)
-        text_out = f"Pulso session context:\n{body}"
+        text_out = f"Pulsyr session context:\n{body}"
     elif name == "decision":
         topic = args.get("topic", "")
         from sqlalchemy import text
@@ -489,7 +495,7 @@ async def _resource_read(rpc_id: Any, params: dict, token: ApiToken, db: AsyncSe
     uri = params.get("uri", "")
     pid = token.project_id
     payload: Any
-    if uri.startswith("pulso://area/"):
+    if uri.startswith("pulsyr://area/"):
         name = uri.split("/", 3)[-1]
         pid_filter = "AND s.project_id = :pid" if pid else ""
         rows = (await db.execute(text(f"""
@@ -497,7 +503,7 @@ async def _resource_read(rpc_id: Any, params: dict, token: ApiToken, db: AsyncSe
             WHERE s.name = :name {pid_filter} GROUP BY i.status
         """), {"name": name, "pid": pid})).mappings().all()
         payload = {"area": name, "counts": {r["status"]: r["n"] for r in rows}}
-    elif uri.startswith("pulso://graph/"):
+    elif uri.startswith("pulsyr://graph/"):
         import uuid as _uuid
         item_id = uri.split("/", 3)[-1]
         from app.items import graph

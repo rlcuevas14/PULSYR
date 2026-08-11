@@ -28,7 +28,7 @@ class AgentRun(Base):
     kind: Mapped[str] = mapped_column(String(30), nullable=False)
     ref_type: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     ref_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pendiente")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     leased_until: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     result: Mapped[Optional[Any]] = mapped_column(JSON, nullable=True)
     error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

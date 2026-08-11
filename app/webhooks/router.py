@@ -11,7 +11,7 @@ from app.config import settings
 from app.database import get_db
 from app.webhooks import connection, service
 
-logger = logging.getLogger("pulso.webhooks")
+logger = logging.getLogger("pulsyr.webhooks")
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 

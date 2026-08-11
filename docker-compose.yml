@@ -16,7 +16,7 @@ services:
 
   app:
     build: .
-    image: ghcr.io/${GITHUB_OWNER:-your-username}/pulso:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_OWNER:-your-username}/pulsyr:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       db:

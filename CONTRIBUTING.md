@@ -1,6 +1,6 @@
-# Contributing to Pulso
+# Contributing to Pulsyr
 
-Thanks for your interest! Pulso is a small, focused codebase — most
+Thanks for your interest! Pulsyr is a small, focused codebase — most
 contributions land fast if they follow the conventions below.
 
 ## Development setup
@@ -9,8 +9,8 @@ Requirements: Python 3.12+ and a local Postgres (pgvector NOT required for
 development — the embedding column is migration-only and degrades gracefully).
 
 ```bash
-git clone https://github.com/rlcuevas14/PULSO
-cd PULSO
+git clone https://github.com/rlcuevas14/PULSYR
+cd PULSYR
 pip install -e ".[dev]"
 ```
 
@@ -21,7 +21,7 @@ is required (without it the session cookie is marked `secure` and every UI
 test 303-redirects to login):
 
 ```bash
-TEST_DATABASE_URL="postgresql+asyncpg://user:pass@localhost:5432/pulso_test" \
+TEST_DATABASE_URL="postgresql+asyncpg://user:pass@localhost:5432/pulsyr_test" \
   DEBUG=true SECRET_KEY=any-test-secret \
   python -m pytest tests/ -q
 ```

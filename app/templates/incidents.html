@@ -16,7 +16,7 @@
 
 <div class="mb-3 flex items-center justify-between gap-3">
   <a href="/incidents{% if not include_ignored %}?include_ignored=true{% endif %}"
-     class="text-sm underline underline-offset-2" style="color:var(--accent)">
+     class="text-sm underline underline-offset-2" style="color:var(--accent-strong)">
     {% if include_ignored %}{{ t("incidents.hide_ignored") }}{% else %}{{ t("incidents.show_ignored") }}{% endif %}
   </a>
   {% if user.account_role == 'owner' %}
@@ -56,7 +56,7 @@
     {{ t("incidents.empty") }}
     {% if user.account_role == 'owner' %}
     <a href="/account/integrations" class="block mt-2 underline underline-offset-2"
-       style="color:var(--accent)">{{ t("incidents.empty_cta") }}</a>
+       style="color:var(--accent-strong)">{{ t("incidents.empty_cta") }}</a>
     {% endif %}
   </div>
   {% endif %}
@@ -73,7 +73,7 @@
         {% else %}<span>{{ t("incidents.no_triage") }}</span>{% endif %}
         <span title="{{ t('incidents.first_seen') }}">{{ t("incidents.first_seen_abbr") }} {{ it.first_seen | fecha('%Y-%m-%d') }}</span>
         <span title="{{ t('incidents.last_seen') }}">{{ t("incidents.last_seen_abbr") }} {{ it.last_seen | fecha }}</span>
-        {% if it.payload and it.payload.get('web_url') %}<a href="{{ it.payload.web_url }}" target="_blank" class="underline underline-offset-2" style="color:var(--accent)">{{ t("incidents.view_in_sentry") }}</a>{% endif %}
+        {% if it.payload and it.payload.get('web_url') %}<a href="{{ it.payload.web_url }}" target="_blank" class="underline underline-offset-2" style="color:var(--accent-strong)">{{ t("incidents.view_in_sentry") }}</a>{% endif %}
       </div>
     </div>
     <div class="flex flex-wrap items-center justify-end gap-2 shrink-0 ml-auto">

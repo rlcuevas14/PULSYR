@@ -1,7 +1,7 @@
 """Búsqueda full-text única sobre items (ts_rank / websearch_to_tsquery 'spanish').
 
 Una sola implementación del FTS, consumida por REST (/items/search), el MCP
-(pulso_search) y la resolución por texto del grafo (relationships.resolve_query).
+(pulsyr_search) y la resolución por texto del grafo (relationships.resolve_query).
 
 Usa `websearch_to_tsquery` (no `plainto_tsquery`): acepta la sintaxis de buscador
 web — comillas para frases exactas, `OR` entre términos, y `-término` para

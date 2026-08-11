@@ -14,7 +14,7 @@ from app.templates_config import templates  # noqa: F401 — re-exported for leg
 # que CUALQUIER otro módulo pueda emitir logs sin reconfigurar nada:
 #
 #     import logging
-#     logger = logging.getLogger("pulso.<modulo>")   # p. ej. "pulso.items", "pulso.mcp"
+#     logger = logging.getLogger("pulsyr.<modulo>")   # p. ej. "pulsyr.items", "pulsyr.mcp"
 #     logger.info("..."); logger.warning("..."); logger.exception("...")
 #
 # basicConfig es idempotente (no hace nada si el root ya tiene handlers), así que reimportar
@@ -23,12 +23,12 @@ logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
-logger = logging.getLogger("pulso")
+logger = logging.getLogger("pulsyr")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Pulso starting (debug=%s)", settings.debug)
+    logger.info("Pulsyr starting (debug=%s)", settings.debug)
     from app.jobs.worker import worker_loop
     task = asyncio.create_task(worker_loop())
     yield
@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
         await task
     except asyncio.CancelledError:
         pass
-    logger.info("Pulso stopped")
+    logger.info("Pulsyr stopped")
 
 
 async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -71,13 +71,13 @@ def create_app() -> FastAPI:
     from app.ui.router import router as ui_router
     from app.webhooks.router import router as webhooks_router
 
-    app = FastAPI(title="Pulso", lifespan=lifespan)
+    app = FastAPI(title="Pulsyr", lifespan=lifespan)
     from fastapi.staticfiles import StaticFiles
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.secret_key,
-        session_cookie="pulso_session",
+        session_cookie="pulsyr_session",
         https_only=not settings.debug,
         # SEC-04: endurecer la cookie de sesión.
         same_site="strict",        # corta envío cross-site (mitiga CSRF sobre la sesión).

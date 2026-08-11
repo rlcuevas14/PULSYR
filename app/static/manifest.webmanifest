@@ -1,6 +1,6 @@
 {
-  "name": "Pulso",
-  "short_name": "Pulso",
+  "name": "Pulsyr",
+  "short_name": "Pulsyr",
   "description": "The backlog your agent reads and writes.",
   "start_url": "/",
   "display": "standalone",

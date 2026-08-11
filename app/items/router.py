@@ -495,7 +495,7 @@ async def enqueue_enrich(
     _require_item(await db.get(Item, item_id), pid)
 
     run = await enqueue_job(db, kind="enrich", ref_type="item", ref_id=item_id, project_id=pid)
-    return {"run_id": str(run.id), "status": "encolado"}
+    return {"run_id": str(run.id), "status": "queued"}
 
 
 @router.post("/enrich-pending", status_code=202)
@@ -518,4 +518,4 @@ async def enqueue_pending_enrich(
     ids = [r[0] for r in rows]
     for item_id in ids:
         await enqueue_job(db, kind="enrich", ref_type="item", ref_id=item_id, project_id=pid)
-    return {"encolados": len(ids)}
+    return {"queued": len(ids)}

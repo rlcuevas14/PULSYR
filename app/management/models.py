@@ -3,7 +3,7 @@
 A new domain, orthogonal to the dev backlog: a project's classic PM surface.
 UI is a viewer; the editor is Claude via MCP (the Gantt is MCP-edit only).
 
-Isolation: every table carries `project_id` (nullable, like the rest of PULSO —
+Isolation: every table carries `project_id` (nullable, like the rest of PULSYR —
 isolation is enforced in code by app/projects/access.py + the MCP project failsafe,
 not by a schema NOT NULL; a NULL project_id is an orphan invisible to every
 project-scoped query). Audit: every mutation emits a ManagementEvent (append-only),

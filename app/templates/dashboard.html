@@ -6,7 +6,7 @@
     <h1 class="text-3xl md:text-4xl font-semibold tracking-tight text-ink">{{ t("dashboard.greeting", name=(user.name or "").split(" ")[0]) }}</h1>
     <p class="text-sm text-muted mt-2">
       {% if request.session.get("current_project_name") %}
-      <span class="inline-block w-2.5 h-2.5 rounded-full align-middle mr-1" style="background:var(--accent)"></span>
+      <span class="inline-block w-2.5 h-2.5 rounded-full align-middle mr-1" style="background:var(--project)"></span>
       {{ request.session["current_project_name"] }} ·
       {% endif %}
       {{ t("dashboard.monthly_ai_cost", amount="%.2f"|format(monthly_cost)) }}

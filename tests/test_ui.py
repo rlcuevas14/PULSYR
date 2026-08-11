@@ -238,7 +238,7 @@ async def test_hilo_elaborate_degraded(client: AsyncClient, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_static_brand_assets_served(client: AsyncClient):
-    r = await client.get("/static/brand/pulso-favicon-16.svg")
+    r = await client.get("/static/brand/pulsyr-favicon-16.svg")
     assert r.status_code == 200 and "svg" in r.headers["content-type"]
     r = await client.get("/static/manifest.webmanifest")
     assert r.status_code == 200
@@ -436,7 +436,7 @@ async def test_board_dnd_invalid_move_snaps_back(client: AsyncClient):
                           headers={"HX-Request": "true"})
     assert r.status_code == 200
     assert "board-root" in r.text
-    assert "pulso:toast" in r.headers.get("HX-Trigger", "")
+    assert "pulsyr:toast" in r.headers.get("HX-Trigger", "")
     async for db in client.app.dependency_overrides[get_db]():
         it = (await db.execute(select(Item).where(Item.id == item_id))).scalar_one()
         assert it.status == "idea"  # sin cambios
@@ -849,7 +849,7 @@ async def test_close_modal_lifecycle_targets(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_transition_out_of_terminal_clears_closed_at(client: AsyncClient):
-    """done→backlog vía apply_transition (alcanzable por MCP pulso_advance) limpia closed_at."""
+    """done→backlog vía apply_transition (alcanzable por MCP pulsyr_advance) limpia closed_at."""
     import datetime as _dt
 
     from app.items import service

@@ -12,9 +12,9 @@ async def test_enqueue_and_process_job(db: AsyncSession):
     from app.jobs.worker import enqueue_job, process_one
 
     # Aislar de jobs pendientes de otros tests (el worker procesa el más antiguo global).
-    await db.execute(text("DELETE FROM agent_runs WHERE status = 'pendiente'"))
+    await db.execute(text("DELETE FROM agent_runs WHERE status = 'pending'"))
     run = await enqueue_job(db, kind="enrich", ref_type="item", ref_id=None)
-    assert run.status == "pendiente"
+    assert run.status == "pending"
 
     processed = await process_one(db)
     assert processed is True
@@ -32,7 +32,7 @@ async def test_no_double_processing(db: AsyncSession, test_engine):
     from app.jobs.worker import enqueue_job, process_one
 
     # Aislar de jobs pendientes que otros tests pudieran haber dejado (el worker es global).
-    await db.execute(text("DELETE FROM agent_runs WHERE status = 'pendiente'"))
+    await db.execute(text("DELETE FROM agent_runs WHERE status = 'pending'"))
     await enqueue_job(db, kind="enrich")
     await db.commit()
 
@@ -49,13 +49,13 @@ async def test_expired_lease_is_reclaimed(db: AsyncSession):
     from app.jobs.worker import enqueue_job, reclaim_expired_leases
 
     run = await enqueue_job(db, kind="enrich")
-    run.status = "corriendo"
+    run.status = "running"
     run.leased_until = datetime.now(timezone.utc) - timedelta(seconds=1)
     await db.commit()
 
     await reclaim_expired_leases(db)
     await db.refresh(run)
-    assert run.status == "pendiente"
+    assert run.status == "pending"
     assert run.leased_until is None
 
 
@@ -66,7 +66,7 @@ async def test_process_one_returns_false_when_queue_empty(db: AsyncSession):
     from app.jobs.worker import process_one
 
     # Asegurar que no queden jobs pendientes de tests anteriores.
-    await db.execute(text("DELETE FROM agent_runs WHERE status = 'pendiente'"))
+    await db.execute(text("DELETE FROM agent_runs WHERE status = 'pending'"))
     await db.commit()
 
     processed = await process_one(db)

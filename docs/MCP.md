@@ -1,11 +1,11 @@
-# Connecting Claude Code to Pulso (MCP over HTTP)
+# Connecting Claude Code to Pulsyr (MCP over HTTP)
 
-Pulso exposes an MCP endpoint at `https://<your-pulso-host>/mcp` (Streamable HTTP, JSON mode).
+Pulsyr exposes an MCP endpoint at `https://<your-pulsyr-host>/mcp` (Streamable HTTP, JSON mode).
 Any Claude Code instance connects with just a token — nothing to install locally.
 
 ## 1. Generate a token
 
-Tokens are **project-scoped**: go to `https://<your-pulso-host>/projects/<slug>/settings` →
+Tokens are **project-scoped**: go to `https://<your-pulsyr-host>/projects/<slug>/settings` →
 **Generate MCP token** (scope `write` to create/close items from a session). Copy the token —
 it is shown only once.
 
@@ -16,7 +16,7 @@ it is shown only once.
 
 **Option A — command (writes to `~/.claude.json`, local scope):**
 ```bash
-claude mcp add --transport http my-project https://<your-pulso-host>/mcp \
+claude mcp add --transport http my-project https://<your-pulsyr-host>/mcp \
   --header "Authorization: Bearer <YOUR_TOKEN>"
 ```
 
@@ -26,62 +26,62 @@ claude mcp add --transport http my-project https://<your-pulso-host>/mcp \
   "mcpServers": {
     "my-project": {
       "type": "http",
-      "url": "https://<your-pulso-host>/mcp",
-      "headers": { "Authorization": "Bearer ${PULSO_TOKEN}" }
+      "url": "https://<your-pulsyr-host>/mcp",
+      "headers": { "Authorization": "Bearer ${PULSYR_TOKEN}" }
     }
   }
 }
 ```
-Claude Code expands `${PULSO_TOKEN}` from the environment (never commit the token).
+Claude Code expands `${PULSYR_TOKEN}` from the environment (never commit the token).
 Verify with `claude mcp list`. New tools appear only after **restarting** Claude Code.
 
 ## 3. Available tools (26)
 
 | Tool | Scope | Purpose |
 |------|-------|---------|
-| `pulso_context(area?, work_description?)` | read | Session briefing: quick wins, blockers, unlinked incidents, active threads |
-| `pulso_search(q, area?, type?, limit?)` | read | Full-text search |
-| `pulso_list(area?, status?, type?, order?, quickwins?, limit?)` | read | Filtered list (order: `impact`/`priority`/`topological`/`recent`) |
-| `pulso_areas()` | read | List areas (backlog groupings) with counts and examples |
-| `pulso_incidents(status?, triage?, limit?)` | read | List Sentry incidents |
-| `pulso_incident(issue_id)` | read | Incident detail (with stack trace when available) |
-| `pulso_thread_list(stage?)` | read | List development threads |
-| `pulso_thread(thread_id)` | read | Thread detail with artifacts and linked items |
-| `pulso_create(title, type, area_name, …)` | write | Create item (origin `ai-session`; creates the area if missing) |
-| `pulso_advance(item_id\|query, to_status)` | write | Change status (lifecycle-validated; terminals go via `pulso_complete`) |
-| `pulso_complete(item_id\|search_query, note?, commit_sha?)` | write | Mark done + report newly unblocked items |
-| `pulso_link(source, target, relation, note?)` | write | Create a graph edge (`blocks`/`requires`/`conflicts`/`related`/`part_of`) |
-| `pulso_move_area(item_id\|query, area_name)` | write | Move an item to another existing area |
-| `pulso_incident_resolve(issue_id, note?)` | write | Resolve a Sentry incident |
-| `pulso_thread_create(title, area_name, summary?)` | write | Create a development thread |
-| `pulso_thread_advance(thread_id, artifact_content?)` | write | Advance a thread to its next stage |
-| `pulso_thread_link(thread_id, item_id\|query)` | write | Link an item to a thread |
-| `pulso_doc_list(compartment_id?, status?, q?)` | read | List Management deliverables (metadata only) |
-| `pulso_doc_get(deliverable_id, include_content?)` | read | Deliverable detail + version history (inlines content up to 256 KB) |
-| `pulso_doc_put(compartment, name, doc_type, content\|content_base64, …)` | write | Create a deliverable or append a version (append-only; auto-creates the compartment) |
-| `pulso_pending_list(status?, owner?, overdue?, plan_task_id?)` | read | List project pendings (action items) |
-| `pulso_pending_upsert(pending_id?, title?, status?, due_date?, owner?, …)` | write | Create or update a pending (omit `pending_id` to create) |
-| `pulso_pending_complete(pending_id)` | write | Mark a pending as done |
-| `pulso_gantt_get()` | read | Full project plan: task hierarchy, dates, progress, milestones, deps |
-| `pulso_gantt_task_upsert(task_id?, name?, parent_id?, start_date?, end_date?, progress?, …)` | write | Create or update a Gantt task (max 3 levels; the Gantt is edited only via MCP) |
-| `pulso_gantt_task_remove(task_id)` | write | Delete a Gantt task (children cascade) |
+| `pulsyr_context(area?, work_description?)` | read | Session briefing: quick wins, blockers, unlinked incidents, active threads |
+| `pulsyr_search(q, area?, type?, limit?)` | read | Full-text search |
+| `pulsyr_list(area?, status?, type?, order?, quickwins?, limit?)` | read | Filtered list (order: `impact`/`priority`/`topological`/`recent`) |
+| `pulsyr_areas()` | read | List areas (backlog groupings) with counts and examples |
+| `pulsyr_incidents(status?, triage?, limit?)` | read | List Sentry incidents |
+| `pulsyr_incident(issue_id)` | read | Incident detail (with stack trace when available) |
+| `pulsyr_thread_list(stage?)` | read | List development threads |
+| `pulsyr_thread(thread_id)` | read | Thread detail with artifacts and linked items |
+| `pulsyr_create(title, type, area_name, …)` | write | Create item (origin `ai-session`; creates the area if missing) |
+| `pulsyr_advance(item_id\|query, to_status)` | write | Change status (lifecycle-validated; terminals go via `pulsyr_complete`) |
+| `pulsyr_complete(item_id\|search_query, note?, commit_sha?)` | write | Mark done + report newly unblocked items |
+| `pulsyr_link(source, target, relation, note?)` | write | Create a graph edge (`blocks`/`requires`/`conflicts`/`related`/`part_of`) |
+| `pulsyr_move_area(item_id\|query, area_name)` | write | Move an item to another existing area |
+| `pulsyr_incident_resolve(issue_id, note?)` | write | Resolve a Sentry incident |
+| `pulsyr_thread_create(title, area_name, summary?)` | write | Create a development thread |
+| `pulsyr_thread_advance(thread_id, artifact_content?)` | write | Advance a thread to its next stage |
+| `pulsyr_thread_link(thread_id, item_id\|query)` | write | Link an item to a thread |
+| `pulsyr_doc_list(compartment_id?, status?, q?)` | read | List Management deliverables (metadata only) |
+| `pulsyr_doc_get(deliverable_id, include_content?)` | read | Deliverable detail + version history (inlines content up to 256 KB) |
+| `pulsyr_doc_put(compartment, name, doc_type, content\|content_base64, …)` | write | Create a deliverable or append a version (append-only; auto-creates the compartment) |
+| `pulsyr_pending_list(status?, owner?, overdue?, plan_task_id?)` | read | List project pendings (action items) |
+| `pulsyr_pending_upsert(pending_id?, title?, status?, due_date?, owner?, …)` | write | Create or update a pending (omit `pending_id` to create) |
+| `pulsyr_pending_complete(pending_id)` | write | Mark a pending as done |
+| `pulsyr_gantt_get()` | read | Full project plan: task hierarchy, dates, progress, milestones, deps |
+| `pulsyr_gantt_task_upsert(task_id?, name?, parent_id?, start_date?, end_date?, progress?, …)` | write | Create or update a Gantt task (max 3 levels; the Gantt is edited only via MCP) |
+| `pulsyr_gantt_task_remove(task_id)` | write | Delete a Gantt task (children cascade) |
 
-Prompts: `briefing`, `decision`. Resource templates: `pulso://area/{name}`, `pulso://graph/{item_id}`.
+Prompts: `briefing`, `decision`. Resource templates: `pulsyr://area/{name}`, `pulsyr://graph/{item_id}`.
 
 ## 4. Breaking change — tool rename (Spanish → English)
 
-Older Pulso versions exposed Spanish tool names. They were renamed once, before the first
+Older Pulsyr versions exposed Spanish tool names. They were renamed once, before the first
 public release:
 
 | Old (removed) | Current |
 |---------------|---------|
-| `pulso_contexto` | `pulso_context` |
-| `pulso_buscar` | `pulso_search` |
-| `pulso_listar` | `pulso_list` |
-| `pulso_crear` | `pulso_create` |
-| `pulso_avanzar` | `pulso_advance` |
-| `pulso_completar` | `pulso_complete` |
-| `pulso_relacionar` | `pulso_link` |
+| `pulsyr_contexto` | `pulsyr_context` |
+| `pulsyr_buscar` | `pulsyr_search` |
+| `pulsyr_listar` | `pulsyr_list` |
+| `pulsyr_crear` | `pulsyr_create` |
+| `pulsyr_avanzar` | `pulsyr_advance` |
+| `pulsyr_completar` | `pulsyr_complete` |
+| `pulsyr_relacionar` | `pulsyr_link` |
 
 Enum values were also renamed (statuses, types, origins — e.g. `hecho` → `done`,
 `ia-sesion` → `ai-session`). If an old client sends Spanish values, calls fail validation —
@@ -102,7 +102,7 @@ v0018 completed the rename for threads (same no-shim policy):
 
 ## 5. Suggested session protocol
 
-- **Session start**: call `pulso_context` to get current priorities, blockers, and open incidents.
-- **During work**: `pulso_create` for anything worth tracking; `pulso_advance` as states change.
-- **Session end**: `pulso_complete` with `note` + `commit_sha` for everything shipped — the
+- **Session start**: call `pulsyr_context` to get current priorities, blockers, and open incidents.
+- **During work**: `pulsyr_create` for anything worth tracking; `pulsyr_advance` as states change.
+- **Session end**: `pulsyr_complete` with `note` + `commit_sha` for everything shipped — the
   commit links the item to code, and the note becomes the close reason shown in the Archive.

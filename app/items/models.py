@@ -77,7 +77,7 @@ class Item(Base):
         TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     closed_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
-    # Tocado por un push/sesión (webhook Git / pulso_completar). Distinto de updated_at
+    # Tocado por un push/sesión (webhook Git / pulsyr_completar). Distinto de updated_at
     # (que dispara con cualquier UPDATE de la fila).
     last_touched_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     # FK al Hilo que originó este ítem (Sprint 4). Nullable: la mayoría de ítems no son de un hilo.

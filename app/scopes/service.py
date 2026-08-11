@@ -39,7 +39,7 @@ async def resolve_scope(
 
     if not create:
         raise ScopeError(
-            f"Area '{cleaned}' does not exist. Use pulso_areas to see available areas."
+            f"Area '{cleaned}' does not exist. Use pulsyr_areas to see available areas."
         )
 
     scope = Scope(name=cleaned[:60], source_repo=source_repo, project_id=project_id)

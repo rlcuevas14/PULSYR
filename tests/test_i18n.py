@@ -25,7 +25,7 @@ DYNAMIC_PREFIXES = {
     "origin.": ORIGENES,
     "stage.": ["idea", "research", "stories", "spec",
                "in-development", "review", "done", "discarded"],
-    "triage.": ["bug-real", "input-malo", "3rd-party", "ruido"],
+    "triage.": ["real-bug", "bad-input", "3rd-party", "noise"],
     "kind.": ["decision"],  # solo 'decision' se pinta con pill en item_detail
     "month.": [str(n) for n in range(1, 13)],
     "relation.": ["blocks", "requires", "conflicts", "related", "part_of"],

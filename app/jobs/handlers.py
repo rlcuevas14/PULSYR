@@ -73,25 +73,21 @@ async def handle_triage_sentry(db: AsyncSession, ref_id: uuid.UUID | None) -> di
         return {"status": "no-ref"}
     issue = (await db.execute(select(SentryIssue).where(SentryIssue.id == ref_id))).scalar_one_or_none()
     if issue is None:
-        return {"status": "issue-no-encontrado"}
+        return {"status": "issue-not-found"}
 
     try:
         verdict = await llm.triage_sentry(issue.title, str(issue.payload or ""))
     except llm.LLMUnavailable:
-        return {"status": "sin-api-key", "note": "queda sin triage hasta tener ANTHROPIC_API_KEY"}
+        return {"status": "no-api-key", "note": "queda sin triage hasta tener ANTHROPIC_API_KEY"}
 
     issue.triage = verdict["triage"]
-    promoted: str | None = None
-    if verdict["triage"] == "ruido" and issue.item_id is None:
+    # The triage classifies; it never writes to the backlog. Hiding noise is reversible
+    # (the issue stays in the container, just filtered out); promoting is not. Promotion
+    # is the owner's call from /incidents, or the agent's via pulsyr_incidents.
+    if verdict["triage"] == "noise" and issue.item_id is None:
         issue.status = "ignored"  # auto-hide the noise from the container
-    elif verdict["triage"] == "bug-real" and issue.item_id is None:
-        # A real bug per the triage → straight to the TOP of the backlog (p0). The owner
-        # can lower the priority or discard it from /incidents if it's a false positive.
-        from app.webhooks.service import promote_issue
-        promoted = await promote_issue(db, issue, priority="p0", actor="triage-auto")
     await db.flush()
-    return {"issue_id": str(ref_id), "triage": verdict["triage"],
-            "status": issue.status, "promoted_item_id": promoted}
+    return {"issue_id": str(ref_id), "triage": verdict["triage"], "status": issue.status}
 
 
 HANDLERS = {

@@ -53,57 +53,57 @@ async def test_full_tool_lifecycle(client: AsyncClient):
     raw, _pid = await _setup(client)
 
     # context (both with and without work_description)
-    ctx = _data(await _call(client, raw, "pulso_context", {}))
+    ctx = _data(await _call(client, raw, "pulsyr_context", {}))
     assert "local" in ctx and ctx["semantic"] is None
-    _data(await _call(client, raw, "pulso_context", {"work_description": "auth refactor"}))
+    _data(await _call(client, raw, "pulsyr_context", {"work_description": "auth refactor"}))
 
     # create two items
-    a = _data(await _call(client, raw, "pulso_create",
+    a = _data(await _call(client, raw, "pulsyr_create",
                           {"title": "Login flow", "type": "feature", "area_name": "auth"}))
-    b = _data(await _call(client, raw, "pulso_create",
+    b = _data(await _call(client, raw, "pulsyr_create",
                           {"title": "Token refresh", "type": "bug", "area_name": "auth"}))
     assert a["scope"] == "auth"
 
     # search finds it
-    found = _data(await _call(client, raw, "pulso_search", {"q": "Login flow"}))
+    found = _data(await _call(client, raw, "pulsyr_search", {"q": "Login flow"}))
     assert any("Login flow" in i["title"] for i in found)
 
     # list with each order
     for order in ("impact", "priority", "topological", "recent"):
-        listed = _data(await _call(client, raw, "pulso_list", {"order": order}))
+        listed = _data(await _call(client, raw, "pulsyr_list", {"order": order}))
         assert isinstance(listed, list)
 
     # areas
-    areas = _data(await _call(client, raw, "pulso_areas", {}))
+    areas = _data(await _call(client, raw, "pulsyr_areas", {}))
     assert any(s["name"] == "auth" for s in areas)
 
     # advance (valid) + invalid status (isError)
-    adv = _data(await _call(client, raw, "pulso_advance",
+    adv = _data(await _call(client, raw, "pulsyr_advance",
                             {"item_id": a["id"], "to_status": "in-progress"}))
     assert adv["status"] == "in-progress"
-    bad = await _call(client, raw, "pulso_advance", {"item_id": a["id"], "to_status": "bogus"})
+    bad = await _call(client, raw, "pulsyr_advance", {"item_id": a["id"], "to_status": "bogus"})
     assert bad["isError"] is True
 
     # link the two (returns a plain-text confirmation, not JSON)
-    link_res = await _call(client, raw, "pulso_link",
+    link_res = await _call(client, raw, "pulsyr_link",
                            {"source_id": a["id"], "target_id": b["id"], "relation": "blocks"})
     assert link_res["isError"] is False
 
     # move_area (target area must exist first — create an item there)
-    _data(await _call(client, raw, "pulso_create",
+    _data(await _call(client, raw, "pulsyr_create",
                       {"title": "Seed billing", "type": "feature", "area_name": "billing"}))
-    moved = _data(await _call(client, raw, "pulso_move_area",
+    moved = _data(await _call(client, raw, "pulsyr_move_area",
                               {"item_id": b["id"], "area_name": "billing"}))
     assert moved["scope"] == "billing"
 
     # complete with note + commit (returns a plain-text summary)
-    done = await _call(client, raw, "pulso_complete",
+    done = await _call(client, raw, "pulsyr_complete",
                        {"item_id": a["id"], "note": "shipped", "commit_sha": "abc1234"})
     assert done["isError"] is False
 
 
 @pytest.mark.asyncio
-async def test_pulso_context_rich(client: AsyncClient):
+async def test_pulsyr_context_rich(client: AsyncClient):
     raw, pid = await _setup(client)
     from app.database import get_db
     from app.items.models import Item
@@ -125,7 +125,7 @@ async def test_pulso_context_rich(client: AsyncClient):
         t.stage = "in-development"
         await db.commit()
         break
-    ctx = _data(await _call(client, raw, "pulso_context",
+    ctx = _data(await _call(client, raw, "pulsyr_context",
                             {"area": "core", "work_description": "refactor auth"}))
     assert "neighborhood" in ctx and ctx["semantic"] is None
     assert any(t["title"] == "Active thread" for t in ctx["local"]["active_threads"])
@@ -135,18 +135,18 @@ async def test_pulso_context_rich(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_thread_and_incident_tools(client: AsyncClient):
     raw, pid = await _setup(client)
-    t = _data(await _call(client, raw, "pulso_thread_create",
+    t = _data(await _call(client, raw, "pulsyr_thread_create",
                           {"title": "Payments", "area_name": "billing"}))
-    _data(await _call(client, raw, "pulso_thread_advance",
+    _data(await _call(client, raw, "pulsyr_thread_advance",
                       {"thread_id": t["id"], "artifact_content": "research"}))
-    item = _data(await _call(client, raw, "pulso_create",
+    item = _data(await _call(client, raw, "pulsyr_create",
                              {"title": "Gateway", "type": "feature", "area_name": "billing"}))
-    linked = _data(await _call(client, raw, "pulso_thread_link",
+    linked = _data(await _call(client, raw, "pulsyr_thread_link",
                                {"thread_id": t["id"], "item_id": item["id"]}))
     assert linked["thread_id"] == t["id"]
-    tl = _data(await _call(client, raw, "pulso_thread_list", {}))
+    tl = _data(await _call(client, raw, "pulsyr_thread_list", {}))
     assert any(x["id"] == t["id"] for x in tl)
-    detail = _data(await _call(client, raw, "pulso_thread", {"id": t["id"]}))
+    detail = _data(await _call(client, raw, "pulsyr_thread", {"id": t["id"]}))
     assert detail["title"] == "Payments"
 
     # incidents: seed a SentryIssue in this project
@@ -161,9 +161,9 @@ async def test_thread_and_incident_tools(client: AsyncClient):
         await db.refresh(issue)
         iid = str(issue.id)
         break
-    incs = _data(await _call(client, raw, "pulso_incidents", {}))
+    incs = _data(await _call(client, raw, "pulsyr_incidents", {}))
     assert any(i["id"] == iid for i in incs)
-    res = await _call(client, raw, "pulso_incident_resolve",
+    res = await _call(client, raw, "pulsyr_incident_resolve",
                       {"id": iid, "resolve_in_sentry": False})
     assert res["isError"] is False
 
@@ -185,15 +185,15 @@ async def test_prompts(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_resources(client: AsyncClient):
     raw, _pid = await _setup(client)
-    _data(await _call(client, raw, "pulso_create",
+    _data(await _call(client, raw, "pulsyr_create",
                       {"title": "Res item", "type": "feature", "area_name": "core"}))
     tmpl = (await _rpc(client, raw, "resources/templates/list")).json()["result"]
     assert "resourceTemplates" in tmpl
     assert (await _rpc(client, raw, "resources/list")).json()["result"] == {"resources": []}
-    area = (await _rpc(client, raw, "resources/read", {"uri": "pulso://area/core"})).json()
+    area = (await _rpc(client, raw, "resources/read", {"uri": "pulsyr://area/core"})).json()
     body = json.loads(area["result"]["contents"][0]["text"])
     assert body["area"] == "core"
-    bad = (await _rpc(client, raw, "resources/read", {"uri": "pulso://nope/x"})).json()
+    bad = (await _rpc(client, raw, "resources/read", {"uri": "pulsyr://nope/x"})).json()
     assert bad["error"]["code"] == -32602
 
 
@@ -203,21 +203,21 @@ async def test_batch_and_errors(client: AsyncClient):
     # batch: two calls in one request
     batch = await client.post("/mcp", json=[
         {"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
-        {"jsonrpc": "2.0", "id": 2, "method": "pulso_areas_not_a_method"},
+        {"jsonrpc": "2.0", "id": 2, "method": "pulsyr_areas_not_a_method"},
     ], headers=_hdr(raw))
     assert isinstance(batch.json(), list) and len(batch.json()) == 2
 
     # unknown tool
-    unk = await _call(client, raw, "pulso_does_not_exist", {})
+    unk = await _call(client, raw, "pulsyr_does_not_exist", {})
     assert unk["isError"] is True and "Unknown tool" in _text(unk)
 
     # missing required argument (KeyError path) — create without title
-    miss = await _call(client, raw, "pulso_create", {"type": "feature", "area_name": "x"})
+    miss = await _call(client, raw, "pulsyr_create", {"type": "feature", "area_name": "x"})
     assert miss["isError"] is True
 
     # read-only token cannot write
     raw_ro, _ = await _setup(client, scopes="read")
-    ro = await _call(client, raw_ro, "pulso_create",
+    ro = await _call(client, raw_ro, "pulsyr_create",
                      {"title": "no", "type": "bug", "area_name": "x"})
     assert ro["isError"] is True and "write" in _text(ro)
 

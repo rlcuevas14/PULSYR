@@ -60,10 +60,10 @@ async def test_enrich_item_with_mocked_api(monkeypatch):
 @pytest.mark.asyncio
 async def test_triage_and_generate_with_mocked_api(monkeypatch):
     monkeypatch.setattr("app.config.settings.anthropic_api_key", "key")
-    _mock_post(monkeypatch, {"content": [{"text": '{"triage": "ruido"}'}]})
-    assert (await llm.triage_sentry("t", "ctx"))["triage"] == "ruido"
+    _mock_post(monkeypatch, {"content": [{"text": '{"triage": "noise"}'}]})
+    assert (await llm.triage_sentry("t", "ctx"))["triage"] == "noise"
     _mock_post(monkeypatch, {"content": [{"text": '{"triage": "weird"}'}]})
-    assert (await llm.triage_sentry("t", "ctx"))["triage"] == "bug-real"  # default
+    assert (await llm.triage_sentry("t", "ctx"))["triage"] == "real-bug"  # default
     _mock_post(monkeypatch, {"content": [{"text": "# Spec\nbody"}]})
     gen = await llm.generate_stage("spec", "Thread", "sum", "prev")
     assert "Spec" in gen["content"] and gen["model"]

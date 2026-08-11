@@ -45,19 +45,19 @@ def _data(res):
 
 
 async def _make_item(client, raw, title="Task one", type="feature", area="backend"):
-    res = await _call(client, raw, "pulso_create",
+    res = await _call(client, raw, "pulsyr_create",
                       {"title": title, "type": type, "area_name": area})
     return _data(res)
 
 
-# ---------- pulso_list orders + pulso_search filters ----------
+# ---------- pulsyr_list orders + pulsyr_search filters ----------
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("order", ["impact", "priority", "topological", "recent"])
 async def test_list_orders(client, order):
     raw, _ = await _token_pid(client)
     await _make_item(client, raw, title=f"item-{order}", area="ops")
-    res = await _call(client, raw, "pulso_list", {"order": order, "limit": 50})
+    res = await _call(client, raw, "pulsyr_list", {"order": order, "limit": 50})
     assert not _err(res)
     assert isinstance(_data(res), list)
 
@@ -67,9 +67,9 @@ async def test_search_area_and_type_filters(client):
     raw, _ = await _token_pid(client)
     await _make_item(client, raw, title="login bug alpha", type="bug", area="auth")
     await _make_item(client, raw, title="login feature beta", type="feature", area="ui")
-    only_bug = _data(await _call(client, raw, "pulso_search", {"q": "login", "type": "bug"}))
+    only_bug = _data(await _call(client, raw, "pulsyr_search", {"q": "login", "type": "bug"}))
     assert all(r["type"] == "bug" for r in only_bug)
-    only_auth = _data(await _call(client, raw, "pulso_search", {"q": "login", "area": "auth"}))
+    only_auth = _data(await _call(client, raw, "pulsyr_search", {"q": "login", "area": "auth"}))
     assert all((r["area"] or "").lower() == "auth" for r in only_auth)
 
 
@@ -79,7 +79,7 @@ async def test_search_area_and_type_filters(client):
 async def test_move_area_to_nonexistent_area_errors(client):
     raw, _ = await _token_pid(client)
     it = await _make_item(client, raw)
-    res = await _call(client, raw, "pulso_move_area",
+    res = await _call(client, raw, "pulsyr_move_area",
                       {"item_id": it["id"], "area_name": "ghost-area"})
     assert _err(res)
 
@@ -88,7 +88,7 @@ async def test_move_area_to_nonexistent_area_errors(client):
 async def test_move_area_missing_area_name_errors(client):
     raw, _ = await _token_pid(client)
     it = await _make_item(client, raw)
-    res = await _call(client, raw, "pulso_move_area", {"item_id": it["id"]})
+    res = await _call(client, raw, "pulsyr_move_area", {"item_id": it["id"]})
     assert _err(res) and "area_name" in _text(res)
 
 
@@ -96,14 +96,14 @@ async def test_move_area_missing_area_name_errors(client):
 async def test_advance_missing_to_status_errors(client):
     raw, _ = await _token_pid(client)
     it = await _make_item(client, raw)
-    res = await _call(client, raw, "pulso_advance", {"item_id": it["id"]})
+    res = await _call(client, raw, "pulsyr_advance", {"item_id": it["id"]})
     assert _err(res) and "to_status" in _text(res)
 
 
 @pytest.mark.asyncio
 async def test_advance_without_item_ref_errors(client):
     raw, _ = await _token_pid(client)
-    res = await _call(client, raw, "pulso_advance", {"to_status": "spec"})
+    res = await _call(client, raw, "pulsyr_advance", {"to_status": "spec"})
     assert _err(res)
 
 
@@ -111,7 +111,7 @@ async def test_advance_without_item_ref_errors(client):
 async def test_advance_invalid_transition_errors(client):
     raw, _ = await _token_pid(client)
     it = await _make_item(client, raw)
-    res = await _call(client, raw, "pulso_advance", {"item_id": it["id"], "to_status": "done"})
+    res = await _call(client, raw, "pulsyr_advance", {"item_id": it["id"], "to_status": "done"})
     assert _err(res) and "transition" in _text(res).lower()
 
 
@@ -119,7 +119,7 @@ async def test_advance_invalid_transition_errors(client):
 async def test_advance_by_query_resolves(client):
     raw, _ = await _token_pid(client)
     await _make_item(client, raw, title="uniquequery widget", area="ui")
-    res = await _call(client, raw, "pulso_advance", {"query": "uniquequery widget", "to_status": "spec"})
+    res = await _call(client, raw, "pulsyr_advance", {"query": "uniquequery widget", "to_status": "spec"})
     assert not _err(res)
     assert _data(res)["status"] == "spec"
 
@@ -128,9 +128,9 @@ async def test_advance_by_query_resolves(client):
 async def test_complete_twice_is_idempotent(client):
     raw, _ = await _token_pid(client)
     it = await _make_item(client, raw)
-    first = await _call(client, raw, "pulso_complete", {"item_id": it["id"]})
+    first = await _call(client, raw, "pulsyr_complete", {"item_id": it["id"]})
     assert not _err(first)
-    again = await _call(client, raw, "pulso_complete", {"item_id": it["id"]})
+    again = await _call(client, raw, "pulsyr_complete", {"item_id": it["id"]})
     assert not _err(again)  # completing a done item is a no-op, not an error
 
 
@@ -139,7 +139,7 @@ async def test_link_missing_relation_errors(client):
     raw, _ = await _token_pid(client)
     a = await _make_item(client, raw, title="src item")
     b = await _make_item(client, raw, title="tgt item")
-    res = await _call(client, raw, "pulso_link", {"source_id": a["id"], "target_id": b["id"]})
+    res = await _call(client, raw, "pulsyr_link", {"source_id": a["id"], "target_id": b["id"]})
     assert _err(res) and "relation" in _text(res)
 
 
@@ -148,7 +148,7 @@ async def test_link_invalid_relation_errors(client):
     raw, _ = await _token_pid(client)
     a = await _make_item(client, raw, title="src2 item")
     b = await _make_item(client, raw, title="tgt2 item")
-    res = await _call(client, raw, "pulso_link",
+    res = await _call(client, raw, "pulsyr_link",
                       {"source_id": a["id"], "target_id": b["id"], "relation": "bogus-rel"})
     assert _err(res)
 
@@ -158,7 +158,7 @@ async def test_link_success(client):
     raw, _ = await _token_pid(client)
     a = await _make_item(client, raw, title="src3 item")
     b = await _make_item(client, raw, title="tgt3 item")
-    res = await _call(client, raw, "pulso_link",
+    res = await _call(client, raw, "pulsyr_link",
                       {"source_id": a["id"], "target_id": b["id"], "relation": "blocks"})
     assert not _err(res)
     assert _data(res)["relation"] == "blocks"
@@ -169,17 +169,17 @@ async def test_link_success(client):
 @pytest.mark.asyncio
 async def test_thread_advance_not_found_errors(client):
     raw, _ = await _token_pid(client)
-    res = await _call(client, raw, "pulso_thread_advance", {"thread_id": str(uuid.uuid4())})
+    res = await _call(client, raw, "pulsyr_thread_advance", {"thread_id": str(uuid.uuid4())})
     assert _err(res) and "not found" in _text(res).lower()
 
 
 @pytest.mark.asyncio
 async def test_thread_advance_past_end_errors(client):
     raw, _ = await _token_pid(client)
-    t = _data(await _call(client, raw, "pulso_thread_create", {"area_name": "billing", "title": "Billing"}))
+    t = _data(await _call(client, raw, "pulsyr_thread_create", {"area_name": "billing", "title": "Billing"}))
     saw_error = False
     for _ in range(10):
-        res = await _call(client, raw, "pulso_thread_advance", {"thread_id": t["id"]})
+        res = await _call(client, raw, "pulsyr_thread_advance", {"thread_id": t["id"]})
         if _err(res):
             saw_error = True
             break
@@ -189,14 +189,14 @@ async def test_thread_advance_past_end_errors(client):
 @pytest.mark.asyncio
 async def test_thread_detail_not_found_errors(client):
     raw, _ = await _token_pid(client)
-    res = await _call(client, raw, "pulso_thread", {"id": str(uuid.uuid4())})
+    res = await _call(client, raw, "pulsyr_thread", {"id": str(uuid.uuid4())})
     assert _err(res) and "not found" in _text(res).lower()
 
 
 @pytest.mark.asyncio
 async def test_thread_link_missing_id_errors(client):
     raw, _ = await _token_pid(client)
-    res = await _call(client, raw, "pulso_thread_link", {"item_id": str(uuid.uuid4())})
+    res = await _call(client, raw, "pulsyr_thread_link", {"item_id": str(uuid.uuid4())})
     assert _err(res) and "thread_id" in _text(res)
 
 
@@ -204,7 +204,7 @@ async def test_thread_link_missing_id_errors(client):
 async def test_thread_link_not_found_errors(client):
     raw, _ = await _token_pid(client)
     it = await _make_item(client, raw)
-    res = await _call(client, raw, "pulso_thread_link",
+    res = await _call(client, raw, "pulsyr_thread_link",
                       {"thread_id": str(uuid.uuid4()), "item_id": it["id"]})
     assert _err(res) and "not found" in _text(res).lower()
 
@@ -220,7 +220,7 @@ async def _seed_incident(client, pid):
         db.add(SentryIssue(
             id=iid, project_id=pid, sentry_issue_id=f"S{uuid.uuid4().hex[:8]}",
             title="Boom error", project="proj", level="error", status="new",
-            events_count=3, triage="pendiente",
+            events_count=3, triage="pending",
         ))
         await db.commit()
         break
@@ -231,7 +231,7 @@ async def _seed_incident(client, pid):
 async def test_incident_detail_without_sentry_token(client):
     raw, pid = await _token_pid(client)
     iid = await _seed_incident(client, pid)
-    res = await _call(client, raw, "pulso_incident", {"id": str(iid)})
+    res = await _call(client, raw, "pulsyr_incident", {"id": str(iid)})
     assert not _err(res)
     data = _data(res)
     # No Sentry API token configured → stack trace fetch fails gracefully.
@@ -242,14 +242,14 @@ async def test_incident_detail_without_sentry_token(client):
 @pytest.mark.asyncio
 async def test_incident_not_found_errors(client):
     raw, _ = await _token_pid(client)
-    res = await _call(client, raw, "pulso_incident", {"id": str(uuid.uuid4())})
+    res = await _call(client, raw, "pulsyr_incident", {"id": str(uuid.uuid4())})
     assert _err(res)
 
 
 @pytest.mark.asyncio
 async def test_incident_resolve_not_found_errors(client):
     raw, _ = await _token_pid(client)
-    res = await _call(client, raw, "pulso_incident_resolve", {"id": str(uuid.uuid4())})
+    res = await _call(client, raw, "pulsyr_incident_resolve", {"id": str(uuid.uuid4())})
     assert _err(res)
 
 
@@ -257,18 +257,18 @@ async def test_incident_resolve_not_found_errors(client):
 async def test_incidents_list_status_all(client):
     raw, pid = await _token_pid(client)
     await _seed_incident(client, pid)
-    res = await _call(client, raw, "pulso_incidents", {"status": "all"})
+    res = await _call(client, raw, "pulsyr_incidents", {"status": "all"})
     assert not _err(res)
     assert len(_data(res)) >= 1
 
 
-# ---------- pulso_context with area fallback (no quickwins -> p0/p1) ----------
+# ---------- pulsyr_context with area fallback (no quickwins -> p0/p1) ----------
 
 @pytest.mark.asyncio
 async def test_context_area_fallback(client):
     raw, _ = await _token_pid(client)
     await _make_item(client, raw, title="urgent thing", area="infra")
-    res = await _call(client, raw, "pulso_context", {"area": "infra"})
+    res = await _call(client, raw, "pulsyr_context", {"area": "infra"})
     assert not _err(res)
     assert "local" in _data(res)
 
@@ -360,7 +360,7 @@ async def test_enqueue_pending_enrich_owner(client):
     cookies = await _owner_cookie(client)
     r = await client.post("/api/v1/items/enrich-pending", cookies=cookies)
     assert r.status_code == 202
-    assert "encolados" in r.json()
+    assert "queued" in r.json()
 
 
 @pytest.mark.asyncio

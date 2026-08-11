@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     secret_key: str = _INSECURE_SECRET
     debug: bool = False
 
-    # Optional — base URL when running behind a reverse proxy (e.g. https://pulso.example.com)
+    # Optional — base URL when running behind a reverse proxy (e.g. https://pulsyr.example.com)
     base_url: str = "http://localhost:8000"
 
     # Optional — AI enrichment (degrade gracefully if absent)

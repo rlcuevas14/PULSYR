@@ -19,7 +19,7 @@ async def enqueue_job(
     project_id: uuid.UUID | None = None,
 ) -> AgentRun:
     run = AgentRun(
-        kind=kind, ref_type=ref_type, ref_id=ref_id, status="pendiente", project_id=project_id
+        kind=kind, ref_type=ref_type, ref_id=ref_id, status="pending", project_id=project_id
     )
     db.add(run)
     await db.commit()
@@ -28,12 +28,12 @@ async def enqueue_job(
 
 
 async def reclaim_expired_leases(db: AsyncSession) -> int:
-    """Return jobs whose lease has expired back to 'pendiente'."""
+    """Return jobs whose lease has expired back to 'pending'."""
     now = datetime.now(timezone.utc)
     result = await db.execute(
         update(AgentRun)
-        .where(AgentRun.status == "corriendo", AgentRun.leased_until < now)
-        .values(status="pendiente", leased_until=None)
+        .where(AgentRun.status == "running", AgentRun.leased_until < now)
+        .values(status="pending", leased_until=None)
     )
     await db.commit()
     return result.rowcount  # type: ignore[attr-defined]
@@ -46,7 +46,7 @@ async def process_one(db: AsyncSession) -> bool:
 
     result = await db.execute(
         select(AgentRun)
-        .where(AgentRun.status == "pendiente")
+        .where(AgentRun.status == "pending")
         .order_by(AgentRun.created_at)
         .limit(1)
         .with_for_update(skip_locked=True)
@@ -55,7 +55,7 @@ async def process_one(db: AsyncSession) -> bool:
     if run is None:
         return False
 
-    run.status = "corriendo"
+    run.status = "running"
     run.leased_until = lease_until
     await db.commit()
 

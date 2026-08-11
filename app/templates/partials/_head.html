@@ -1,7 +1,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#fffaf0">
-<link rel="icon" type="image/svg+xml" href="/static/brand/pulso-favicon-16.svg">
+<link rel="icon" type="image/svg+xml" href="/static/brand/pulsyr-favicon-16.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
 <link rel="apple-touch-icon" href="/static/brand/apple-touch-180.png">
 <link rel="manifest" href="/static/manifest.webmanifest">
@@ -12,7 +12,7 @@
 <script>
   (function () {
     try {
-      var t = localStorage.getItem("pulso-theme");
+      var t = localStorage.getItem("pulsyr-theme");
       var dark = t === "dark" || (!t && window.matchMedia("(prefers-color-scheme: dark)").matches);
       if (dark) document.documentElement.classList.add("dark");
       var m = document.querySelector('meta[name="theme-color"]');
@@ -21,7 +21,7 @@
   })();
   function toggleTheme() {
     var dark = document.documentElement.classList.toggle("dark");
-    try { localStorage.setItem("pulso-theme", dark ? "dark" : "light"); } catch (e) {}
+    try { localStorage.setItem("pulsyr-theme", dark ? "dark" : "light"); } catch (e) {}
     var m = document.querySelector('meta[name="theme-color"]');
     if (m) m.content = dark ? "#0e0e10" : "#fffaf0";
   }
@@ -69,12 +69,15 @@
     --ink:#0a0a0a; --body:#3a3a3a; --muted:#6f6a5c; --hairline:#eae5d9;
     --primary:#0a0a0a; --on-primary:#ffffff;
     --accent:#6366f1; --accent-fg:#ffffff;
+    --accent-strong:#4f46e5; /* indigo readable as TEXT on cream (6.0:1); #6366f1 is 4.29:1 -> fills/focus only */
+    --project:#6366f1; --project-fg:#ffffff; /* overridden per project in base.html; identity, never text */
     --warning-strong:#b45309; /* amber readable as TEXT on cream (AA); #f59e0b stays for fills */
   }
   html.dark {
     --canvas:#0e0e10; --surface-soft:#17171a; --surface-card:#1c1c20; --surface-strong:#242429;
     --ink:#f5f3ee; --body:#c9c7c1; --muted:#8f8d88; --hairline:#2a2a30;
     --primary:#f5f3ee; --on-primary:#0e0e10;
+    --accent-strong:#818cf8; /* 6.5:1 on the dark canvas */
     --warning-strong:#f59e0b;
   }
   /* ---- kit de componentes ---- */
@@ -106,7 +109,7 @@
   .p-md code { background:var(--surface-strong); padding:1px 5px; border-radius:6px; font-size:.9em; }
   .p-md pre { background:var(--surface-strong); padding:.75rem; border-radius:10px; overflow-x:auto; margin:.5rem 0; }
   .p-md pre code { background:transparent; padding:0; }
-  .p-md a { color:var(--accent); text-decoration:underline; text-underline-offset:2px; }
+  .p-md a { color:var(--accent-strong); text-decoration:underline; text-underline-offset:2px; }
   .p-md h1, .p-md h2, .p-md h3, .p-md h4 { font-weight:600; color:var(--ink); margin:.75rem 0 .25rem; }
   .p-md blockquote { border-left:3px solid var(--hairline); padding-left:.75rem; color:var(--muted); margin:.5rem 0; }
   .p-md hr { border:0; border-top:1px solid var(--hairline); margin:.75rem 0; }
@@ -130,10 +133,10 @@
   /* spinner de marca: oculto hasta que htmx marca la request */
   .p-spin { display:none; }
   .htmx-request .p-spin, .htmx-request.p-spin { display:inline-block; }
-  .p-spin path { stroke-dasharray:61; animation:pulso-dash 1.6s ease-in-out infinite; }
-  .p-spin circle { animation:pulso-blip 1.6s linear infinite; }
-  @keyframes pulso-dash { 0%{stroke-dashoffset:61} 50%{stroke-dashoffset:0} 100%{stroke-dashoffset:-61} }
-  @keyframes pulso-blip { 0%,40%,100%{opacity:.35} 55%{opacity:1} }
+  .p-spin path { stroke-dasharray:61; animation:pulsyr-dash 1.6s ease-in-out infinite; }
+  .p-spin circle { animation:pulsyr-blip 1.6s linear infinite; }
+  @keyframes pulsyr-dash { 0%{stroke-dashoffset:61} 50%{stroke-dashoffset:0} 100%{stroke-dashoffset:-61} }
+  @keyframes pulsyr-blip { 0%,40%,100%{opacity:.35} 55%{opacity:1} }
   @keyframes p-pop { from{opacity:0;transform:scale(.9)} to{opacity:1;transform:scale(1)} }
   @keyframes p-draw { to{stroke-dashoffset:0} }
   @media (prefers-reduced-motion: reduce) {

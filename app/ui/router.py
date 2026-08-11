@@ -603,7 +603,7 @@ async def ui_board_move(
     resp = templates.TemplateResponse(request, "partials/items_board.html", ctx)
     if invalid:
         resp.headers["HX-Trigger"] = _json.dumps(
-            {"pulso:toast": {"message": invalid, "kind": "error"}}
+            {"pulsyr:toast": {"message": invalid, "kind": "error"}}
         )
     return resp
 

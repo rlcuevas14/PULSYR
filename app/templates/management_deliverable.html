@@ -49,7 +49,7 @@
     {% if v.version_no != d.current_version %}
     <form action="/ui/management/documentos/{{ d.id }}/rollback" method="post" class="inline">
       <input type="hidden" name="version_no" value="{{ v.version_no }}">
-      <button type="submit" class="text-muted hover:text-ink" style="color:var(--accent)">{{ t("management.doc.rollback") }}</button>
+      <button type="submit" class="text-muted hover:text-ink" style="color:var(--accent-strong)">{{ t("management.doc.rollback") }}</button>
     </form>
     {% else %}
     <span class="p-pill bg-success/15 text-ink">{{ t("management.doc.current") }}</span>

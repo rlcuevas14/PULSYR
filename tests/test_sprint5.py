@@ -143,7 +143,7 @@ async def test_sentry_triage_hides_noise(client: AsyncClient, monkeypatch):
     )
 
     async def fake_triage(title, context):
-        return {"triage": "ruido"}
+        return {"triage": "noise"}
 
     monkeypatch.setattr(llm, "triage_sentry", fake_triage)
     async for db in client.app.dependency_overrides[get_db]():
@@ -152,7 +152,7 @@ async def test_sentry_triage_hides_noise(client: AsyncClient, monkeypatch):
         )).scalar_one()
         out = await handle_triage_sentry(db, issue.id)
         await db.commit()
-        assert out["triage"] == "ruido"
+        assert out["triage"] == "noise"
         issue2 = await db.get(SentryIssue, issue.id)
         assert issue2.status == "ignored"
         assert issue2.item_id is None
@@ -160,11 +160,10 @@ async def test_sentry_triage_hides_noise(client: AsyncClient, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_sentry_triage_promotes_bug_real(client: AsyncClient, monkeypatch):
-    """El triage clasifica bug-real → auto-promueve al backlog como ítem p0 (el tope)."""
+async def test_sentry_triage_classifies_without_promoting(client: AsyncClient, monkeypatch):
+    """El triage clasifica bug-real pero NO escribe en el backlog: promover es del owner."""
     from app.ai import llm
     from app.database import get_db
-    from app.items.models import Item
     from app.jobs.handlers import handle_triage_sentry
     from app.webhooks.models import SentryIssue
 
@@ -177,7 +176,7 @@ async def test_sentry_triage_promotes_bug_real(client: AsyncClient, monkeypatch)
     )
 
     async def fake_triage(title, context):
-        return {"triage": "bug-real"}
+        return {"triage": "real-bug"}
 
     monkeypatch.setattr(llm, "triage_sentry", fake_triage)
     async for db in client.app.dependency_overrides[get_db]():
@@ -186,14 +185,12 @@ async def test_sentry_triage_promotes_bug_real(client: AsyncClient, monkeypatch)
         )).scalar_one()
         out = await handle_triage_sentry(db, issue.id)
         await db.commit()
-        assert out["triage"] == "bug-real"
-        assert out["promoted_item_id"] is not None
+        assert out["triage"] == "real-bug"
+        assert "promoted_item_id" not in out
         issue2 = await db.get(SentryIssue, issue.id)
-        assert issue2.status == "linked"
-        assert issue2.item_id is not None
-        item = await db.get(Item, issue2.item_id)
-        assert item.type == "bug"
-        assert item.priority == "p0"  # al tope del backlog
+        assert issue2.item_id is None       # sigue en el contenedor, sin ítem
+        assert issue2.status != "linked"
+        assert issue2.triage == "real-bug"  # clasificado, que es todo lo que debe hacer
         break
 
 
@@ -223,7 +220,7 @@ async def test_github_completes_item(client: AsyncClient, monkeypatch):
         break
 
     body = json.dumps({"commits": [
-        {"id": "abc123def456", "message": f"fix(auth): resuelto pulso:{item_id}"}
+        {"id": "abc123def456", "message": f"fix(auth): resuelto pulsyr:{item_id}"}
     ]}).encode()
     r = await client.post(
         "/webhooks/github", content=body,

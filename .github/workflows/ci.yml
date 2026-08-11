@@ -15,19 +15,19 @@ jobs:
       db:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_USER: pulso
+          POSTGRES_USER: pulsyr
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: pulso_test
+          POSTGRES_DB: pulsyr_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U pulso"
+          --health-cmd "pg_isready -U pulsyr"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
 
     env:
-      TEST_DATABASE_URL: postgresql+asyncpg://pulso:test@localhost:5432/pulso_test
+      TEST_DATABASE_URL: postgresql+asyncpg://pulsyr:test@localhost:5432/pulsyr_test
       SECRET_KEY: test-secret
       DEBUG: "true"
 
@@ -57,7 +57,7 @@ jobs:
       # create_all, not migrations) and leaves the DB migrated for eventual inspection.
       - name: Alembic migrations (round-trip)
         env:
-          DATABASE_URL: postgresql+asyncpg://pulso:test@localhost:5432/pulso_test
+          DATABASE_URL: postgresql+asyncpg://pulsyr:test@localhost:5432/pulsyr_test
         run: |
           alembic upgrade head
           alembic downgrade base

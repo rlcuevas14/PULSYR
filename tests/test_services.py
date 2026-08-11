@@ -211,8 +211,9 @@ async def test_handle_triage_promotes_bug(db, monkeypatch):
     issue = (await db.execute(select(SentryIssue).order_by(SentryIssue.first_seen.desc()))).scalars().first()
 
     async def fake_triage(title, ctx):
-        return {"triage": "bug-real"}
+        return {"triage": "real-bug"}
 
     monkeypatch.setattr("app.ai.llm.triage_sentry", fake_triage)
     out = await handle_triage_sentry(db, issue.id)
-    assert out["triage"] == "bug-real" and out["promoted_item_id"] is not None
+    assert out["triage"] == "real-bug" and "promoted_item_id" not in out
+    assert issue.item_id is None  # clasifica, no promueve

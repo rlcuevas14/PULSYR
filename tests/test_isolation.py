@@ -113,7 +113,7 @@ async def test_mcp_token_cannot_read_other_account(client: AsyncClient):
     r = await client.post(
         "/mcp",
         json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
-              "params": {"name": "pulso_list", "arguments": {}}},
+              "params": {"name": "pulsyr_list", "arguments": {}}},
         headers=hdr,
     )
     result = r.json()["result"]

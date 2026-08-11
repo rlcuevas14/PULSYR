@@ -1,4 +1,4 @@
-# Pulso
+# Pulsyr
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -8,7 +8,7 @@
 
 ## How it works
 
-You run Pulso on your own server (or locally). Claude Code connects to it as an MCP server. As the agent codes, it reads context, creates items, advances statuses, and closes completed work — automatically.
+You run Pulsyr on your own server (or locally). Claude Code connects to it as an MCP server. As the agent codes, it reads context, creates items, advances statuses, and closes completed work — automatically.
 
 Each project gets its own MCP token. The agent cannot write to the wrong project.
 
@@ -19,8 +19,8 @@ Each project gets its own MCP token. The agent cannot write to the wrong project
 **Prerequisites:** Docker, Docker Compose, a Postgres instance (included in the compose file).
 
 ```bash
-git clone https://github.com/rlcuevas14/PULSO
-cd PULSO
+git clone https://github.com/rlcuevas14/PULSYR
+cd PULSYR
 cp .env.example .env
 ```
 
@@ -36,7 +36,7 @@ docker compose up -d
 ```
 
 The compose file pulls the prebuilt public image
-[`ghcr.io/rlcuevas14/pulso`](https://github.com/rlcuevas14/PULSO/pkgs/container/pulso) —
+[`ghcr.io/rlcuevas14/pulsyr`](https://github.com/rlcuevas14/PULSYR/pkgs/container/pulsyr) —
 no local build needed.
 
 Open **http://localhost:8000** → redirects to `/setup` to create your account, first project, and write token in one step.
@@ -50,7 +50,7 @@ claude mcp add --transport http my-project http://localhost:8000/mcp \
   --header "Authorization: Bearer <TOKEN>"
 ```
 
-Restart Claude Code. Call `pulso_context` at the start of any session to get your current priorities, blockers, and open incidents.
+Restart Claude Code. Call `pulsyr_context` at the start of any session to get your current priorities, blockers, and open incidents.
 
 ---
 
@@ -58,32 +58,32 @@ Restart Claude Code. Call `pulso_context` at the start of any session to get you
 
 | Tool | What it does |
 |------|--------------|
-| `pulso_context` | Session briefing: quick wins, blockers, unlinked Sentry errors, active threads |
-| `pulso_search` | Full-text search across backlog items |
-| `pulso_list` | Filtered item list (status, type, area, order) |
-| `pulso_areas` | List areas (groupings) with item counts |
-| `pulso_create` | Create a backlog item; auto-creates the area if needed |
-| `pulso_advance` | Transition an item's status (lifecycle-validated) |
-| `pulso_complete` | Mark an item done — reports newly unblocked items |
-| `pulso_link` | Add a graph edge between items (`blocks` / `requires` / `conflicts` / `related` / `part_of`) |
-| `pulso_move_area` | Move an item to a different area |
-| `pulso_thread_create` | Create a Thread (funnel for heavy features) |
-| `pulso_thread_advance` | Advance a Thread to its next stage |
-| `pulso_thread_list` | List Threads, filter by stage or area |
-| `pulso_thread` | Thread detail with artifacts and linked items |
-| `pulso_thread_link` | Link an existing backlog item to a Thread |
-| `pulso_incidents` | List Sentry errors in the incident container |
-| `pulso_incident` | Incident detail with stack trace fetched from Sentry |
-| `pulso_incident_resolve` | Resolve an incident in Pulso (and optionally in Sentry) |
-| `pulso_doc_list` | List management documents (deliverables) grouped by compartment |
-| `pulso_doc_get` | Read a management document (current or a specific version) |
-| `pulso_doc_put` | Create or update a management document (append-only versioning) |
-| `pulso_pending_list` | List project pendings (action items) with owner and status |
-| `pulso_pending_upsert` | Create or update a pending |
-| `pulso_pending_complete` | Mark a pending as done |
-| `pulso_gantt_get` | Read the project plan (3-level Gantt hierarchy) |
-| `pulso_gantt_task_upsert` | Create or update a plan task (the Gantt is edited only via MCP) |
-| `pulso_gantt_task_remove` | Remove a plan task |
+| `pulsyr_context` | Session briefing: quick wins, blockers, unlinked Sentry errors, active threads |
+| `pulsyr_search` | Full-text search across backlog items |
+| `pulsyr_list` | Filtered item list (status, type, area, order) |
+| `pulsyr_areas` | List areas (groupings) with item counts |
+| `pulsyr_create` | Create a backlog item; auto-creates the area if needed |
+| `pulsyr_advance` | Transition an item's status (lifecycle-validated) |
+| `pulsyr_complete` | Mark an item done — reports newly unblocked items |
+| `pulsyr_link` | Add a graph edge between items (`blocks` / `requires` / `conflicts` / `related` / `part_of`) |
+| `pulsyr_move_area` | Move an item to a different area |
+| `pulsyr_thread_create` | Create a Thread (funnel for heavy features) |
+| `pulsyr_thread_advance` | Advance a Thread to its next stage |
+| `pulsyr_thread_list` | List Threads, filter by stage or area |
+| `pulsyr_thread` | Thread detail with artifacts and linked items |
+| `pulsyr_thread_link` | Link an existing backlog item to a Thread |
+| `pulsyr_incidents` | List Sentry errors in the incident container |
+| `pulsyr_incident` | Incident detail with stack trace fetched from Sentry |
+| `pulsyr_incident_resolve` | Resolve an incident in Pulsyr (and optionally in Sentry) |
+| `pulsyr_doc_list` | List management documents (deliverables) grouped by compartment |
+| `pulsyr_doc_get` | Read a management document (current or a specific version) |
+| `pulsyr_doc_put` | Create or update a management document (append-only versioning) |
+| `pulsyr_pending_list` | List project pendings (action items) with owner and status |
+| `pulsyr_pending_upsert` | Create or update a pending |
+| `pulsyr_pending_complete` | Mark a pending as done |
+| `pulsyr_gantt_get` | Read the project plan (3-level Gantt hierarchy) |
+| `pulsyr_gantt_task_upsert` | Create or update a plan task (the Gantt is edited only via MCP) |
+| `pulsyr_gantt_task_remove` | Remove a plan task |
 
 ---
 
@@ -108,7 +108,7 @@ Transitions are validated — the agent can't make illegal moves. Terminal state
 - **Multi-project** — N projects, one database. Token-level isolation: each MCP token is bound to exactly one project.
 - **Threads** — a lightweight funnel for features too big to go straight to the backlog (idea → investigation → stories → spec → in-development → review → done).
 - **Sentry integration** — errors land in a dedicated incident container. AI triage pre-classifies noise. You (or the agent) promote real issues to the backlog manually.
-- **GitHub webhook** — include `pulso:ITEM-UUID` in any commit message to auto-close the referenced item.
+- **GitHub webhook** — include `pulsyr:ITEM-UUID` in any commit message to auto-close the referenced item.
 - **AI enrichment** — impact/effort estimation via Claude Haiku. Optional; degrades gracefully without `ANTHROPIC_API_KEY`.
 - **Semantic search** — embedding-based neighbor lookup via Gemini + pgvector. Optional; requires both `GEMINI_API_KEY` and a Postgres instance with pgvector.
 - **No Node.js** — Tailwind and HTMX load from CDN. Server renders HTML; HTMX handles partial updates.
@@ -145,7 +145,7 @@ pip install -e ".[dev]"
 
 # Run tests (Postgres required — any empty database works; pgvector NOT required.
 # DEBUG=true is mandatory: without it the session cookie is `secure` and UI tests 303-redirect)
-TEST_DATABASE_URL="postgresql+asyncpg://user:pass@localhost:5432/pulso_test" \
+TEST_DATABASE_URL="postgresql+asyncpg://user:pass@localhost:5432/pulsyr_test" \
   DEBUG=true SECRET_KEY=any-test-secret \
   python -m pytest tests/ -q
 
@@ -189,4 +189,7 @@ security vulnerability privately, see [SECURITY.md](SECURITY.md).
 
 ## License
 
-[MIT](LICENSE) © 2026 Rodolfo Cuevas
+[MIT](LICENSE) © 2026 Avonlea Systems SpA
+
+The code is MIT. The **name and logo** are trademarks — fork freely, but ship it
+under your own name. See [TRADEMARK.md](TRADEMARK.md).

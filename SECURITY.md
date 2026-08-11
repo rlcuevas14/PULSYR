@@ -1,6 +1,6 @@
 # Security Policy
 
-Pulso is a self-hosted application that handles authentication, API tokens,
+Pulsyr is a self-hosted application that handles authentication, API tokens,
 and inbound webhooks — security reports are taken seriously.
 
 ## Supported versions

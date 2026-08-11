@@ -14,7 +14,7 @@
   "discarded":      "bg-surface-strong",
 } %}
 
-<div class="mb-4"><a href="/threads" class="text-sm underline underline-offset-2" style="color:var(--accent)">← {{ t("nav.threads") }}</a></div>
+<div class="mb-4"><a href="/threads" class="text-sm underline underline-offset-2" style="color:var(--accent-strong)">← {{ t("nav.threads") }}</a></div>
 
 <div class="p-card p-5 mb-5">
   <div class="flex items-start justify-between gap-4">
@@ -43,7 +43,7 @@
   {% if thread.stage not in ('done', 'discarded') %}
   <div class="border border-hairline rounded-xl p-4 mb-2 bg-surface-soft">
     <div class="text-sm font-medium text-body mb-2">
-      {% if next_stage %}{{ t("threads.next_stage") }} <span style="color:var(--accent)">{{ t("stage." ~ next_stage) }}</span>{% else %}{{ t("threads.final_stage") }}{% endif %}
+      {% if next_stage %}{{ t("threads.next_stage") }} <span style="color:var(--accent-strong)">{{ t("stage." ~ next_stage) }}</span>{% else %}{{ t("threads.final_stage") }}{% endif %}
     </div>
     <div class="flex flex-wrap gap-2 items-center">
       {% if next_stage %}

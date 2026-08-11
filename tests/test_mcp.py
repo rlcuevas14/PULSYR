@@ -54,7 +54,7 @@ async def test_initialize_handshake(client: AsyncClient):
     res = r.json()["result"]
     assert res["protocolVersion"] == "2025-03-26"
     assert "tools" in res["capabilities"]
-    assert res["serverInfo"]["name"] == "pulso"
+    assert res["serverInfo"]["name"] == "pulsyr"
 
 
 @pytest.mark.asyncio
@@ -77,9 +77,9 @@ async def test_tools_list(client: AsyncClient):
     raw = await _token(client)
     r = await _rpc(client, raw, "tools/list")
     names = [t["name"] for t in r.json()["result"]["tools"]]
-    assert "pulso_context" in names
-    assert "pulso_create" in names
-    assert "pulso_complete" in names
+    assert "pulsyr_context" in names
+    assert "pulsyr_create" in names
+    assert "pulsyr_complete" in names
 
 
 @pytest.mark.asyncio
@@ -98,17 +98,17 @@ async def test_get_mcp_405(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_pulso_crear_and_buscar(client: AsyncClient):
+async def test_pulsyr_crear_and_buscar(client: AsyncClient):
     raw = await _token(client, "write")
     r = await _rpc(client, raw, "tools/call", {
-        "name": "pulso_create",
+        "name": "pulsyr_create",
         "arguments": {"title": "Tarea MCP zzz", "type": "feature", "area_name": "mcp-scope"},
     })
     assert r.status_code == 200
     result = r.json()["result"]
     assert result["isError"] is False
     # buscar la encuentra
-    s = await _rpc(client, raw, "tools/call", {"name": "pulso_search", "arguments": {"q": "MCP zzz"}})
+    s = await _rpc(client, raw, "tools/call", {"name": "pulsyr_search", "arguments": {"q": "MCP zzz"}})
     import json
     found = json.loads(s.json()["result"]["content"][0]["text"])
     assert any("MCP zzz" in i["title"] for i in found)
@@ -118,7 +118,7 @@ async def test_pulso_crear_and_buscar(client: AsyncClient):
 async def test_read_token_cannot_write(client: AsyncClient):
     raw = await _token(client, "read")
     r = await _rpc(client, raw, "tools/call", {
-        "name": "pulso_create",
+        "name": "pulsyr_create",
         "arguments": {"title": "no debería crearse", "type": "bug", "area_name": "x"},
     })
     assert r.status_code == 200
@@ -127,13 +127,13 @@ async def test_read_token_cannot_write(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_pulso_completar_ambiguous_aborts(client: AsyncClient):
+async def test_pulsyr_completar_ambiguous_aborts(client: AsyncClient):
     from app.database import get_db
     from app.items.models import Item
     from app.scopes.models import Scope
 
     raw = await _token(client, "write")
-    # pulso_create ahora es idempotente (dedup por title+scope abierto) → no se puede
+    # pulsyr_create ahora es idempotente (dedup por title+scope abierto) → no se puede
     # forzar ambigüedad duplicando un título. La ambigüedad real ocurre cuando dos ítems
     # con títulos DISTINTOS empatan EXACTAMENTE en el rank FTS para la query (la palabra
     # «login» aparece una vez en cada título, mismo peso A → mismo ts_rank). Insertamos
@@ -152,16 +152,16 @@ async def test_pulso_completar_ambiguous_aborts(client: AsyncClient):
         break
 
     r = await _rpc(client, raw, "tools/call", {
-        "name": "pulso_complete", "arguments": {"search_query": "login"},
+        "name": "pulsyr_complete", "arguments": {"search_query": "login"},
     })
     assert r.json()["result"]["isError"] is True
     assert "ambig" in r.json()["result"]["content"][0]["text"].lower()
 
 
 @pytest.mark.asyncio
-async def test_pulso_contexto_runs(client: AsyncClient):
+async def test_pulsyr_contexto_runs(client: AsyncClient):
     raw = await _token(client)
-    r = await _rpc(client, raw, "tools/call", {"name": "pulso_context", "arguments": {}})
+    r = await _rpc(client, raw, "tools/call", {"name": "pulsyr_context", "arguments": {}})
     import json
     ctx = json.loads(r.json()["result"]["content"][0]["text"])
     assert "local" in ctx
@@ -186,13 +186,13 @@ async def test_hilo_item_linking(client: AsyncClient):
 
     # crear hilo
     h = await _rpc(client, raw, "tools/call", {
-        "name": "pulso_thread_create", "arguments": {"title": "Módulo Financiero", "area_name": sname}})
+        "name": "pulsyr_thread_create", "arguments": {"title": "Módulo Financiero", "area_name": sname}})
     hilo = _json.loads(h.json()["result"]["content"][0]["text"])
     hid = hilo["id"]
 
-    # crear ítem colgado del hilo (thread_id en pulso_create)
+    # crear ítem colgado del hilo (thread_id en pulsyr_create)
     c = await _rpc(client, raw, "tools/call", {
-        "name": "pulso_create",
+        "name": "pulsyr_create",
         "arguments": {"title": "F0 núcleo cobranza", "type": "feature",
                       "area_name": sname, "thread_id": hid}})
     f0 = _json.loads(c.json()["result"]["content"][0]["text"])
@@ -200,17 +200,17 @@ async def test_hilo_item_linking(client: AsyncClient):
 
     # crear ítem suelto y vincularlo después
     c2 = await _rpc(client, raw, "tools/call", {
-        "name": "pulso_create",
+        "name": "pulsyr_create",
         "arguments": {"title": "F1 pasarela chile", "type": "feature", "area_name": sname}})
     f1 = _json.loads(c2.json()["result"]["content"][0]["text"])
     assert f1["thread_id"] is None  # suelto: _item_brief SIEMPRE incluye thread_id (null si no)
     v = await _rpc(client, raw, "tools/call", {
-        "name": "pulso_thread_link", "arguments": {"thread_id": hid, "item_id": f1["id"]}})
+        "name": "pulsyr_thread_link", "arguments": {"thread_id": hid, "item_id": f1["id"]}})
     linked = _json.loads(v.json()["result"]["content"][0]["text"])
     assert linked["thread_id"] == hid
 
-    # pulso_thread detalle muestra los 2 ítems vinculados
-    d = await _rpc(client, raw, "tools/call", {"name": "pulso_thread", "arguments": {"id": hid}})
+    # pulsyr_thread detalle muestra los 2 ítems vinculados
+    d = await _rpc(client, raw, "tools/call", {"name": "pulsyr_thread", "arguments": {"id": hid}})
     detail = _json.loads(d.json()["result"]["content"][0]["text"])
     titles = {i["title"] for i in detail["items"]}
     assert titles == {"F0 núcleo cobranza", "F1 pasarela chile"}
@@ -238,14 +238,14 @@ async def test_scope_tools(client: AsyncClient):
         await db.commit()
         break
 
-    # 1) pulso_areas lista con nombre + descripción
-    sc = await _rpc(client, raw, "tools/call", {"name": "pulso_areas", "arguments": {}})
+    # 1) pulsyr_areas lista con nombre + descripción
+    sc = await _rpc(client, raw, "tools/call", {"name": "pulsyr_areas", "arguments": {}})
     scopes = _json.loads(sc.json()["result"]["content"][0]["text"])
     assert any(s["name"] == sname and s["description"] == "Currículo y OAs" for s in scopes)
 
     # 2) crear con variante de mayúsculas/espacios → matchea el existente, NO duplica
     cr = await _rpc(client, raw, "tools/call", {
-        "name": "pulso_create",
+        "name": "pulsyr_create",
         "arguments": {"title": "OA electivas", "type": "feature", "area_name": f"  {sname.upper()}  "},
     })
     created = _json.loads(cr.json()["result"]["content"][0]["text"])
@@ -265,7 +265,7 @@ async def test_scope_tools(client: AsyncClient):
         await db.commit()
         break
     mv = await _rpc(client, raw, "tools/call", {
-        "name": "pulso_move_area",
+        "name": "pulsyr_move_area",
         "arguments": {"item_id": created["id"], "area_name": other},
     })
     moved = _json.loads(mv.json()["result"]["content"][0]["text"])
@@ -296,7 +296,7 @@ async def test_incident_tools_flow(client: AsyncClient, monkeypatch):
         break
 
     # 1) listar incidentes
-    li = await _rpc(client, raw, "tools/call", {"name": "pulso_incidents", "arguments": {}})
+    li = await _rpc(client, raw, "tools/call", {"name": "pulsyr_incidents", "arguments": {}})
     listed = _json.loads(li.json()["result"]["content"][0]["text"])
     assert any(i["id"] == issue_id for i in listed)
 
@@ -306,13 +306,13 @@ async def test_incident_tools_flow(client: AsyncClient, monkeypatch):
                 "stacktrace": "KeyError: 'foo'\n  app/api/x.py:42 in handler"}
 
     monkeypatch.setattr(wservice, "fetch_issue_detail", fake_detail)
-    det = await _rpc(client, raw, "tools/call", {"name": "pulso_incident", "arguments": {"id": issue_id}})
+    det = await _rpc(client, raw, "tools/call", {"name": "pulsyr_incident", "arguments": {"id": issue_id}})
     detail = _json.loads(det.json()["result"]["content"][0]["text"])
     assert "x.py:42" in detail["stacktrace"]
 
     # 3) resolver (sin tocar Sentry)
     res = await _rpc(client, raw, "tools/call", {
-        "name": "pulso_incident_resolve",
+        "name": "pulsyr_incident_resolve",
         "arguments": {"id": issue_id, "nota": "arreglado", "resolver_en_sentry": False},
     })
     out = _json.loads(res.json()["result"]["content"][0]["text"])

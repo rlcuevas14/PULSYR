@@ -21,10 +21,12 @@ from app.scopes.service import resolve_scope
 from app.webhooks.connection import DEFAULT_BASE_URL, effective_base_url, outbound
 from app.webhooks.models import SentryIssue
 
-logger = logging.getLogger("pulso.webhooks")
+logger = logging.getLogger("pulsyr.webhooks")
 
 _TAG_RE = re.compile(r"<[^>]+>")
-_PULSO_RE = re.compile(r"(?:closes\s+)?pulso:([0-9a-fA-F-]{36})")
+# ponytail: accepts the legacy `pulso:` prefix too — commit history is immutable and
+# those references must keep auto-closing. Drop the alternation once no live repo uses it.
+_PULSYR_RE = re.compile(r"(?:closes\s+)?puls(?:yr|o):([0-9a-fA-F-]{36})")
 
 
 def verify_sentry_signature(secret: str, body: bytes, header: str | None) -> bool:
@@ -132,7 +134,7 @@ async def ingest_sentry(
         await db.flush()
         # Enqueue AI triage (pre-classifies noise; runs when ANTHROPIC_API_KEY is set).
         db.add(AgentRun(kind="triage-sentry", ref_type="sentry_issue",
-                        ref_id=issue.id, status="pendiente", project_id=issue.project_id))
+                        ref_id=issue.id, status="pending", project_id=issue.project_id))
     else:
         issue.events_count += 1
         issue.last_seen = last_seen
@@ -181,10 +183,10 @@ async def resolve_issue(
     actor: str,
     commit_sha: str | None = None,
 ) -> dict[str, Any]:
-    """Resolve an incident: mark it resolved in Pulso, optionally in Sentry, and
+    """Resolve an incident: mark it resolved in Pulsyr, optionally in Sentry, and
     close the linked backlog item (if there is one and it is still open).
 
-    Service logic extracted from the pulso_incidente_resolver MCP tool (ARCH-2) so that
+    Service logic extracted from the pulsyr_incidente_resolver MCP tool (ARCH-2) so that
     UI / REST / MCP consume it without duplication. Flush only; the edge does the commit.
 
     Returns {"id", "status", "resuelto_en_sentry", "item_cerrado"}.
@@ -233,7 +235,7 @@ async def resolve_issue(
 
 
 async def process_github_push(db: AsyncSession, payload: dict) -> dict:
-    """Stamp last_touched_at per scope and auto-complete items referenced by pulso:UUID."""
+    """Stamp last_touched_at per scope and auto-complete items referenced by pulsyr:UUID."""
     commits = payload.get("commits", [])
     touched_scopes: set[str] = set()
     completed: list[str] = []
@@ -245,8 +247,8 @@ async def process_github_push(db: AsyncSession, payload: dict) -> dict:
         m = re.match(r"^\w+\(([\w-]+)\)", msg)
         if m:
             touched_scopes.add(m.group(1))
-        # pulso:UUID -> complete (idempotent, validated)
-        for match in _PULSO_RE.finditer(msg):
+        # pulsyr:UUID -> complete (idempotent, validated)
+        for match in _PULSYR_RE.finditer(msg):
             item_id = match.group(1)
             done = await _complete_by_ref(db, item_id, sha)
             if done:

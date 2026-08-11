@@ -151,7 +151,7 @@ async def test_process_github_push_autocompletes(db):
     item = Item(scope_id=scope.id, title="Close me", type="feature", status="in-progress", origen="human")
     db.add(item)
     await db.flush()
-    payload = {"commits": [{"id": "abc123", "message": f"fix(auth): done pulso:{item.id}"}]}
+    payload = {"commits": [{"id": "abc123", "message": f"fix(auth): done pulsyr:{item.id}"}]}
     res = await ws.process_github_push(db, payload)
     assert str(item.id) in res["completed"]
     await db.refresh(item)

@@ -55,25 +55,25 @@ async def test_document_versioning_and_dedup(client: AsyncClient):
     raw, _pid = await _setup(client)
 
     # create (v1)
-    d = _data(await _call(client, raw, "pulso_doc_put", {
+    d = _data(await _call(client, raw, "pulsyr_doc_put", {
         "compartment": "Proposals", "name": "Client proposal", "doc_type": "md",
         "content": "# v1", "summary_md": "first draft"}))
     assert d["current_version"] == 1 and d["new_version"] is True
 
     # identical bytes → dedup, no new version
-    d = _data(await _call(client, raw, "pulso_doc_put", {
+    d = _data(await _call(client, raw, "pulsyr_doc_put", {
         "compartment": "Proposals", "name": "Client proposal", "doc_type": "md", "content": "# v1"}))
     assert d["current_version"] == 1 and d["new_version"] is False
 
     # changed bytes → v2
-    d = _data(await _call(client, raw, "pulso_doc_put", {
+    d = _data(await _call(client, raw, "pulsyr_doc_put", {
         "compartment": "Proposals", "name": "Client proposal", "doc_type": "md", "content": "# v2"}))
     assert d["current_version"] == 2 and d["new_version"] is True
 
-    listed = _data(await _call(client, raw, "pulso_doc_list", {}))
+    listed = _data(await _call(client, raw, "pulsyr_doc_list", {}))
     assert len(listed) == 1 and listed[0]["compartment"] == "Proposals"
 
-    got = _data(await _call(client, raw, "pulso_doc_get",
+    got = _data(await _call(client, raw, "pulsyr_doc_get",
                             {"deliverable_id": d["id"], "include_content": True}))
     assert len(got["versions"]) == 2
     assert got["content_text"] == "# v2"  # current version inlined for md
@@ -82,12 +82,12 @@ async def test_document_versioning_and_dedup(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_document_invalid_type_and_binary(client: AsyncClient):
     raw, _pid = await _setup(client)
-    bad = await _call(client, raw, "pulso_doc_put",
+    bad = await _call(client, raw, "pulsyr_doc_put",
                       {"compartment": "C", "name": "x", "doc_type": "exe", "content": "z"})
     assert bad["isError"] is True and "doc_type" in _text(bad)
 
     # binary via base64
-    d = _data(await _call(client, raw, "pulso_doc_put", {
+    d = _data(await _call(client, raw, "pulsyr_doc_put", {
         "compartment": "C", "name": "sheet", "doc_type": "xlsx",
         "content_base64": _b64("binary-bytes")}))
     assert d["doc_type"] == "xlsx"
@@ -96,59 +96,59 @@ async def test_document_invalid_type_and_binary(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_pendings_lifecycle(client: AsyncClient):
     raw, _pid = await _setup(client)
-    p = _data(await _call(client, raw, "pulso_pending_upsert",
+    p = _data(await _call(client, raw, "pulsyr_pending_upsert",
                           {"title": "Send contract", "owner": "Rodolfo", "due_date": "2026-08-01"}))
     assert p["status"] == "open" and p["owner"] == "Rodolfo"
 
-    rows = _data(await _call(client, raw, "pulso_pending_list", {}))
+    rows = _data(await _call(client, raw, "pulsyr_pending_list", {}))
     assert len(rows) == 1
 
-    done = _data(await _call(client, raw, "pulso_pending_complete", {"pending_id": p["id"]}))
+    done = _data(await _call(client, raw, "pulsyr_pending_complete", {"pending_id": p["id"]}))
     assert done["status"] == "done"
 
     # invalid status rejected
-    bad = await _call(client, raw, "pulso_pending_upsert", {"title": "x", "status": "nope"})
+    bad = await _call(client, raw, "pulsyr_pending_upsert", {"title": "x", "status": "nope"})
     assert bad["isError"] is True
 
 
 @pytest.mark.asyncio
 async def test_gantt_hierarchy_depth_and_cycle(client: AsyncClient):
     raw, _pid = await _setup(client)
-    phase = _data(await _call(client, raw, "pulso_gantt_task_upsert",
+    phase = _data(await _call(client, raw, "pulsyr_gantt_task_upsert",
                               {"name": "Phase 1", "start_date": "2026-01-05", "end_date": "2026-03-01"}))
-    sub = _data(await _call(client, raw, "pulso_gantt_task_upsert",
+    sub = _data(await _call(client, raw, "pulsyr_gantt_task_upsert",
                             {"name": "Module A", "parent_id": phase["id"]}))
-    task = _data(await _call(client, raw, "pulso_gantt_task_upsert",
+    task = _data(await _call(client, raw, "pulsyr_gantt_task_upsert",
                              {"name": "Build", "parent_id": sub["id"],
                               "start_date": "2026-01-05", "end_date": "2026-01-20", "progress": 40}))
 
     # 4th level rejected
-    too_deep = await _call(client, raw, "pulso_gantt_task_upsert",
+    too_deep = await _call(client, raw, "pulsyr_gantt_task_upsert",
                            {"name": "Too deep", "parent_id": task["id"]})
     assert too_deep["isError"] is True and "depth" in _text(too_deep)
 
     # cycle rejected: reparent phase under its own descendant
-    cycle = await _call(client, raw, "pulso_gantt_task_upsert",
+    cycle = await _call(client, raw, "pulsyr_gantt_task_upsert",
                         {"task_id": phase["id"], "parent_id": sub["id"]})
     assert cycle["isError"] is True
 
-    plan = _data(await _call(client, raw, "pulso_gantt_get", {}))
+    plan = _data(await _call(client, raw, "pulsyr_gantt_get", {}))
     assert len(plan["tasks"]) == 3
     assert plan["start"] == "2026-01-05"
 
     # remove phase cascades to children → empty plan
-    _data(await _call(client, raw, "pulso_gantt_task_remove", {"task_id": phase["id"]}))
-    plan = _data(await _call(client, raw, "pulso_gantt_get", {}))
+    _data(await _call(client, raw, "pulsyr_gantt_task_remove", {"task_id": phase["id"]}))
+    plan = _data(await _call(client, raw, "pulsyr_gantt_get", {}))
     assert plan["tasks"] == []
 
 
 @pytest.mark.asyncio
 async def test_milestone_and_dates_validation(client: AsyncClient):
     raw, _pid = await _setup(client)
-    ms = _data(await _call(client, raw, "pulso_gantt_task_upsert",
+    ms = _data(await _call(client, raw, "pulsyr_gantt_task_upsert",
                            {"name": "Go-live", "is_milestone": True, "start_date": "2026-02-01"}))
     assert ms["is_milestone"] is True
-    bad = await _call(client, raw, "pulso_gantt_task_upsert",
+    bad = await _call(client, raw, "pulsyr_gantt_task_upsert",
                       {"name": "Bad", "start_date": "2026-02-10", "end_date": "2026-02-01"})
     assert bad["isError"] is True
 
@@ -156,11 +156,11 @@ async def test_milestone_and_dates_validation(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_write_scope_required(client: AsyncClient):
     raw, _pid = await _setup(client, scopes="read")
-    res = await _call(client, raw, "pulso_doc_put",
+    res = await _call(client, raw, "pulsyr_doc_put",
                       {"compartment": "C", "name": "x", "doc_type": "md", "content": "y"})
     assert res["isError"] is True and "write" in _text(res)
     # read tools still work
-    ok = await _call(client, raw, "pulso_pending_list", {})
+    ok = await _call(client, raw, "pulsyr_pending_list", {})
     assert ok.get("isError") is not True
 
 
@@ -168,11 +168,11 @@ async def test_write_scope_required(client: AsyncClient):
 async def test_project_isolation(client: AsyncClient):
     raw_a, _ = await _setup(client)
     raw_b, _ = await _setup(client)
-    made = _data(await _call(client, raw_a, "pulso_doc_put",
+    made = _data(await _call(client, raw_a, "pulsyr_doc_put",
                              {"compartment": "A", "name": "secret", "doc_type": "md", "content": "z"}))
     # project B sees nothing and cannot fetch A's deliverable
-    assert _data(await _call(client, raw_b, "pulso_doc_list", {})) == []
-    cross = await _call(client, raw_b, "pulso_doc_get", {"deliverable_id": made["id"]})
+    assert _data(await _call(client, raw_b, "pulsyr_doc_list", {})) == []
+    cross = await _call(client, raw_b, "pulsyr_doc_get", {"deliverable_id": made["id"]})
     assert cross["isError"] is True
 
 
@@ -221,25 +221,25 @@ async def test_size_limit_enforced(db):
 async def test_management_error_paths(client: AsyncClient):
     raw, _pid = await _setup(client)
     # documents
-    assert (await _call(client, raw, "pulso_doc_put",
+    assert (await _call(client, raw, "pulsyr_doc_put",
                         {"compartment": "C", "name": "", "doc_type": "md", "content": "x"}))["isError"]
-    assert (await _call(client, raw, "pulso_doc_put",
+    assert (await _call(client, raw, "pulsyr_doc_put",
                         {"compartment": "C", "name": "n", "doc_type": "md"}))["isError"]
-    assert (await _call(client, raw, "pulso_doc_get", {"deliverable_id": "not-a-uuid"}))["isError"]
+    assert (await _call(client, raw, "pulsyr_doc_get", {"deliverable_id": "not-a-uuid"}))["isError"]
     # doc_list with a status filter exercises the filtered query branch
-    assert _data(await _call(client, raw, "pulso_doc_list", {"status": "final"})) == []
+    assert _data(await _call(client, raw, "pulsyr_doc_list", {"status": "final"})) == []
     # pendings
-    assert (await _call(client, raw, "pulso_pending_upsert",
+    assert (await _call(client, raw, "pulsyr_pending_upsert",
                         {"title": "x", "plan_task_id": str(uuid.uuid4())}))["isError"]
-    assert (await _call(client, raw, "pulso_pending_upsert", {}))["isError"]
+    assert (await _call(client, raw, "pulsyr_pending_upsert", {}))["isError"]
     # gantt
-    assert (await _call(client, raw, "pulso_gantt_task_upsert", {"name": "x", "progress": 150}))["isError"]
-    assert (await _call(client, raw, "pulso_gantt_task_remove", {"task_id": str(uuid.uuid4())}))["isError"]
-    assert (await _call(client, raw, "pulso_gantt_task_upsert",
+    assert (await _call(client, raw, "pulsyr_gantt_task_upsert", {"name": "x", "progress": 150}))["isError"]
+    assert (await _call(client, raw, "pulsyr_gantt_task_remove", {"task_id": str(uuid.uuid4())}))["isError"]
+    assert (await _call(client, raw, "pulsyr_gantt_task_upsert",
                         {"name": "x", "parent_id": str(uuid.uuid4())}))["isError"]
-    assert (await _call(client, raw, "pulso_gantt_task_upsert",
+    assert (await _call(client, raw, "pulsyr_gantt_task_upsert",
                         {"task_id": str(uuid.uuid4()), "name": "y"}))["isError"]
-    assert (await _call(client, raw, "pulso_gantt_task_upsert", {"deps": "not-a-list"}))["isError"]
+    assert (await _call(client, raw, "pulsyr_gantt_task_upsert", {"deps": "not-a-list"}))["isError"]
 
 
 @pytest.mark.asyncio

@@ -38,11 +38,11 @@ LIST_ORDERS: tuple[str, ...] = ("impact", "priority", "topological", "recent")
 AGENT_RUN_KINDS: tuple[str, ...] = (
     "enrich", "dedup", "triage-sentry", "digest-email", "fix-externo",
 )
-AGENT_RUN_STATUSES: tuple[str, ...] = ("pendiente", "corriendo", "ok", "error")
+AGENT_RUN_STATUSES: tuple[str, ...] = ("pending", "running", "ok", "error")
 
 # --- sentry ---
 SENTRY_LEVELS: tuple[str, ...] = ("error", "warning", "info")
-SENTRY_TRIAGE: tuple[str, ...] = ("pendiente", "bug-real", "input-malo", "3rd-party", "ruido")
+SENTRY_TRIAGE: tuple[str, ...] = ("pending", "real-bug", "bad-input", "3rd-party", "noise")
 SENTRY_STATUSES: tuple[str, ...] = ("new", "linked", "resolved", "ignored")
 
 # --- auth ---
