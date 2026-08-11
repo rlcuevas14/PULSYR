@@ -75,12 +75,9 @@ jobs:
             cp "$SRC" "$BACKUP"
             echo "Backed up to $BACKUP"
 
-            cat >> "$SRC" <<EOF
-
-${HOSTNAME_IN} {
-	reverse_proxy ${UPSTREAM}
-}
-EOF
+            # printf rather than a heredoc: a heredoc body has to sit at column 0,
+            # which would terminate this YAML block scalar.
+            printf '\n%s {\n    reverse_proxy %s\n}\n' "$HOSTNAME_IN" "$UPSTREAM" >> "$SRC"
 
             # Validate inside the container, which is the binary that will load it.
             if ! docker exec "$CADDY" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile; then
