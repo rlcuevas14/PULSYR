@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Something in Pulso doesn't work as expected
+about: Something in Pulsyr doesn't work as expected
 labels: bug
 ---
 
@@ -18,7 +18,7 @@ labels: bug
 
 **Environment**
 
-- Pulso version/tag:
+- Pulsyr version/tag:
 - Deployment: Docker Compose / manual
 - Browser (for UI issues):
 

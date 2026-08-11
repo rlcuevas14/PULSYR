@@ -1,0 +1,93 @@
+name: VM Caddy site
+
+# Self-hoster-specific, like the deploy job: the maintainer's VM co-hosts an
+# `infra` stack whose Caddy reverse-proxies several sites, and that Caddyfile is
+# not in this repo. This workflow is the only way to touch it from here (there is
+# no direct SSH from the dev machine).
+#
+# `inspect` is read-only and safe to run any time. `add` is guarded: it backs the
+# file up, validates the result with `caddy validate`, and restores the backup if
+# validation fails, because the same file serves other people's sites.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "inspect (read-only) or add (write a site block)"
+        required: true
+        default: inspect
+        type: choice
+        options: [inspect, add]
+      hostname:
+        description: "Hostname to serve, e.g. app.pulsyr.dev"
+        required: true
+        default: app.pulsyr.dev
+      upstream:
+        description: "Container:port to reverse-proxy to"
+        required: true
+        default: pulso-app-1:8000
+
+jobs:
+  caddy:
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Run against the VM
+        uses: appleboy/ssh-action@v1
+        env:
+          ACTION: ${{ inputs.action }}
+          HOSTNAME_IN: ${{ inputs.hostname }}
+          UPSTREAM: ${{ inputs.upstream }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          envs: ACTION,HOSTNAME_IN,UPSTREAM
+          script: |
+            set -e
+
+            # Find the Caddyfile by asking Docker where the running Caddy has it
+            # mounted, rather than guessing a path on someone else's filesystem.
+            CADDY=$(docker ps --filter "name=caddy" --format '{{.Names}}' | head -1)
+            [ -n "$CADDY" ] || { echo "No running caddy container found"; exit 1; }
+            SRC=$(docker inspect "$CADDY" \
+              --format '{{range .Mounts}}{{if eq .Destination "/etc/caddy/Caddyfile"}}{{.Source}}{{end}}{{end}}')
+            [ -n "$SRC" ] || { echo "Caddy container $CADDY has no /etc/caddy/Caddyfile mount"; exit 1; }
+            echo "Caddy container: $CADDY"
+            echo "Caddyfile on host: $SRC"
+
+            echo "=== current Caddyfile ==="
+            cat "$SRC"
+            echo "=== end ==="
+
+            if [ "$ACTION" = "inspect" ]; then
+              echo "Inspect only, nothing changed."
+              exit 0
+            fi
+
+            if grep -qE "^[[:space:]]*${HOSTNAME_IN}[[:space:],{]" "$SRC"; then
+              echo "$HOSTNAME_IN already present, nothing to do."
+              exit 0
+            fi
+
+            BACKUP="${SRC}.bak.$(date +%s)"
+            cp "$SRC" "$BACKUP"
+            echo "Backed up to $BACKUP"
+
+            cat >> "$SRC" <<EOF
+
+${HOSTNAME_IN} {
+	reverse_proxy ${UPSTREAM}
+}
+EOF
+
+            # Validate inside the container, which is the binary that will load it.
+            if ! docker exec "$CADDY" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile; then
+              echo "Validation FAILED, restoring backup."
+              cp "$BACKUP" "$SRC"
+              exit 1
+            fi
+
+            docker exec "$CADDY" caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+            echo "Reloaded. $HOSTNAME_IN -> $UPSTREAM"

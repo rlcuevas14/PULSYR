@@ -10,3 +10,9 @@ dist/
 venv/
 .coverage
 ssh/
+
+# Local working notes.
+Idea*.txt
+# Brand source. The code is MIT, the name and logo are not (see TRADEMARK.md),
+# so the identity manual and its assets stay out of the public repo.
+PULSYR Identidad visual/
