@@ -12,7 +12,7 @@ sus verificaciones y termina en PR + merge a `main`. Ninguna fase autoriza deplo
 | P3 — Frontend/seguridad/caché | Completada | [PR #11](https://github.com/rlcuevas14/PULSYR/pull/11): assets locales con hash, CSRF, cabeceras/CSP, compresión, caché y secretos write-only. |
 | P4 — Performance/a11y/UX | Completada | [PR #12](https://github.com/rlcuevas14/PULSYR/pull/12): presupuestos, matriz Playwright/axe y patrones accesibles compartidos. |
 | P5 — Staging/analítica/observabilidad | Completada | [PR #13](https://github.com/rlcuevas14/PULSYR/pull/13): staging por digest, health/Sentry, medición pública, supply-chain y CI aprobados. |
-| P6 — Automatización/lanzamiento | Pendiente | — |
+| P6 — Automatización/lanzamiento | Completada | [PR #24](https://github.com/rlcuevas14/PULSYR/pull/24): 10 jobs CI aprobados, gates con artefactos, checklist no-deploy y revisión 30/60/90. |
 
 ## Regla operativa
 

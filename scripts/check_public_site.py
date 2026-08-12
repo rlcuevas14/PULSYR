@@ -273,8 +273,29 @@ def inspect_site(dist: Path) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dist", type=Path)
+    parser.add_argument("--report", type=Path, help="Write a machine-readable gate report")
     args = parser.parse_args()
     errors = inspect_site(args.dist)
+    if args.report:
+        args.report.parent.mkdir(parents=True, exist_ok=True)
+        args.report.write_text(
+            json.dumps(
+                {
+                    "gate": "seo-crawl",
+                    "routes": list(EXPECTED_ROUTES),
+                    "thresholds": {
+                        "metadata_coverage_percent": 100,
+                        "private_urls_in_sitemap": 0,
+                        "broken_internal_links": 0,
+                    },
+                    "passed": not errors,
+                    "errors": errors,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
     if errors:
         print("Public site contract failed:")
         for error in errors:

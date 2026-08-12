@@ -83,8 +83,8 @@ jobs:
           pytest tests/ -v --tb=short
           --cov=app --cov-report=term-missing --cov-fail-under=90
 
-  public-site:
-    name: Public site
+  public-build:
+    name: Public build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -107,13 +107,6 @@ jobs:
       - name: Verify generated assets are committed
         run: git diff --exit-code -- app/static/assets app/static/asset-manifest.json
 
-      - name: Validate documented Caddy policy
-        run: >-
-          docker run --rm
-          -v "$PWD/infra/Caddyfile.example:/etc/caddy/Caddyfile:ro"
-          caddy:2.10.2-alpine
-          caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-
       - name: Type and content checks
         working-directory: site
         run: npm run check
@@ -125,9 +118,6 @@ jobs:
       - name: Enforce performance budgets
         working-directory: site
         run: npm run check:budget
-
-      - name: Validate generated public surface
-        run: python scripts/check_public_site.py site/dist
 
       - name: Confirm analytics is disabled outside production configuration
         run: python scripts/check_analytics_build.py site/dist
@@ -142,29 +132,233 @@ jobs:
       - name: Confirm one analytics snippet and the event catalog
         run: python scripts/check_analytics_build.py site/dist --enabled
 
-      - name: Restore dependency-free default build for browser tests
+      - name: Restore dependency-free default build
         working-directory: site
         run: npm run build
 
       - name: Reconfirm default analytics exclusion
         run: python scripts/check_analytics_build.py site/dist
 
-      - name: Install Playwright Chromium
-        working-directory: site
-        run: npx playwright install --with-deps chromium
+      - name: Validate temporary gate exceptions
+        run: python scripts/check_quality_exceptions.py docs/quality-gate-exceptions.json
 
-      - name: Accessibility, responsive and browser smoke tests
-        working-directory: site
-        run: npm run test:e2e
+      - name: Upload reusable static build
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-site-dist
+          path: site/dist/
+          if-no-files-found: error
+          retention-days: 7
 
-      - name: Upload browser-test evidence
+  seo-crawl:
+    name: SEO crawl
+    needs: public-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-site-dist
+          path: site/dist
+      - name: Enforce metadata, indexation, sitemap and internal-link contract
+        run: >-
+          python scripts/check_public_site.py site/dist
+          --report artifacts/seo/report.json
+      - name: Upload SEO crawl evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: public-site-playwright-report
-          path: site/playwright-report/
-          if-no-files-found: ignore
-          retention-days: 14
+          name: seo-crawl-report
+          path: artifacts/seo/
+          if-no-files-found: error
+          retention-days: 30
+
+  html-validation:
+    name: HTML validation
+    needs: public-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-site-dist
+          path: site/dist
+      - name: Install locked validator
+        working-directory: site
+        run: npm ci
+      - name: Validate generated HTML
+        working-directory: site
+        run: |
+          mkdir -p artifacts/html
+          set +e
+          npm run check:html -- --formatter json > artifacts/html/report.json
+          status=$?
+          set -e
+          cat artifacts/html/report.json
+          exit "$status"
+      - name: Upload HTML validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-validation-report
+          path: site/artifacts/html/
+          if-no-files-found: error
+          retention-days: 30
+
+  browser-quality:
+    name: Browser and axe
+    needs: public-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-site-dist
+          path: site/dist
+      - name: Install locked browser tooling
+        working-directory: site
+        run: npm ci
+      - name: Install Chromium, Firefox and WebKit
+        working-directory: site
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Chromium accessibility, responsive and console gate
+        working-directory: site
+        env:
+          PLAYWRIGHT_REPORT_NAME: chromium-quality
+        run: npm run test:e2e
+      - name: Cross-browser smoke gate
+        working-directory: site
+        env:
+          FULL_BROWSER_MATRIX: "true"
+          PLAYWRIGHT_REPORT_NAME: cross-browser
+        run: npm run test:browsers
+      - name: Upload browser and axe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-axe-report
+          path: |
+            site/artifacts/playwright/
+            site/playwright-report/
+            site/test-results/
+          if-no-files-found: error
+          retention-days: 30
+
+  lighthouse:
+    name: Lighthouse
+    needs: public-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-site-dist
+          path: site/dist
+      - name: Install locked Lighthouse tooling
+        working-directory: site
+        run: npm ci
+      - name: Audit representative public routes
+        working-directory: site
+        run: |
+          mkdir -p artifacts/lighthouse
+          npm run preview -- --host 127.0.0.1 --port 4321 > artifacts/lighthouse/server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..20}; do
+            curl --fail --silent http://127.0.0.1:4321/ >/dev/null && break
+            sleep 1
+          done
+          for item in "home:/" "product:/producto/" "docs:/docs/primeros-pasos/"; do
+            name="${item%%:*}"
+            route="${item#*:}"
+            npx lighthouse "http://127.0.0.1:4321${route}" \
+              --output=json \
+              --output-path="artifacts/lighthouse/${name}.json" \
+              --only-categories=performance,accessibility,best-practices,seo \
+              --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+              --quiet
+          done
+          npm run check:lighthouse
+      - name: Upload Lighthouse evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: site/artifacts/lighthouse/
+          if-no-files-found: error
+          retention-days: 30
+
+  delivery-contract:
+    name: Headers, cache and compression
+    needs: public-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-site-dist
+          path: site/dist
+      - name: Validate production Caddy configuration
+        run: >-
+          docker run --rm
+          -v "$PWD/infra:/etc/caddy:ro"
+          caddy:2.10.2-alpine
+          caddy validate --config /etc/caddy/Caddyfile.example --adapter caddyfile
+      - name: Exercise public delivery policy
+        run: bash scripts/check_public_delivery.sh
+      - name: Upload delivery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: delivery-contract-report
+          path: artifacts/delivery/
+          if-no-files-found: error
+          retention-days: 30
+
+  links:
+    name: Link integrity
+    needs: public-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-site-dist
+          path: site/dist
+      - name: Check internal fragments and critical external journeys
+        run: >-
+          python scripts/check_site_links.py site/dist
+          --critical site/critical-external-links.txt
+          --report artifacts/links/report.json
+      - name: Upload link-check evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: link-integrity-report
+          path: artifacts/links/
+          if-no-files-found: error
+          retention-days: 30
 
   supply-chain:
     name: Supply chain
