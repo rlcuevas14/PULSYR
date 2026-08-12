@@ -15,6 +15,7 @@
 <p class="text-sm text-muted mb-3">{{ t("members.intro") }}</p>
 <div class="p-card overflow-x-auto p-5 mb-8">
   <table class="w-full text-sm min-w-[640px]">
+    <caption class="sr-only">{{ t("members.heading") }}</caption>
     <thead>
       <tr>
         <th class="p-label text-left pb-2 sticky left-0 bg-surface-card pr-4">{{ t("members.member") }}</th>
@@ -53,15 +54,15 @@
 <form method="post" action="/account/members" class="p-card p-5 grid sm:grid-cols-2 gap-4 max-w-xl">
   <div>
     <label class="p-label" for="member-name">{{ t("common.name") }}</label>
-    <input id="member-name" name="name" placeholder="{{ t('common.name') }}" required class="p-input">
+    <input id="member-name" name="name" autocomplete="name" placeholder="{{ t('common.name') }}" required class="p-input">
   </div>
   <div>
     <label class="p-label" for="member-email">{{ t("login.email") }}</label>
-    <input id="member-email" name="email" type="email" placeholder="{{ t('login.email') }}" required class="p-input">
+    <input id="member-email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="{{ t('login.email') }}" required class="p-input">
   </div>
   <div class="sm:col-span-2">
     <label class="p-label" for="member-password">{{ t("common.temp_password") }}</label>
-    <input id="member-password" name="password" type="password" placeholder="{{ t('common.temp_password_placeholder') }}" required class="p-input">
+    <input id="member-password" name="password" type="password" autocomplete="new-password" placeholder="{{ t('common.temp_password_placeholder') }}" required class="p-input">
   </div>
   <button class="p-btn p-btn-primary sm:col-span-2">{{ t("members.add") }}</button>
 </form>

@@ -11,6 +11,7 @@
   <h2 class="text-lg font-semibold text-ink mb-3">{{ t("admin.users_count", n=users|length) }}</h2>
   <div class="overflow-x-auto">
   <table class="w-full text-sm">
+    <caption class="sr-only">{{ t("admin.users_count", n=users|length) }}</caption>
     <thead><tr>
       <th class="p-label text-left pb-2">{{ t("login.email") }}</th><th class="p-label text-left pb-2">{{ t("common.name") }}</th><th class="p-label text-left pb-2">{{ t("common.role") }}</th><th class="p-label text-left pb-2">{{ t("common.active") }}</th>
     </tr></thead>
@@ -48,6 +49,7 @@
   <div id="token-result" aria-live="polite"></div>
   <div class="overflow-x-auto">
   <table class="w-full text-sm mt-3">
+    <caption class="sr-only">{{ t("admin.tokens_count", n=tokens|length) }}</caption>
     <thead><tr>
       <th class="p-label text-left pb-2">{{ t("common.name") }}</th><th class="p-label text-left pb-2">{{ t("common.scope") }}</th><th class="p-label text-left pb-2">{{ t("admin.last_used") }}</th>
     </tr></thead>
@@ -69,6 +71,7 @@
   <h2 class="text-lg font-semibold text-ink mb-3">{{ t("admin.scopes_count", n=scopes|length) }}</h2>
   <div class="overflow-x-auto">
   <table class="w-full text-sm">
+    <caption class="sr-only">{{ t("admin.scopes_count", n=scopes|length) }}</caption>
     <thead><tr>
       <th class="p-label text-left pb-2">{{ t("common.name") }}</th><th class="p-label text-left pb-2">{{ t("common.color") }}</th><th class="p-label text-left pb-2">{{ t("admin.repo") }}</th><th class="p-label text-left pb-2">{{ t("admin.archived") }}</th>
     </tr></thead>
@@ -90,6 +93,7 @@
   <h2 class="text-lg font-semibold text-ink mb-3">{{ t("admin.jobs_count", n=runs|length) }}</h2>
   <div class="overflow-x-auto">
   <table class="w-full text-sm">
+    <caption class="sr-only">{{ t("admin.jobs_count", n=runs|length) }}</caption>
     <thead><tr>
       <th class="p-label text-left pb-2">{{ t("admin.kind") }}</th><th class="p-label text-left pb-2">{{ t("admin.status") }}</th><th class="p-label text-left pb-2">{{ t("common.created") }}</th>
     </tr></thead>

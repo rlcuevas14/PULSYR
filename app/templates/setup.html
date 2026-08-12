@@ -5,6 +5,7 @@
   {% include "partials/_head.html" %}
 </head>
 <body class="bg-canvas text-body font-sans min-h-screen flex items-center justify-center p-4">
+  <a class="p-skip-link" href="#main-content">{{ t("nav.skip_content") }}</a>
   <div class="fixed top-4 right-4 flex items-center gap-1">
     <details class="p-menu">
       <summary class="p-2 rounded-xl text-muted hover:text-ink hover:bg-surface-strong flex items-center gap-1" aria-label="{{ t('nav.language') }}">
@@ -24,7 +25,7 @@
     </button>
   </div>
 
-  <div class="p-card w-full max-w-sm p-8">
+  <main id="main-content" tabindex="-1" class="p-card w-full max-w-sm p-8">
     <div class="flex items-center gap-2 mb-1">
       <svg width="28" height="28" viewBox="0 0 48 48" fill="none" aria-hidden="true" class="text-ink">
         <path d="M4 25 H11 L17 13 L24 36 L29 25 H33" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -43,23 +44,23 @@
     <form method="post" action="/setup" class="space-y-4">
       <div>
         <label class="p-label" for="name">{{ t("setup.your_name") }}</label>
-        <input id="name" name="name" type="text" required autofocus class="p-input" placeholder="{{ t('setup.name_placeholder') }}">
+        <input id="name" name="name" type="text" required autofocus autocomplete="name" class="p-input" placeholder="{{ t('setup.name_placeholder') }}">
       </div>
       <div>
         <label class="p-label" for="email">{{ t("login.email") }}</label>
-        <input id="email" name="email" type="email" required class="p-input" placeholder="you@example.com">
+        <input id="email" name="email" type="email" required autocomplete="email" inputmode="email" class="p-input" placeholder="you@example.com">
       </div>
       <div>
         <label class="p-label" for="password">{{ t("login.password") }}</label>
-        <input id="password" name="password" type="password" required minlength="8" class="p-input" placeholder="{{ t('setup.password_placeholder') }}">
+        <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password" class="p-input" placeholder="{{ t('setup.password_placeholder') }}">
       </div>
       <div class="border-t border-hairline pt-4">
         <label class="p-label" for="project_name">{{ t("setup.first_project") }}</label>
         <p class="text-xs text-muted mb-2">{{ t("setup.more_projects_hint") }}</p>
-        <input id="project_name" name="project_name" type="text" required class="p-input" placeholder="{{ t('projects.name_placeholder') }}">
+        <input id="project_name" name="project_name" type="text" required autocomplete="organization" class="p-input" placeholder="{{ t('projects.name_placeholder') }}">
       </div>
-      <div>
-        <label class="p-label">{{ t("setup.project_color") }}</label>
+      <div role="group" aria-labelledby="setup-color-label">
+        <p id="setup-color-label" class="p-label">{{ t("setup.project_color") }}</p>
         <div class="flex items-center gap-2 flex-wrap">
           {% for c in BRAND_PRESETS %}
           <button type="button" class="setup-swatch w-7 h-7 rounded-full border border-hairline hover:scale-110 transition-transform"
@@ -74,6 +75,6 @@
       <button type="submit" class="p-btn p-btn-primary w-full">{{ t("setup.submit") }}</button>
       <p class="text-xs text-muted text-center">{{ t("footer.tagline") }}</p>
     </form>
-  </div>
+  </main>
 </body>
 </html>

@@ -5,6 +5,7 @@
   {% include "partials/_head.html" %}
 </head>
 <body class="bg-canvas text-body font-sans min-h-screen flex items-center justify-center p-4">
+  <a class="p-skip-link" href="#main-content">{{ t("nav.skip_content") }}</a>
   <div class="fixed top-4 right-4 flex items-center gap-1">
     <details class="p-menu">
       <summary class="p-2 rounded-xl text-muted hover:text-ink hover:bg-surface-strong flex items-center gap-1" aria-label="{{ t('nav.language') }}">
@@ -24,7 +25,7 @@
     </button>
   </div>
 
-  <div class="p-card w-full max-w-sm p-8">
+  <main id="main-content" tabindex="-1" class="p-card w-full max-w-sm p-8">
     <div class="flex items-center gap-2 mb-1">
       <svg width="28" height="28" viewBox="0 0 48 48" fill="none" aria-hidden="true" class="text-ink">
         <path d="M4 25 H11 L17 13 L24 36 L29 25 H33" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -41,6 +42,6 @@
     {% endif %}
 
     {% block card %}{% endblock %}
-  </div>
+  </main>
 </body>
 </html>

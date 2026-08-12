@@ -6,7 +6,7 @@
     <form action="/ui/items/create" method="post" class="space-y-4">
       <div>
         <label class="p-label" for="ni-title">{{ t("new_item.field_title") }}</label>
-        <input id="ni-title" name="title" required placeholder="{{ t('new_item.field_title') }}" aria-label="{{ t('new_item.title_aria') }}" class="p-input">
+        <input id="ni-title" name="title" required autocomplete="off" placeholder="{{ t('new_item.field_title') }}" aria-label="{{ t('new_item.title_aria') }}" class="p-input">
       </div>
       <div class="flex gap-3">
         <div class="flex-1">

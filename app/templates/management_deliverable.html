@@ -26,10 +26,10 @@
   {% if d.doc_type == "md" %}
   <pre class="p-card p-4 text-sm text-body whitespace-pre-wrap overflow-x-auto">{{ text_preview }}</pre>
   {% elif d.doc_type == "html" %}
-  <iframe sandbox title="{{ d.name }}" class="w-full p-card"
+  <iframe sandbox title="{{ d.name }}" width="1200" height="800" class="w-full p-card"
           style="height:70vh;background:#fff" src="/management/documentos/{{ d.id }}/download?disposition=inline"></iframe>
   {% elif d.doc_type == "pdf" %}
-  <iframe title="{{ d.name }}" class="w-full p-card"
+  <iframe title="{{ d.name }}" width="1200" height="800" class="w-full p-card"
           style="height:75vh" src="/management/documentos/{{ d.id }}/download?disposition=inline"></iframe>
   {% else %}
   <div class="p-card p-6 text-center text-muted text-sm">{{ t("management.doc.no_preview") }}</div>

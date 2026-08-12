@@ -24,7 +24,7 @@
   <div class="p-card p-5 space-y-4">
     <h2 class="text-lg font-semibold text-ink">{{ t("sentry.inbound_title") }}</h2>
     <div>
-      <label class="p-label">{{ t("sentry.webhook_url") }}</label>
+      <label class="p-label" for="sentry-webhook-url">{{ t("sentry.webhook_url") }}</label>
       <div class="flex gap-2">
         <input id="sentry-webhook-url" type="text" readonly value="{{ webhook_url }}"
                class="w-full p-input text-xs font-mono">
@@ -34,9 +34,9 @@
       </div>
     </div>
     <div>
-      <label class="p-label">{{ t("sentry.client_secret") }}</label>
+      <label class="p-label" for="sentry-client-secret">{{ t("sentry.client_secret") }}</label>
       {% if conn.client_secret %}<p class="text-xs text-success mb-2">{{ t("common.secret_configured") }}</p>{% endif %}
-      <input name="client_secret" type="password" autocomplete="new-password" value=""
+      <input id="sentry-client-secret" name="client_secret" type="password" autocomplete="new-password" value=""
              placeholder="{{ t('common.replace_secret') }}"
              class="w-full p-input text-xs font-mono">
       {% if conn.client_secret %}<label class="text-xs text-muted mt-2 flex items-center gap-2"><input type="checkbox" name="clear_client_secret" value="true">{{ t("common.clear_secret") }}</label>{% endif %}
@@ -58,21 +58,21 @@
     <h2 class="text-lg font-semibold text-ink">{{ t("sentry.outbound_title") }}</h2>
     <div class="grid sm:grid-cols-2 gap-3">
       <div>
-        <label class="p-label">{{ t("sentry.api_token") }}</label>
+        <label class="p-label" for="sentry-api-token">{{ t("sentry.api_token") }}</label>
         {% if conn.api_token %}<p class="text-xs text-success mb-2">{{ t("common.secret_configured") }}</p>{% endif %}
-        <input name="api_token" type="password" autocomplete="new-password" value=""
+        <input id="sentry-api-token" name="api_token" type="password" autocomplete="new-password" value=""
                placeholder="{{ t('common.replace_secret') }}"
                class="w-full p-input text-xs font-mono">
         {% if conn.api_token %}<label class="text-xs text-muted mt-2 flex items-center gap-2"><input type="checkbox" name="clear_api_token" value="true">{{ t("common.clear_secret") }}</label>{% endif %}
       </div>
       <div>
-        <label class="p-label">{{ t("sentry.org_slug") }}</label>
-        <input name="org_slug" type="text" value="{{ conn.org_slug or '' }}"
+        <label class="p-label" for="sentry-org-slug">{{ t("sentry.org_slug") }}</label>
+        <input id="sentry-org-slug" name="org_slug" type="text" autocomplete="organization" value="{{ conn.org_slug or '' }}"
                class="w-full p-input text-xs font-mono" placeholder="my-org">
       </div>
       <div class="sm:col-span-2">
-        <label class="p-label">{{ t("sentry.base_url") }}</label>
-        <input name="base_url" type="text" value="{{ conn.base_url or '' }}"
+        <label class="p-label" for="sentry-base-url">{{ t("sentry.base_url") }}</label>
+        <input id="sentry-base-url" name="base_url" type="url" autocomplete="url" inputmode="url" value="{{ conn.base_url or '' }}"
                class="w-full p-input text-xs font-mono" placeholder="https://sentry.io">
       </div>
     </div>
@@ -94,8 +94,7 @@
 {# data-confirm keeps translated strings out of inline JS — an apostrophe (fr) inside
    confirm('…') is a SyntaxError and the destructive submit would run unconfirmed. #}
 <form method="post" action="/account/integrations/regenerate" class="max-w-2xl mt-3"
-      data-confirm="{{ t('sentry.regenerate_confirm') }}"
-      onsubmit="return confirm(this.dataset.confirm)">
+      data-confirm="{{ t('sentry.regenerate_confirm') }}">
   <button type="submit" class="p-btn p-btn-ghost p-btn-sm">{{ t("sentry.regenerate") }}</button>
 </form>
 {% endblock %}

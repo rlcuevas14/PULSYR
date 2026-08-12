@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "preview": "astro preview",
     "build": "astro build",
     "check": "astro check",
-    "build:app": "tailwindcss -c tailwind.app.config.mjs -i app-assets/tailwind.css -o ../app/static/.build/app.css --minify && node scripts/hash-app-assets.mjs"
+    "build:app": "tailwindcss -c tailwind.app.config.mjs -i app-assets/tailwind.css -o ../app/static/.build/app.css --minify && node scripts/hash-app-assets.mjs",
+    "test:e2e": "playwright test",
+    "check:budget": "node scripts/check-performance-budget.mjs"
   },
   "dependencies": {
     "astro": "7.2.1",
@@ -16,6 +19,9 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.6",
+    "@axe-core/playwright": "4.10.2",
+    "@playwright/test": "1.62.1",
+    "@types/node": "24.13.3",
     "tailwindcss": "3.4.17",
     "typescript": "5.9.3"
   }

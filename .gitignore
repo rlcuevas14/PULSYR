@@ -12,6 +12,8 @@ dist/
 venv/
 node_modules/
 .astro/
+playwright-report/
+test-results/
 .coverage
 ssh/
 

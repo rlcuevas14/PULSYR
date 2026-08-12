@@ -86,7 +86,7 @@ jobs:
   public-site:
     name: Public site
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
 
@@ -122,5 +122,26 @@ jobs:
         working-directory: site
         run: npm run build
 
+      - name: Enforce performance budgets
+        working-directory: site
+        run: npm run check:budget
+
       - name: Validate generated public surface
         run: python scripts/check_public_site.py site/dist
+
+      - name: Install Playwright Chromium
+        working-directory: site
+        run: npx playwright install --with-deps chromium
+
+      - name: Accessibility, responsive and browser smoke tests
+        working-directory: site
+        run: npm run test:e2e
+
+      - name: Upload browser-test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-site-playwright-report
+          path: site/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14
