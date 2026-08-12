@@ -1,0 +1,42 @@
+---
+import PageHero from "../../../components/PageHero.astro";
+import PublicLayout from "../../../layouts/PublicLayout.astro";
+---
+
+<PublicLayout title="Get started" description="Install Pulsyr with Docker Compose, configure its required secrets, create the first account and project, then connect an MCP-compatible agent.">
+  <PageHero compact eyebrow="Documentation" title="Run Pulsyr and connect your first agent." lead="The quickest path uses Docker Compose and the published container image. You need Docker, a generated application secret, and a database password." />
+  <div class="container docs-layout">
+    <aside aria-label="On this page"><strong>On this page</strong><a href="#install">Install</a><a href="#configure">Configure</a><a href="#first-run">First run</a><a href="#connect">Connect an agent</a><a href="#verify">Verify</a></aside>
+    <article class="prose">
+      <div class="notice"><strong>Before production:</strong> choose unique secrets, use HTTPS, keep <code>DEBUG=false</code>, and arrange database backups.</div>
+      <h2 id="install">1. Get the Compose project</h2>
+      <pre class="code-block"><code>git clone https://github.com/rlcuevas14/PULSYR
+cd PULSYR
+cp .env.example .env</code></pre>
+      <p>The Compose file starts Pulsyr and Postgres with pgvector support. It can build locally or use the image configured for your repository namespace.</p>
+      <h2 id="configure">2. Configure the required secrets</h2>
+      <pre class="code-block"><code>SECRET_KEY=&lt;a random value of at least 32 characters&gt;
+DB_PASSWORD=&lt;a unique database password&gt;
+DEBUG=false</code></pre>
+      <p>Generate the application secret with a cryptographically secure tool. Pulsyr refuses to start in production with a distributed placeholder or short key.</p>
+      <h2 id="first-run">3. Start the services</h2>
+      <pre class="code-block"><code>docker compose up -d</code></pre>
+      <p>Open the configured host. A new database redirects to <code>/setup</code>, where you create the owner account, first project, and first write token in one flow. The raw token is shown once—store it in your MCP client's secret configuration.</p>
+      <h2 id="connect">4. Connect an MCP-compatible client</h2>
+      <p>Every client needs the endpoint and Bearer header:</p>
+      <pre class="code-block"><code>URL:    https://your-pulsyr-host.example/mcp
+Header: Authorization: Bearer &lt;PROJECT_TOKEN&gt;</code></pre>
+      <p>For Claude Code, the project settings screen provides a ready-to-copy command. Other MCP clients use the same URL and header in their own server configuration.</p>
+      <h2 id="verify">5. Verify project context</h2>
+      <p>Restart the client if required, then ask it to call <code>pulsyr_context</code>. A valid response includes the project, current priorities, blockers, incidents, and active Threads. If authentication fails, create a new token from Project Settings instead of attempting to recover the old raw value.</p>
+      <div class="actions"><a class="button button-dark" href="https://github.com/rlcuevas14/PULSYR/blob/main/docs/MCP.md">Full MCP guide</a><a class="button button-outline" href="https://github.com/rlcuevas14/PULSYR/issues">Get help on GitHub</a></div>
+    </article>
+  </div>
+</PublicLayout>
+
+<style>
+  .docs-layout { display:grid; grid-template-columns:220px minmax(0,760px); gap:clamp(2rem,7vw,6rem); align-items:start; }
+  aside { position:sticky; top:100px; display:flex; flex-direction:column; gap:.6rem; padding:1.2rem; border:1px solid var(--line); border-radius:16px; background:var(--soft); font-size:.88rem; }
+  aside a { color:var(--muted); text-underline-offset:3px; }
+  @media(max-width:760px){ .docs-layout{grid-template-columns:1fr} aside{position:static} }
+</style>

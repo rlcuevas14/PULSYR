@@ -1,0 +1,21 @@
+---
+interface Props {
+  size?: number;
+  label?: string;
+}
+
+const { size = 30, label } = Astro.props;
+---
+
+<span class="brand" aria-label={label}>
+  <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden="true">
+    <path d="M4 25H11L17 13L24 36L29 25H33" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></path>
+    <circle cx="41" cy="25" r="4.5" fill="var(--pink)"></circle>
+  </svg>
+  <span class="wordmark">pulsyr</span>
+</span>
+
+<style>
+  .brand { display:inline-flex; align-items:center; gap:.55rem; color:var(--ink); }
+  .wordmark { font-size:1.14rem; font-weight:700; letter-spacing:-.04em; }
+</style>

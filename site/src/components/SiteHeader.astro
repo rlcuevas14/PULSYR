@@ -1,0 +1,50 @@
+---
+import BrandMark from "./BrandMark.astro";
+
+const path = Astro.url.pathname;
+const links = [
+  ["/producto/", "Product"],
+  ["/integraciones/mcp/", "MCP integration"],
+  ["/open-source/", "Open source"],
+  ["/docs/primeros-pasos/", "Docs"],
+];
+---
+
+<header class="site-header">
+  <nav class="container nav" aria-label="Primary navigation">
+    <a class="logo-link" href="/" aria-label="Pulsyr home"><BrandMark /></a>
+    <div class="desktop-links">
+      {links.map(([href, label]) => (
+        <a href={href} aria-current={path.startsWith(href) ? "page" : undefined}>{label}</a>
+      ))}
+    </div>
+    <div class="desktop-actions">
+      <a class="text-link" href="https://github.com/rlcuevas14/PULSYR">GitHub</a>
+      <a class="button button-dark button-small" href="https://app.pulsyr.dev/login">Open the app</a>
+    </div>
+    <details class="mobile-menu">
+      <summary aria-label="Open navigation">Menu</summary>
+      <div class="mobile-panel">
+        {links.map(([href, label]) => <a href={href}>{label}</a>)}
+        <a href="https://github.com/rlcuevas14/PULSYR">GitHub</a>
+        <a href="https://app.pulsyr.dev/login">Open the app</a>
+      </div>
+    </details>
+  </nav>
+</header>
+
+<style>
+  .site-header { position:sticky; top:0; z-index:20; background:color-mix(in srgb, var(--canvas) 92%, transparent); border-bottom:1px solid var(--line); backdrop-filter:blur(14px); }
+  .nav { min-height:68px; display:flex; align-items:center; gap:2rem; }
+  .logo-link { text-decoration:none; margin-right:auto; }
+  .desktop-links,.desktop-actions { display:flex; align-items:center; gap:1.25rem; }
+  .desktop-links a,.text-link { color:var(--muted); font-size:.9rem; font-weight:600; text-decoration:none; }
+  .desktop-links a:hover,.desktop-links a[aria-current="page"],.text-link:hover { color:var(--ink); }
+  .mobile-menu { display:none; position:relative; }
+  .mobile-menu summary { cursor:pointer; list-style:none; min-height:44px; display:flex; align-items:center; padding:0 1rem; border:1px solid var(--line); border-radius:12px; font-weight:700; }
+  .mobile-menu summary::-webkit-details-marker { display:none; }
+  .mobile-panel { position:absolute; right:0; top:calc(100% + .6rem); width:min(82vw,280px); padding:.6rem; display:grid; background:var(--canvas); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); }
+  .mobile-panel a { color:var(--ink); text-decoration:none; padding:.85rem; border-radius:10px; }
+  .mobile-panel a:hover { background:var(--soft); }
+  @media (max-width:900px) { .desktop-links,.desktop-actions { display:none; } .mobile-menu { display:block; } }
+</style>

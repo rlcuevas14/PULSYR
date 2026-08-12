@@ -1,0 +1,26 @@
+---
+import CallToAction from "../../components/CallToAction.astro";
+import PageHero from "../../components/PageHero.astro";
+import PublicLayout from "../../layouts/PublicLayout.astro";
+---
+
+<PublicLayout title="Open source" description="Pulsyr is self-hosted open-source software under the MIT License, with transparent source, releases, contribution guidance, and a separate trademark policy.">
+  <PageHero eyebrow="Open source" title="Your project system should remain yours." lead="Pulsyr's code is available under the MIT License. Run it on your infrastructure, inspect how project isolation works, adapt it to your workflow, and contribute improvements upstream.">
+    <div class="actions"><a class="button button-dark" href="https://github.com/rlcuevas14/PULSYR">Browse the source</a><a class="button button-outline" href="/docs/primeros-pasos/">Self-host it</a></div>
+  </PageHero>
+  <section class="section container">
+    <div class="grid-3">
+      <article class="card pink"><span class="kicker">MIT</span><h2>Use and modify the code</h2><p>Run Pulsyr privately or commercially, fork it, redistribute it, and build on it under the license terms.</p></article>
+      <article class="card teal"><span class="kicker">Self-hosted</span><h2>Control the operational boundary</h2><p>The app, Postgres database, secrets, network, backups, and upgrade schedule stay under the operator's control.</p></article>
+      <article class="card ochre"><span class="kicker">Transparent</span><h2>Review the implementation</h2><p>Authentication, scoped tokens, migrations, CI, webhooks, and MCP tools are available in the public repository.</p></article>
+    </div>
+  </section>
+  <section class="section-tight container prose">
+    <h2>Code freedom and brand identity are separate.</h2>
+    <p>The Pulsyr software is MIT-licensed. “Pulsyr”, its pulse-and-dot symbol, and its logo are trademarks of Avonlea Systems SpA. Public forks should use their own product name and visual identity while describing their origin truthfully.</p>
+    <p>Read the repository's <a href="https://github.com/rlcuevas14/PULSYR/blob/main/LICENSE">license</a>, <a href="https://github.com/rlcuevas14/PULSYR/blob/main/TRADEMARK.md">trademark policy</a>, and <a href="https://github.com/rlcuevas14/PULSYR/blob/main/CONTRIBUTING.md">contribution guide</a> before redistributing a modified build.</p>
+  </section>
+  <CallToAction title="Fork the code. Keep the workflow understandable." body="Start from the reproducible Docker setup, then contribute issues or pull requests through GitHub." />
+</PublicLayout>
+
+<style>.card h2{margin-top:1.7rem;font-size:1.6rem}</style>

@@ -82,3 +82,31 @@ jobs:
         run: >-
           pytest tests/ -v --tb=short
           --cov=app --cov-report=term-missing --cov-fail-under=90
+
+  public-site:
+    name: Public site
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Type and content checks
+        working-directory: site
+        run: npm run check
+
+      - name: Static build
+        working-directory: site
+        run: npm run build
+
+      - name: Validate generated public surface
+        run: python scripts/check_public_site.py site/dist
