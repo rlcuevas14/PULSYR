@@ -9,7 +9,10 @@
     "build": "astro build",
     "check": "astro check",
     "build:app": "tailwindcss -c tailwind.app.config.mjs -i app-assets/tailwind.css -o ../app/static/.build/app.css --minify && node scripts/hash-app-assets.mjs",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test tests/e2e/public-site.spec.ts",
+    "test:browsers": "playwright test tests/e2e/cross-browser.spec.ts",
+    "check:html": "html-validate \"dist/**/*.html\"",
+    "check:lighthouse": "node scripts/check-lighthouse-reports.mjs",
     "check:budget": "node scripts/check-performance-budget.mjs"
   },
   "dependencies": {
@@ -22,6 +25,8 @@
     "@axe-core/playwright": "4.10.2",
     "@playwright/test": "1.62.1",
     "@types/node": "24.13.3",
+    "html-validate": "11.6.2",
+    "lighthouse": "13.4.1",
     "tailwindcss": "3.4.17",
     "typescript": "5.9.3"
   }

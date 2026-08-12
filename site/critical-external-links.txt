@@ -1,0 +1,7 @@
+# Small, stable public URLs whose failure breaks a primary user journey.
+https://github.com/rlcuevas14/PULSYR
+https://github.com/rlcuevas14/PULSYR/blob/main/LICENSE
+https://github.com/rlcuevas14/PULSYR/blob/main/SECURITY.md
+https://github.com/rlcuevas14/PULSYR/blob/main/docs/MCP.md
+https://github.com/rlcuevas14/PULSYR/issues
+https://github.com/rlcuevas14/PULSYR/security/advisories/new

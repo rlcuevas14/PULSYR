@@ -1,0 +1,9 @@
+{
+    auto_https off
+}
+
+import public-site.caddy
+
+:8080 {
+    import public_site_policy
+}
