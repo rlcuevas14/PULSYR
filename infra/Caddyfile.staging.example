@@ -1,0 +1,24 @@
+{
+    # Merge into the operator-owned Caddy configuration. Generate the password
+    # hash with `caddy hash-password`; never commit the plaintext or resulting hash.
+}
+
+staging.pulsyr.dev {
+    basic_auth {
+        operator {$STAGING_PASSWORD_HASH}
+    }
+    header X-Robots-Tag "noindex, nofollow"
+    root * /srv/pulsyr-staging/site
+    encode zstd gzip
+    try_files {path} {path}/
+    file_server
+}
+
+app-staging.pulsyr.dev {
+    basic_auth {
+        operator {$STAGING_PASSWORD_HASH}
+    }
+    header X-Robots-Tag "noindex, nofollow"
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:18000
+}
