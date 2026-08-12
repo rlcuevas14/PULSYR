@@ -32,7 +32,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # Image name derives from the repository (lowercased — required by GHCR),
       # so forks publish to their own namespace with zero config.
