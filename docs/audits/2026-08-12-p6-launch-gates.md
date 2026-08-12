@@ -2,7 +2,7 @@
 
 - **Fecha:** 2026-08-12
 - **Deploy/DNS/cuentas externas:** no ejecutados
-- **Fase:** en curso hasta PR, CI y merge
+- **Fase:** CI aprobado; pendiente merge del PR
 
 ## Implementado
 
@@ -29,7 +29,18 @@
 La ejecución local completa de Lighthouse quedó limitada por limpieza de temporales de
 Chrome en Windows; generó el reporte de homepage antes del error. La matriz Linux de CI,
 los tres reportes Lighthouse, WebKit/Firefox y Caddy son la evidencia autoritativa
-pendiente. No se atribuye éxito a esos gates hasta que el PR quede verde.
+que se registra a continuación.
+
+## Evidencia de CI
+
+- [Run 31651793180](https://github.com/rlcuevas14/PULSYR/actions/runs/31651793180):
+  10 jobs aprobados, incluidos los 6 gates web con sus artefactos.
+- Lighthouse: docs y producto 1,00 en las cuatro categorías; homepage 0,97 en
+  performance y 1,00 en accessibility/best-practices/SEO.
+- Peor LCP: 949 ms; peor CLS: 0,00015; peor TBT: 193 ms. Todos dentro de los
+  umbrales versionados.
+- Caddy real aprobó CSP/cabeceras, caché HTML/immutable, gzip y 404; Firefox/WebKit y
+  los seis enlaces externos críticos también aprobaron.
 
 ## Evidencia externa pendiente
 
