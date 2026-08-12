@@ -37,3 +37,10 @@ DNS, proxy secrets, base de staging, monitores de uptime, entrega real de alerta
 propiedades Search Console/Bing/Plausible y un ejercicio real de promoción/rollback
 requieren autoridad de operador. Los runbooks enumeran la evidencia que debe adjuntarse
 cuando se ejecute. Ningún resultado externo se simula ni se declara completado aquí.
+
+## Evidencia de CI
+
+- [Run 31649680531](https://github.com/rlcuevas14/PULSYR/actions/runs/31649680531):
+  backend/migraciones/cobertura, sitio público, secret scan y supply-chain aprobados.
+- El job de supply-chain construyó la imagen únicamente para inspección, no la publicó;
+  Trivy no encontró vulnerabilidades corregibles HIGH/CRITICAL y generó el SBOM.
