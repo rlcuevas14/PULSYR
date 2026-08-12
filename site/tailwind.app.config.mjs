@@ -1,0 +1,35 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["../app/templates/**/*.html"],
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        canvas: "var(--canvas)",
+        "surface-soft": "var(--surface-soft)",
+        "surface-card": "var(--surface-card)",
+        "surface-strong": "var(--surface-strong)",
+        ink: "var(--ink)",
+        body: "var(--body)",
+        muted: "var(--muted)",
+        hairline: "var(--hairline)",
+        primary: "var(--primary)",
+        "on-primary": "var(--on-primary)",
+        accent: "var(--accent)",
+        "accent-fg": "var(--accent-fg)",
+        "brand-pink": "#ff4d8b",
+        "brand-teal": "#1a3a3a",
+        "brand-lavender": "#b8a4ed",
+        "brand-peach": "#ffb084",
+        "brand-ochre": "#e8b94a",
+        "brand-coral": "#ff6b5a",
+        "brand-mint": "#a4d4c5",
+        success: "#22c55e",
+        warning: "#f59e0b",
+        "warning-strong": "var(--warning-strong)",
+        error: "#ef4444",
+      },
+      fontFamily: { sans: ["Inter", "system-ui", "sans-serif"] },
+    },
+  },
+};

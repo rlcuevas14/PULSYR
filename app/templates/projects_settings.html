@@ -117,9 +117,11 @@
         <div class="grid grid-cols-2 gap-3 mt-3">
           <div>
             <label class="p-label">{{ t("projects.github_webhook_secret") }}</label>
-            <input name="github_webhook_secret" type="password" autocomplete="off"
-              value="{{ project.github_webhook_secret or '' }}"
+            {% if project.github_webhook_secret %}<p class="text-xs text-success mb-2">{{ t("common.secret_configured") }}</p>{% endif %}
+            <input name="github_webhook_secret" type="password" autocomplete="new-password"
+              value="" placeholder="{{ t('common.replace_secret') }}"
               class="w-full p-input text-xs font-mono">
+            {% if project.github_webhook_secret %}<label class="text-xs text-muted mt-2 flex items-center gap-2"><input type="checkbox" name="clear_github_webhook_secret" value="true">{{ t("common.clear_secret") }}</label>{% endif %}
           </div>
           <div>
             <label class="p-label">{{ t("projects.sentry_slug") }}</label>

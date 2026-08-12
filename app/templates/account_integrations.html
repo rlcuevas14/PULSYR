@@ -35,8 +35,11 @@
     </div>
     <div>
       <label class="p-label">{{ t("sentry.client_secret") }}</label>
-      <input name="client_secret" type="password" autocomplete="off" value="{{ conn.client_secret or '' }}"
+      {% if conn.client_secret %}<p class="text-xs text-success mb-2">{{ t("common.secret_configured") }}</p>{% endif %}
+      <input name="client_secret" type="password" autocomplete="new-password" value=""
+             placeholder="{{ t('common.replace_secret') }}"
              class="w-full p-input text-xs font-mono">
+      {% if conn.client_secret %}<label class="text-xs text-muted mt-2 flex items-center gap-2"><input type="checkbox" name="clear_client_secret" value="true">{{ t("common.clear_secret") }}</label>{% endif %}
     </div>
     <details class="border-t border-hairline pt-3">
       <summary class="text-sm text-muted cursor-pointer hover:text-ink">{{ t("sentry.guide_a_title") }}</summary>
@@ -56,8 +59,11 @@
     <div class="grid sm:grid-cols-2 gap-3">
       <div>
         <label class="p-label">{{ t("sentry.api_token") }}</label>
-        <input name="api_token" type="password" autocomplete="off" value="{{ conn.api_token or '' }}"
+        {% if conn.api_token %}<p class="text-xs text-success mb-2">{{ t("common.secret_configured") }}</p>{% endif %}
+        <input name="api_token" type="password" autocomplete="new-password" value=""
+               placeholder="{{ t('common.replace_secret') }}"
                class="w-full p-input text-xs font-mono">
+        {% if conn.api_token %}<label class="text-xs text-muted mt-2 flex items-center gap-2"><input type="checkbox" name="clear_api_token" value="true">{{ t("common.clear_secret") }}</label>{% endif %}
       </div>
       <div>
         <label class="p-label">{{ t("sentry.org_slug") }}</label>

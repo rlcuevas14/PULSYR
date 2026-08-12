@@ -100,6 +100,20 @@ jobs:
         working-directory: site
         run: npm ci
 
+      - name: Build versioned private-app assets
+        working-directory: site
+        run: npm run build:app
+
+      - name: Verify generated assets are committed
+        run: git diff --exit-code -- app/static/assets app/static/asset-manifest.json
+
+      - name: Validate documented Caddy policy
+        run: >-
+          docker run --rm
+          -v "$PWD/infra/Caddyfile.example:/etc/caddy/Caddyfile:ro"
+          caddy:2.10.2-alpine
+          caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
       - name: Type and content checks
         working-directory: site
         run: npm run check

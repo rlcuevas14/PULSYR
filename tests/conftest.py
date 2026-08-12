@@ -10,8 +10,22 @@ from testcontainers.postgres import PostgresContainer
 
 from app.database import Base, get_db
 from app.main import create_app
+from app.web_security import CSRF_COOKIE
 
 _TEST_DB_URL = os.getenv("TEST_DATABASE_URL", "")
+
+
+class CsrfAsyncClient(AsyncClient):
+    """Exercise browser mutations with the same double-submit header as the UI."""
+
+    async def request(self, method, url, **kwargs):
+        if method.upper() not in {"GET", "HEAD", "OPTIONS", "TRACE"}:
+            token = self.cookies.get(CSRF_COOKIE, "test-csrf-token")
+            self.cookies.set(CSRF_COOKIE, token)
+            headers = dict(kwargs.pop("headers", {}) or {})
+            headers.setdefault("X-CSRF-Token", token)
+            kwargs["headers"] = headers
+        return await super().request(method, url, **kwargs)
 
 
 @pytest.fixture(scope="session")
@@ -86,6 +100,6 @@ async def client(test_engine) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides[get_db] = override_get_db
 
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+    async with CsrfAsyncClient(transport=transport, base_url="http://test") as ac:
         ac.app = app  # expose app for test introspection
         yield ac

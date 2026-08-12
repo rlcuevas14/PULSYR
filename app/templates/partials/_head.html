@@ -5,64 +5,10 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
 <link rel="apple-touch-icon" href="/static/brand/apple-touch-180.png">
 <link rel="manifest" href="/static/manifest.webmanifest">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-{# No-FOUC: fija la clase dark + theme-color ANTES del primer paint. Debe quedar inline y bloqueante. #}
-<script>
-  (function () {
-    try {
-      var t = localStorage.getItem("pulsyr-theme");
-      var dark = t === "dark" || (!t && window.matchMedia("(prefers-color-scheme: dark)").matches);
-      if (dark) document.documentElement.classList.add("dark");
-      var m = document.querySelector('meta[name="theme-color"]');
-      if (m && dark) m.content = "#0e0e10";
-    } catch (e) { /* sin localStorage: queda light */ }
-  })();
-  function toggleTheme() {
-    var dark = document.documentElement.classList.toggle("dark");
-    try { localStorage.setItem("pulsyr-theme", dark ? "dark" : "light"); } catch (e) {}
-    var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.content = dark ? "#0e0e10" : "#fffaf0";
-  }
-</script>
-{# TODO(pre-existente): vendorizar/compilar Tailwind para prod (el CDN es solo-dev). #}
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    darkMode: "class",
-    theme: {
-      extend: {
-        colors: {
-          canvas: "var(--canvas)",
-          "surface-soft": "var(--surface-soft)",
-          "surface-card": "var(--surface-card)",
-          "surface-strong": "var(--surface-strong)",
-          ink: "var(--ink)",
-          body: "var(--body)",
-          muted: "var(--muted)",
-          hairline: "var(--hairline)",
-          primary: "var(--primary)",
-          "on-primary": "var(--on-primary)",
-          accent: "var(--accent)",
-          "accent-fg": "var(--accent-fg)",
-          "brand-pink": "#ff4d8b",
-          "brand-teal": "#1a3a3a",
-          "brand-lavender": "#b8a4ed",
-          "brand-peach": "#ffb084",
-          "brand-ochre": "#e8b94a",
-          "brand-coral": "#ff6b5a",
-          "brand-mint": "#a4d4c5",
-          success: "#22c55e",
-          warning: "#f59e0b",
-          "warning-strong": "var(--warning-strong)",
-          error: "#ef4444"
-        },
-        fontFamily: { sans: ["Inter", "system-ui", "sans-serif"] }
-      }
-    }
-  };
-</script>
+<meta name="csrf-token" content="{{ request.state.csrf_token }}">
+<link rel="stylesheet" href="{{ asset_url('app.css') }}">
+{# Blocking by design: applies the saved theme before first paint. #}
+<script src="{{ asset_url('app.js') }}"></script>
 <style type="text/css">
   :root {
     --canvas:#fffaf0; --surface-soft:#faf5e8; --surface-card:#f5f0e0; --surface-strong:#ebe6d6;
@@ -144,6 +90,4 @@
                            transition-duration:.01ms !important; }
   }
 </style>
-<script src="https://unpkg.com/htmx.org@2.0.0/dist/htmx.min.js"
-        integrity="sha384-wS5l5IKJBvK6sPTKa2WZ1js3d947pvWXbPJ1OmWfEuxLgeHcEbjUUA5i9V5ZkpCw"
-        crossorigin="anonymous"></script>
+<script src="{{ asset_url('htmx.js') }}"></script>

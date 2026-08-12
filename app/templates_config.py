@@ -1,4 +1,7 @@
+import json
 from datetime import datetime
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 from fastapi.templating import Jinja2Templates
@@ -17,6 +20,24 @@ templates = Jinja2Templates(directory="app/templates")
 templates.env.globals["non_terminal_targets"] = non_terminal_targets
 templates.env.globals["allowed_targets"] = allowed_targets
 templates.env.globals["base_url"] = settings.base_url
+
+
+@lru_cache(maxsize=1)
+def _asset_manifest() -> dict[str, str]:
+    path = Path("app/static/asset-manifest.json")
+    if not path.is_file():
+        raise RuntimeError("Frontend assets are missing. Run: cd site && npm run build:app")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def asset_url(logical_name: str) -> str:
+    try:
+        return _asset_manifest()[logical_name]
+    except KeyError as exc:
+        raise RuntimeError(f"Unknown frontend asset: {logical_name}") from exc
+
+
+templates.env.globals["asset_url"] = asset_url
 
 
 # i18n: la lengua sale de la sesión del request (pass_context), default inglés.
