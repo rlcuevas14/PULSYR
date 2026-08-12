@@ -37,7 +37,7 @@ async def test_get_or_create_generates_token_once(db):
 
 
 @pytest.mark.asyncio
-async def test_update_validates_base_url_and_blanks(db):
+async def test_update_validates_base_url_and_secrets_are_write_only(db):
     a = await _account(db)
     c = await sc.get_or_create(db, a.id)
     await sc.update_connection(db, c, client_secret=" s ", api_token="",
@@ -47,7 +47,12 @@ async def test_update_validates_base_url_and_blanks(db):
     with pytest.raises(sc.SentryConfigError):
         await sc.update_connection(db, c, client_secret="", api_token="",
                                    org_slug="", base_url="https://host/path")
-    await sc.update_connection(db, c, client_secret="", api_token="", org_slug="", base_url="")
+    await sc.update_connection(db, c, client_secret="", api_token="new-token",
+                               org_slug="", base_url="")
+    assert c.client_secret == "s" and c.api_token == "new-token"
+    await sc.update_connection(db, c, client_secret="", api_token="", org_slug="", base_url="",
+                               clear_client_secret=True, clear_api_token=True)
+    assert c.client_secret is None and c.api_token is None
     assert sc.effective_base_url(c) == sc.DEFAULT_BASE_URL
 
 

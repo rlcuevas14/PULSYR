@@ -12,6 +12,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.projects.models import Project
+from app.secret_fields import resolve_write_only_secret
 from app.webhooks.models import SentryConnection, SentryIssue
 
 DEFAULT_BASE_URL = "https://sentry.io"
@@ -53,12 +54,15 @@ async def update_connection(
     db: AsyncSession, conn: SentryConnection, *,
     client_secret: str | None, api_token: str | None,
     org_slug: str | None, base_url: str | None,
+    clear_client_secret: bool = False, clear_api_token: bool = False,
 ) -> SentryConnection:
     base = _clean(base_url)
     if base and not _BASE_URL_RE.match(base):
         raise SentryConfigError("base_url must be http(s)://host[:port] with no path.")
-    conn.client_secret = _clean(client_secret)
-    conn.api_token = _clean(api_token)
+    conn.client_secret = resolve_write_only_secret(
+        conn.client_secret, client_secret, clear=clear_client_secret
+    )
+    conn.api_token = resolve_write_only_secret(conn.api_token, api_token, clear=clear_api_token)
     conn.org_slug = _clean(org_slug)
     conn.base_url = base
     await db.flush()

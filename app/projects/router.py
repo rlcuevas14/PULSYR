@@ -16,6 +16,7 @@ from app.i18n import resolve_lang
 from app.i18n import t as _t
 from app.projects import service as ps
 from app.projects.access import accessible_project_ids, require_project_access, user_role_on_project
+from app.secret_fields import resolve_write_only_secret
 from app.templates_config import templates
 from app.ui.flash import flash_success
 
@@ -121,6 +122,7 @@ async def project_settings_update(
     color: str = Form(""),
     repo_url: str = Form(""),
     github_webhook_secret: str = Form(""),
+    clear_github_webhook_secret: bool = Form(False),
     sentry_project_slug: str = Form(""),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_owner),
@@ -152,7 +154,6 @@ async def project_settings_update(
             project.name = name.strip() or project.name
             project.description = description.strip() or None
             project.repo_url = repo_url.strip() or None
-            project.github_webhook_secret = github_webhook_secret.strip() or None
             project.sentry_project_slug = new_sentry_slug
             return templates.TemplateResponse(request, "projects_settings.html", {
                 "user": user, "project": project, "tokens": tokens, "can_write": True,
@@ -164,7 +165,11 @@ async def project_settings_update(
         "description": description.strip() or None,
         "color": color.strip() or None,
         "repo_url": repo_url.strip() or None,
-        "github_webhook_secret": github_webhook_secret.strip() or None,
+        "github_webhook_secret": resolve_write_only_secret(
+            project.github_webhook_secret,
+            github_webhook_secret,
+            clear=clear_github_webhook_secret,
+        ),
         "sentry_project_slug": new_sentry_slug,
     })
     await db.commit()

@@ -2,18 +2,22 @@ import asyncio
 import logging
 import uuid
 from contextlib import asynccontextmanager
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import JSONResponse
 from starlette.datastructures import MutableHeaders
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.config import settings
 from app.templates_config import templates  # noqa: F401 — re-exported for legacy imports
+from app.web_security import CsrfMiddleware, ResponsePolicyMiddleware
 
 # OBS-1/OBS-2 — Logging centralizado.
 # Configuramos el logging raíz una sola vez aquí (al importar el módulo de arranque) para
@@ -189,6 +193,19 @@ def create_app() -> FastAPI:
         # SEC-04: endurecer la cookie de sesión.
         same_site="strict",        # corta envío cross-site (mitiga CSRF sobre la sesión).
         max_age=604800,            # 7 días — la sesión expira aunque la cookie persista.
+    )
+    app.add_middleware(CsrfMiddleware)
+    app.add_middleware(ResponsePolicyMiddleware)
+    app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=6)
+    configured_host = urlparse(settings.base_url).hostname
+    trusted_hosts = [
+        host
+        for host in (configured_host, "localhost", "127.0.0.1", "test", "testserver")
+        if host
+    ]
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=trusted_hosts,
     )
     app.include_router(auth_router)
     app.include_router(auth_compat_router)

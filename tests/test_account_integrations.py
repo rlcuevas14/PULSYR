@@ -45,13 +45,24 @@ async def test_integrations_owner_only(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_integrations_save_regenerate_and_validation(client: AsyncClient):
-    await _owner_login(client)
+    acc_id = await _owner_login(client)
     r = await client.post("/account/integrations", data={
         "client_secret": "cs", "api_token": "tok", "org_slug": "acme",
         "base_url": "https://sentry.acme.dev"}, follow_redirects=False)
     assert r.status_code == 303
     page1 = (await client.get("/account/integrations")).text
     assert "acme" in page1
+    assert 'value="cs"' not in page1 and 'value="tok"' not in page1
+    assert page1.count("Configured") >= 2
+    preserve = await client.post("/account/integrations", data={
+        "client_secret": "", "api_token": "", "org_slug": "acme",
+        "base_url": "https://sentry.acme.dev"}, follow_redirects=False)
+    assert preserve.status_code == 303
+    async for db in client.app.dependency_overrides[get_db]():
+        from app.webhooks.connection import get_for_account
+        conn = await get_for_account(db, acc_id)
+        assert conn is not None and conn.client_secret == "cs" and conn.api_token == "tok"
+        break
     r2 = await client.post("/account/integrations/regenerate", follow_redirects=False)
     assert r2.status_code == 303
     page2 = (await client.get("/account/integrations")).text

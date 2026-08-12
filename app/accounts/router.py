@@ -132,6 +132,8 @@ async def account_integrations_save(
     api_token: str = Form(""),
     org_slug: str = Form(""),
     base_url: str = Form(""),
+    clear_client_secret: bool = Form(False),
+    clear_api_token: bool = Form(False),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_owner),
 ):
@@ -139,7 +141,9 @@ async def account_integrations_save(
     try:
         await sconn.update_connection(db, conn, client_secret=client_secret,
                                       api_token=api_token, org_slug=org_slug,
-                                      base_url=base_url)
+                                      base_url=base_url,
+                                      clear_client_secret=clear_client_secret,
+                                      clear_api_token=clear_api_token)
     except sconn.SentryConfigError as e:
         return HTMLResponse(str(e), status_code=422)
     await db.commit()
