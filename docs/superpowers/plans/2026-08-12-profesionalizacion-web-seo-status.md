@@ -9,7 +9,7 @@ sus verificaciones y termina en PR + merge a `main`. Ninguna fase autoriza deplo
 | P0 — Contención y línea base | Completada | [PR #8](https://github.com/rlcuevas14/PULSYR/pull/8): ADR 0001, auditor reproducible, baseline y secret scan. |
 | P1 — Superficie pública | Completada | [PR #9](https://github.com/rlcuevas14/PULSYR/pull/9): 9 páginas Astro SSG, contrato de HTML público y política `noindex` del origen privado. |
 | P2 — SEO técnico | Completada | [PR #10](https://github.com/rlcuevas14/PULSYR/pull/10): metadata, schema, crawling, tarjeta social, semántica y errores con request ID. |
-| P3 — Frontend/seguridad/caché | En curso | Assets locales versionados, CSRF, cabeceras, caché y secretos write-only en desarrollo. |
+| P3 — Frontend/seguridad/caché | Completada | [PR #11](https://github.com/rlcuevas14/PULSYR/pull/11): assets locales con hash, CSRF, cabeceras/CSP, compresión, caché y secretos write-only. |
 | P4 — Performance/a11y/UX | Pendiente | — |
 | P5 — Staging/analítica/observabilidad | Pendiente | — |
 | P6 — Automatización/lanzamiento | Pendiente | — |
