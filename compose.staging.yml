@@ -1,0 +1,38 @@
+services:
+  db-staging:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    volumes:
+      - pulsyr_staging_db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: pulsyr_staging
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set a staging-only DB_PASSWORD}
+      POSTGRES_DB: pulsyr_staging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulsyr_staging"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app-staging:
+    image: ${PULSYR_IMAGE:?set an immutable image digest}
+    restart: unless-stopped
+    depends_on:
+      db-staging:
+        condition: service_healthy
+    env_file: .env.staging
+    environment:
+      DATABASE_URL: postgresql+asyncpg://pulsyr_staging:${DB_PASSWORD}@db-staging/pulsyr_staging
+      DEPLOYMENT_ENVIRONMENT: staging
+      DEBUG: "false"
+      PUBLIC_SIGNUP: "false"
+    ports:
+      - "127.0.0.1:${STAGING_PORT:-18000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pulsyr_staging_db:

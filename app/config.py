@@ -1,4 +1,4 @@
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _INSECURE_SECRET = "dev-secret-change-in-production"
@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://pulso:pulso@db/pulso"
     secret_key: str = _INSECURE_SECRET
     debug: bool = False
+    deployment_environment: str = "development"
+    release: str = ""
 
     # Optional — base URL when running behind a reverse proxy (e.g. https://pulsyr.example.com)
     base_url: str = "http://localhost:8000"
@@ -39,6 +41,12 @@ class Settings(BaseSettings):
     github_webhook_secret: str = ""
     sentry_api_token: str = ""
     sentry_org: str = ""
+
+    # Optional application monitoring (separate from the inbound Sentry webhook
+    # integration above). PII is disabled and scrubbed again before transport.
+    sentry_dsn: str = ""
+    sentry_traces_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    readiness_timeout_seconds: float = Field(default=2.0, gt=0.0, le=30.0)
 
     job_poll_interval_seconds: int = 10
     job_lease_seconds: int = 300

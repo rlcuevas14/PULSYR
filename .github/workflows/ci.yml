@@ -129,6 +129,26 @@ jobs:
       - name: Validate generated public surface
         run: python scripts/check_public_site.py site/dist
 
+      - name: Confirm analytics is disabled outside production configuration
+        run: python scripts/check_analytics_build.py site/dist
+
+      - name: Validate production-only analytics contract
+        working-directory: site
+        env:
+          PUBLIC_ANALYTICS_ENABLED: "true"
+          PUBLIC_DEPLOYMENT_ENVIRONMENT: production
+        run: npm run build
+
+      - name: Confirm one analytics snippet and the event catalog
+        run: python scripts/check_analytics_build.py site/dist --enabled
+
+      - name: Restore dependency-free default build for browser tests
+        working-directory: site
+        run: npm run build
+
+      - name: Reconfirm default analytics exclusion
+        run: python scripts/check_analytics_build.py site/dist
+
       - name: Install Playwright Chromium
         working-directory: site
         run: npx playwright install --with-deps chromium
@@ -145,3 +165,63 @@ jobs:
           path: site/playwright-report/
           if-no-files-found: ignore
           retention-days: 14
+
+  supply-chain:
+    name: Supply chain
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Audit locked Python dependencies
+        run: |
+          python -m pip install pip-audit==2.10.1
+          pip-audit -r requirements.lock --no-deps --disable-pip
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Audit locked frontend dependencies
+        working-directory: site
+        run: |
+          npm ci
+          npm audit --audit-level=high
+
+      - name: Build inspection-only image
+        run: docker build --tag pulsyr-ci:${{ github.sha }} .
+
+      - name: Scan image for fixed high and critical vulnerabilities
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: pulsyr-ci:${{ github.sha }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      - name: Generate CycloneDX image SBOM
+        if: always()
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: pulsyr-ci:${{ github.sha }}
+          format: cyclonedx
+          output: trivy-sbom.cdx.json
+          exit-code: "0"
+
+      - name: Upload SBOM evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pulsyr-image-sbom
+          path: trivy-sbom.cdx.json
+          if-no-files-found: error
+          retention-days: 30

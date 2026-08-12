@@ -9,6 +9,7 @@ from app.config import settings
 from app.database import SessionFactory
 from app.jobs.handlers import HANDLERS
 from app.jobs.models import AgentRun
+from app.observability import capture_exception
 
 
 async def enqueue_job(
@@ -71,6 +72,7 @@ async def process_one(db: AsyncSession) -> bool:
     except Exception as exc:
         run.status = "error"
         run.error = str(exc)
+        capture_exception(exc, component="job-worker", job_kind=run.kind, job_id=str(run.id))
     finally:
         run.finished_at = datetime.now(timezone.utc)
         run.leased_until = None
@@ -91,5 +93,6 @@ async def worker_loop() -> None:
                     await asyncio.sleep(poll_interval)
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except Exception as exc:
+                capture_exception(exc, component="job-worker-loop")
                 await asyncio.sleep(poll_interval)

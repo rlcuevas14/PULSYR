@@ -19,15 +19,15 @@ const links = [
       ))}
     </div>
     <div class="desktop-actions">
-      <a class="text-link" href="https://github.com/rlcuevas14/PULSYR">GitHub</a>
-      <a class="button button-dark button-small" href="https://app.pulsyr.dev/login">Open the app</a>
+      <a class="text-link" data-analytics-event="cta_github" href="https://github.com/rlcuevas14/PULSYR">GitHub</a>
+      <a class="button button-dark button-small" data-analytics-event="cta_app" href="https://app.pulsyr.dev/login">Open the app</a>
     </div>
     <details class="mobile-menu">
       <summary aria-label="Open navigation">Menu</summary>
       <div class="mobile-panel">
         {links.map(([href, label]) => <a href={href}>{label}</a>)}
-        <a href="https://github.com/rlcuevas14/PULSYR">GitHub</a>
-        <a href="https://app.pulsyr.dev/login">Open the app</a>
+        <a data-analytics-event="cta_github" href="https://github.com/rlcuevas14/PULSYR">GitHub</a>
+        <a data-analytics-event="cta_app" href="https://app.pulsyr.dev/login">Open the app</a>
       </div>
     </details>
   </nav>

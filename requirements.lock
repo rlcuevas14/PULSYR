@@ -23,12 +23,15 @@ certifi==2026.6.17
     # via
     #   httpcore
     #   httpx
+    #   sentry-sdk
 click==8.4.2
     # via uvicorn
 colorama==0.4.6
     # via click
 fastapi==0.139.2
-    # via pulsyr (pyproject.toml)
+    # via
+    #   pulsyr (pyproject.toml)
+    #   sentry-sdk
 greenlet==3.5.3
     # via sqlalchemy
 h11==0.16.0
@@ -77,6 +80,8 @@ python-multipart==0.0.32
     # via pulsyr (pyproject.toml)
 pyyaml==6.0.3
     # via uvicorn
+sentry-sdk[fastapi]==2.67.1
+    # via pulsyr (pyproject.toml)
 sqlalchemy[asyncio]==2.0.51
     # via
     #   alembic
@@ -98,6 +103,8 @@ typing-inspection==0.4.2
     #   fastapi
     #   pydantic
     #   pydantic-settings
+urllib3==2.7.0
+    # via sentry-sdk
 uvicorn[standard]==0.51.0
     # via pulsyr (pyproject.toml)
 watchfiles==1.2.0

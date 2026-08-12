@@ -1,6 +1,7 @@
 ---
 import SiteFooter from "../components/SiteFooter.astro";
 import SiteHeader from "../components/SiteHeader.astro";
+import Analytics from "../components/Analytics.astro";
 import { DEFAULT_SOCIAL_IMAGE, absoluteUrl, structuredData } from "../lib/seo";
 import "../styles/global.css";
 
@@ -16,6 +17,8 @@ const path = Astro.url.pathname;
 const canonical = absoluteUrl(path);
 const socialImage = absoluteUrl(DEFAULT_SOCIAL_IMAGE);
 const schema = robots === "index,follow" ? structuredData(path, title, description) : null;
+const googleVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
+const bingVerification = import.meta.env.PUBLIC_BING_SITE_VERIFICATION;
 ---
 
 <!doctype html>
@@ -26,6 +29,8 @@ const schema = robots === "index,follow" ? structuredData(path, title, descripti
     <meta name="theme-color" content="#fffaf0" />
     <meta name="robots" content={robots} />
     <meta name="description" content={description} />
+    {googleVerification && <meta name="google-site-verification" content={googleVerification} />}
+    {bingVerification && <meta name="msvalidate.01" content={bingVerification} />}
     <link rel="canonical" href={canonical} />
     <link rel="alternate" hreflang="en" href={canonical} />
     <link rel="alternate" hreflang="x-default" href={canonical} />
@@ -43,6 +48,7 @@ const schema = robots === "index,follow" ? structuredData(path, title, descripti
     <meta name="twitter:image" content={socialImage} />
     <meta name="twitter:image:alt" content="Pulsyr — The backlog your agent maintains" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <Analytics />
     <title>{documentTitle}</title>
     {schema && <script is:inline type="application/ld+json" set:html={JSON.stringify(schema)}></script>}
   </head>

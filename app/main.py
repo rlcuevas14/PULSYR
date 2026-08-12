@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from starlette.datastructures import MutableHeaders
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.gzip import GZipMiddleware
@@ -16,6 +17,7 @@ from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.config import settings
+from app.observability import capture_exception, init_observability
 from app.templates_config import templates  # noqa: F401 — re-exported for legacy imports
 from app.web_security import CsrfMiddleware, ResponsePolicyMiddleware
 
@@ -34,6 +36,21 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger("pulsyr")
+init_observability()
+
+
+async def _database_ready() -> bool:
+    """Check the critical database dependency within a strict timeout."""
+    from app.database import SessionFactory
+
+    try:
+        async with asyncio.timeout(settings.readiness_timeout_seconds):
+            async with SessionFactory() as session:
+                await session.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        logger.warning("Readiness database check failed", exc_info=settings.debug)
+        return False
 
 
 class PrivateIndexingMiddleware:
@@ -129,6 +146,13 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> Resp
         request.url.path,
         request_id,
     )
+    capture_exception(
+        exc,
+        component="http",
+        method=request.method,
+        route=getattr(request.scope.get("route"), "path", "unmatched"),
+        request_id=request_id,
+    )
     if _request_prefers_html(request):
         return templates.TemplateResponse(
             request,
@@ -207,6 +231,18 @@ def create_app() -> FastAPI:
         TrustedHostMiddleware,
         allowed_hosts=trusted_hosts,
     )
+
+    @app.get("/health/live", include_in_schema=False)
+    async def health_live() -> dict[str, str]:
+        return {"status": "ok", "service": "pulsyr"}
+
+    @app.get("/health/ready", include_in_schema=False)
+    async def health_ready() -> JSONResponse:
+        ready = await _database_ready()
+        return JSONResponse(
+            status_code=200 if ready else 503,
+            content={"status": "ready" if ready else "unavailable", "database": "ok" if ready else "error"},
+        )
     app.include_router(auth_router)
     app.include_router(auth_compat_router)
     app.include_router(setup_router)
