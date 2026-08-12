@@ -1,0 +1,107 @@
+name: VM env sync
+
+# Writes the OAuth settings into /opt/pulso/.env and restarts the app, so the
+# values live in GitHub repository secrets and never pass through a chat, a
+# commit or a laptop. There is no direct SSH from the dev machine; the key lives
+# only in Actions secrets, which is why this is a workflow rather than a script.
+#
+# Safe to run repeatedly, and safe to run with only some secrets configured: a
+# secret that is empty is skipped, so syncing GitHub today does not erase Google
+# tomorrow. Everything already in .env (DB_PASSWORD, SECRET_KEY, the Sentry keys)
+# is preserved, and the file is backed up before every edit.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Public URL of the instance. The OAuth callback derives from it."
+        required: true
+        default: https://app.pulsyr.dev
+      public_signup:
+        description: "Allow anyone with a provider account to register"
+        required: true
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+
+jobs:
+  sync:
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Write .env and restart the app
+        uses: appleboy/ssh-action@v1
+        env:
+          BASE_URL_IN: ${{ inputs.base_url }}
+          PUBLIC_SIGNUP_IN: ${{ inputs.public_signup }}
+          GH_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+          GH_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
+          GOOGLE_ID: ${{ secrets.OAUTH_GOOGLE_CLIENT_ID }}
+          GOOGLE_SECRET: ${{ secrets.OAUTH_GOOGLE_CLIENT_SECRET }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          envs: BASE_URL_IN,PUBLIC_SIGNUP_IN,GH_ID,GH_SECRET,GOOGLE_ID,GOOGLE_SECRET
+          script: |
+            set -e
+            cd /opt/pulso
+            cp .env ".env.bak.$(date +%s)"
+
+            # Rewrite rather than sed-replace: a client secret can contain any of
+            # sed's delimiters and metacharacters, and would corrupt the file.
+            upsert() {
+              key="$1"; val="$2"
+              if [ -z "$val" ]; then
+                echo "  $key: no value configured, left untouched"
+                return
+              fi
+              grep -v "^${key}=" .env > .env.tmp || true
+              printf '%s=%s\n' "$key" "$val" >> .env.tmp
+              mv .env.tmp .env
+              echo "  $key: written (${#val} chars)"
+            }
+
+            echo "Updating /opt/pulso/.env"
+            upsert BASE_URL "$BASE_URL_IN"
+            upsert PUBLIC_SIGNUP "$PUBLIC_SIGNUP_IN"
+            upsert OAUTH_GITHUB_CLIENT_ID "$GH_ID"
+            upsert OAUTH_GITHUB_CLIENT_SECRET "$GH_SECRET"
+            upsert OAUTH_GOOGLE_CLIENT_ID "$GOOGLE_ID"
+            upsert OAUTH_GOOGLE_CLIENT_SECRET "$GOOGLE_SECRET"
+
+            # Which keys exist now, never their values.
+            echo "Keys present in .env:"
+            sed 's/=.*//' .env | sed 's/^/  /'
+
+            # --force-recreate because env_file values are baked in at container
+            # creation: without it compose can decide nothing changed and the new
+            # settings would silently not apply.
+            docker compose --env-file .env up -d --force-recreate app
+
+            # The app must rejoin infra_frontnet or Caddy cannot resolve it and
+            # every request 502s. That attachment lives in docker-compose.override.yml
+            # on this host, which the pipeline never writes, so a recreate is exactly
+            # when its absence would show. Check rather than hope.
+            for i in $(seq 1 15); do
+              if docker inspect pulso-app-1 \
+                   --format '{{range $n, $v := .NetworkSettings.Networks}}{{$n}} {{end}}' \
+                   2>/dev/null | grep -q infra_frontnet; then
+                echo "Network OK: pulso-app-1 is on infra_frontnet"
+                break
+              fi
+              [ "$i" = "15" ] && { echo "FAILED: pulso-app-1 is not on infra_frontnet, Caddy will 502"; exit 1; }
+              sleep 2
+            done
+
+            for i in $(seq 1 20); do
+              code=$(docker exec pulso-app-1 python -c \
+                "import urllib.request;\
+                 r=urllib.request.urlopen('http://localhost:8000/login', timeout=5);\
+                 print(r.status)" 2>/dev/null || true)
+              [ "$code" = "200" ] && { echo "App OK: /login returns 200"; exit 0; }
+              sleep 3
+            done
+            echo "FAILED: /login never returned 200 after the restart"
+            exit 1
