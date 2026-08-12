@@ -1,0 +1,80 @@
+export const SITE_ORIGIN = "https://pulsyr.dev";
+export const DEFAULT_SOCIAL_IMAGE = "/og/pulsyr-social.png";
+
+export const INDEXABLE_ROUTES = [
+  "/",
+  "/producto/",
+  "/integraciones/mcp/",
+  "/open-source/",
+  "/docs/primeros-pasos/",
+  "/seguridad/",
+  "/privacidad/",
+  "/terminos/",
+  "/contacto/",
+] as const;
+
+export function absoluteUrl(path: string): string {
+  return new URL(path, SITE_ORIGIN).href;
+}
+
+export function structuredData(path: string, title: string, description: string) {
+  const graph: Record<string, unknown>[] = [];
+
+  if (path === "/") {
+    graph.push(
+      {
+        "@type": "Organization",
+        "@id": `${SITE_ORIGIN}/#organization`,
+        name: "Pulsyr",
+        url: `${SITE_ORIGIN}/`,
+        logo: absoluteUrl("/favicon.svg"),
+        sameAs: ["https://github.com/rlcuevas14/PULSYR"],
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_ORIGIN}/#website`,
+        name: "Pulsyr",
+        url: `${SITE_ORIGIN}/`,
+        inLanguage: "en",
+        publisher: { "@id": `${SITE_ORIGIN}/#organization` },
+      },
+    );
+  }
+
+  if (path === "/producto/") {
+    graph.push({
+      "@type": "SoftwareApplication",
+      "@id": `${SITE_ORIGIN}/producto/#software`,
+      name: "Pulsyr",
+      description,
+      url: absoluteUrl(path),
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web, Linux",
+      license: "https://github.com/rlcuevas14/PULSYR/blob/main/LICENSE",
+      codeRepository: "https://github.com/rlcuevas14/PULSYR",
+      inLanguage: "en",
+    });
+  }
+
+  if (path !== "/") {
+    graph.push({
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: `${SITE_ORIGIN}/`,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: title,
+          item: absoluteUrl(path),
+        },
+      ],
+    });
+  }
+
+  return { "@context": "https://schema.org", "@graph": graph };
+}

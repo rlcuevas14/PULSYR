@@ -1,0 +1,14 @@
+---
+import PublicLayout from "../layouts/PublicLayout.astro";
+---
+
+<PublicLayout title="Temporary error" description="Pulsyr could not complete this public page request. Try again or use the available documentation and support channels." robots="noindex,follow">
+  <section class="error-page container">
+    <p class="eyebrow">500 · Temporary error</p>
+    <h1>The request reached a blocker.</h1>
+    <p class="lead">Try again shortly. If the problem continues, report it through the public support channel.</p>
+    <div class="actions"><a class="button button-dark" href="/">Return home</a><a class="button button-outline" href="/contacto/">Contact Pulsyr</a></div>
+  </section>
+</PublicLayout>
+
+<style>.error-page{padding:clamp(6rem,14vw,11rem) 0}.error-page h1{max-width:15ch}.error-page .lead{max-width:620px}</style>

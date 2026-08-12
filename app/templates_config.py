@@ -69,7 +69,14 @@ _md = MarkdownIt("commonmark", {"html": False, "breaks": True})
 
 
 def _render_md(text: str | None) -> Markup:
-    return Markup(_md.render(text or ""))
+    tokens = _md.parse(text or "")
+    # A document already has its page-level h1. User/agent Markdown is nested
+    # content, so top-level Markdown headings start at h2 instead of creating a
+    # second document title.
+    for token in tokens:
+        if token.tag == "h1":
+            token.tag = "h2"
+    return Markup(_md.renderer.render(tokens, _md.options, {}))
 
 
 # Jinja filter `md`: {{ item.summary_md | md }} → sanitized HTML (pair with .p-md styles).

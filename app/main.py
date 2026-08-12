@@ -1,11 +1,15 @@
 import asyncio
 import logging
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import JSONResponse
 from starlette.datastructures import MutableHeaders
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.config import settings
@@ -68,7 +72,42 @@ async def lifespan(app: FastAPI):
     logger.info("Pulsyr stopped")
 
 
-async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+def _request_prefers_html(request: Request) -> bool:
+    """Return HTML only for browser-facing routes that explicitly accept it."""
+    if request.url.path.startswith(("/api/", "/mcp", "/webhooks/")):
+        return False
+    return "text/html" in request.headers.get("accept", "").lower()
+
+
+def _request_id() -> str:
+    return uuid.uuid4().hex
+
+
+async def _http_error_handler(request: Request, exc: Exception) -> Response:
+    assert isinstance(exc, StarletteHTTPException)
+    request_id = _request_id()
+    response: Response
+    if _request_prefers_html(request):
+        detail = exc.detail if isinstance(exc.detail, str) else "The requested page is unavailable."
+        response = templates.TemplateResponse(
+            request,
+            "error.html",
+            {
+                "status_code": exc.status_code,
+                "heading": "Page not found" if exc.status_code == 404 else "Request unavailable",
+                "message": detail,
+                "request_id": request_id,
+            },
+            status_code=exc.status_code,
+        )
+    else:
+        response = await http_exception_handler(request, exc)
+    response.headers["X-Request-ID"] = request_id
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
+
+async def _unhandled_exception_handler(request: Request, exc: Exception) -> Response:
     """Red de último recurso para rutas REST/UI (OBS + manejo de errores).
 
     Loguea la excepción con stack trace (incluye método + path) y devuelve un 500
@@ -79,8 +118,37 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
     nunca llega aquí. Tampoco captura HTTPException ni RequestValidationError: esos van
     registrados aparte para conservar su comportamiento normal (status + detail correctos).
     """
-    logger.exception("Excepción no manejada en %s %s", request.method, request.url.path)
-    return JSONResponse(status_code=500, content={"detail": "error interno"})
+    request_id = _request_id()
+    logger.exception(
+        "Excepción no manejada en %s %s (request_id=%s)",
+        request.method,
+        request.url.path,
+        request_id,
+    )
+    if _request_prefers_html(request):
+        return templates.TemplateResponse(
+            request,
+            "error.html",
+            {
+                "status_code": 500,
+                "heading": "Temporary error",
+                "message": "Pulsyr could not complete this request. Try again shortly.",
+                "request_id": request_id,
+            },
+            status_code=500,
+            headers={
+                "X-Request-ID": request_id,
+                "X-Robots-Tag": "noindex, nofollow",
+            },
+        )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "error interno"},
+        headers={
+            "X-Request-ID": request_id,
+            "X-Robots-Tag": "noindex, nofollow",
+        },
+    )
 
 
 def create_app() -> FastAPI:
@@ -144,6 +212,7 @@ def create_app() -> FastAPI:
     # matchea: FastAPI ya trae handlers built-in para HTTPException (devuelve su status +
     # detail) y RequestValidationError (422 con los errores de validación), que tienen
     # prioridad sobre este. Así, este solo atrapa los errores 500 inesperados.
+    app.add_exception_handler(StarletteHTTPException, _http_error_handler)
     app.add_exception_handler(Exception, _unhandled_exception_handler)
     return app
 
