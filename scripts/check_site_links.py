@@ -94,7 +94,7 @@ def probe(url: str, attempts: int = 3) -> tuple[int | None, str | None]:
             if exc.code not in {405, 429}:
                 return exc.code, str(exc)
             last_error = str(exc)
-        except (TimeoutError, URLError) as exc:
+        except (ConnectionError, TimeoutError, URLError) as exc:
             last_error = str(exc)
         if attempt + 1 < attempts:
             time.sleep(2**attempt)

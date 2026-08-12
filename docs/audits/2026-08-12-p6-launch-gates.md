@@ -41,6 +41,8 @@ que se registra a continuación.
   umbrales versionados.
 - Caddy real aprobó CSP/cabeceras, caché HTML/immutable, gzip y 404; Firefox/WebKit y
   los seis enlaces externos críticos también aprobaron.
+- Un run inicial expuso `RemoteDisconnected` antes de escribir el reporte de enlaces;
+  se incorporó al retry y quedó cubierto por una prueba de regresión desconexión→éxito.
 
 ## Evidencia externa pendiente
 
