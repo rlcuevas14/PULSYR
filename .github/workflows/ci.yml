@@ -200,7 +200,7 @@ jobs:
         run: docker build --tag pulsyr-ci:${{ github.sha }} .
 
       - name: Scan image for fixed high and critical vulnerabilities
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: pulsyr-ci:${{ github.sha }}
           format: table
@@ -210,7 +210,7 @@ jobs:
 
       - name: Generate CycloneDX image SBOM
         if: always()
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: pulsyr-ci:${{ github.sha }}
           format: cyclonedx
