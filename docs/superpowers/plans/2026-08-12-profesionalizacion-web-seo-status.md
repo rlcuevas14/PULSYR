@@ -6,7 +6,7 @@ sus verificaciones y termina en PR + merge a `main`. Ninguna fase autoriza deplo
 
 | Fase | Estado | Evidencia |
 |---|---|---|
-| P0 — Contención y línea base | En validación | [PR #8](https://github.com/rlcuevas14/PULSYR/pull/8): ADR 0001, auditor reproducible, baseline y secret scan. |
+| P0 — Contención y línea base | Completada | [PR #8](https://github.com/rlcuevas14/PULSYR/pull/8): ADR 0001, auditor reproducible, baseline y secret scan. |
 | P1 — Superficie pública | Pendiente | — |
 | P2 — SEO técnico | Pendiente | — |
 | P3 — Frontend/seguridad/caché | Pendiente | — |
