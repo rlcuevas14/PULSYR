@@ -1,0 +1,47 @@
+name: Web baseline
+
+# Read-only production observation. This workflow never deploys and is deliberately
+# manual: it records a dated snapshot when a phase or incident needs fresh evidence.
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Origin to observe"
+        required: true
+        default: "https://app.pulsyr.dev"
+      label:
+        description: "Short reason for this snapshot"
+        required: true
+        default: "manual-baseline"
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Capture DNS, TLS and HTTP behavior
+        run: >-
+          python scripts/web_baseline.py
+          --base-url "${{ inputs.base_url }}"
+          --location "github-actions/ubuntu-latest"
+          --label "${{ inputs.label }}"
+          --output web-baseline.json
+
+      - name: Add concise job summary
+        run: python scripts/web_baseline.py --summarize web-baseline.json >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: web-baseline-${{ github.run_id }}
+          path: web-baseline.json
+          if-no-files-found: error
+          retention-days: 30
