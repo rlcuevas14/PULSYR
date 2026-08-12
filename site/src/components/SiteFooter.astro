@@ -1,0 +1,44 @@
+---
+import BrandMark from "./BrandMark.astro";
+---
+
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <a href="/" aria-label="Pulsyr home"><BrandMark size={26} /></a>
+      <p>The backlog your coding agent can actually maintain.</p>
+      <p class="company">Avonlea Systems SpA · Santiago, Chile</p>
+    </div>
+    <div>
+      <h2>Product</h2>
+      <a href="/producto/">Features</a>
+      <a href="/integraciones/mcp/">MCP integration</a>
+      <a href="/docs/primeros-pasos/">Get started</a>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <a href="/open-source/">Open source</a>
+      <a href="/seguridad/">Security</a>
+      <a href="https://github.com/rlcuevas14/PULSYR">GitHub</a>
+    </div>
+    <div>
+      <h2>Company</h2>
+      <a href="/contacto/">Contact</a>
+      <a href="/privacidad/">Privacy</a>
+      <a href="/terminos/">Terms</a>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer { margin-top:clamp(5rem,10vw,9rem); padding:4.5rem 0; border-top:1px solid var(--line); background:var(--soft); }
+  .footer-grid { display:grid; grid-template-columns:2fr repeat(3,1fr); gap:2.5rem; }
+  .footer-brand p { max-width:30rem; color:var(--muted); }
+  .footer-brand a { text-decoration:none; }
+  .company { font-size:.8rem; margin-top:1.5rem; }
+  h2 { font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; margin:0 0 1rem; }
+  .footer-grid > div:not(.footer-brand) { display:flex; flex-direction:column; align-items:flex-start; gap:.7rem; }
+  .footer-grid a { color:var(--body); text-decoration:none; font-size:.9rem; }
+  .footer-grid a:hover { color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
+  @media (max-width:760px) { .footer-grid { grid-template-columns:1fr 1fr; } .footer-brand { grid-column:1/-1; } }
+</style>

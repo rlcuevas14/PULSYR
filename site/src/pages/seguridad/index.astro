@@ -1,0 +1,25 @@
+---
+import PageHero from "../../components/PageHero.astro";
+import PublicLayout from "../../layouts/PublicLayout.astro";
+---
+
+<PublicLayout title="Security" description="Understand Pulsyr's self-hosted security boundary, project-scoped tokens, role controls, signed webhooks, supported releases, and private reporting process.">
+  <PageHero compact eyebrow="Security" title="Clear boundaries for people, projects, and agents." lead="Pulsyr handles authentication, API tokens, project data, and inbound webhooks. Its controls reduce accidental cross-project access, while operators remain responsible for infrastructure, secrets, backups, and upgrades." />
+  <section class="section-tight container">
+    <div class="grid-2">
+      <article class="card"><h2>Project isolation</h2><p>Each MCP token is bound to one project. Session users resolve access through account roles and explicit project grants.</p></article>
+      <article class="card"><h2>Credential handling</h2><p>Raw MCP tokens appear once and are stored as hashes. Production startup rejects placeholder or short session secrets.</p></article>
+      <article class="card"><h2>Signed integrations</h2><p>Sentry and GitHub webhooks support signature verification. Configure a unique secret for every external integration.</p></article>
+      <article class="card"><h2>Supported release</h2><p>Only the latest tagged release receives security fixes. Upgrade before reporting or reproducing an issue.</p></article>
+    </div>
+  </section>
+  <section class="section-tight container prose">
+    <h2>Report a vulnerability privately.</h2>
+    <p>Do not open a public issue for a security problem. Use GitHub's private vulnerability reporting from the repository <strong>Security</strong> tab. Include the affected area, reproducible steps or proof of concept, and the impact you believe an attacker could achieve.</p>
+    <div class="actions"><a class="button button-dark" href="https://github.com/rlcuevas14/PULSYR/security/advisories/new">Report privately</a><a class="button button-outline" href="https://github.com/rlcuevas14/PULSYR/blob/main/SECURITY.md">Read the policy</a></div>
+    <h2>Operator responsibilities</h2>
+    <ul><li>Terminate TLS at a maintained reverse proxy.</li><li>Keep <code>DEBUG=false</code> in production.</li><li>Use unique secrets and restrict database/network access.</li><li>Back up Postgres and test restoration.</li><li>Monitor releases and apply security updates.</li></ul>
+  </section>
+</PublicLayout>
+
+<style>.card h2{font-size:1.45rem}</style>

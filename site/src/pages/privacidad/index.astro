@@ -1,0 +1,19 @@
+---
+import PageHero from "../../components/PageHero.astro";
+import PublicLayout from "../../layouts/PublicLayout.astro";
+---
+
+<PublicLayout title="Privacy" description="Privacy information for the public Pulsyr website and the separate responsibilities that apply when you self-host the Pulsyr application.">
+  <PageHero compact eyebrow="Legal" title="Privacy" lead="This notice describes the public Pulsyr website. A self-hosted Pulsyr instance is operated by whoever deploys it, and that operator determines its own data practices." />
+  <article class="section-tight container prose">
+    <p><strong>Effective date:</strong> 12 August 2026</p>
+    <h2>Public website</h2>
+    <p>The public website provides product and project information. Its initial release does not offer accounts, accept form submissions, set advertising cookies, or include behavioral analytics. Hosting and network providers may process ordinary request data—such as IP address, user agent, requested URL, timestamp, and security signals—to deliver and protect the site.</p>
+    <h2>External destinations</h2>
+    <p>Links to GitHub and the separate application host take you to services with their own privacy terms. Pulsyr does not control how an independently operated GitHub account, MCP client, reverse proxy, or self-hosted installation processes data.</p>
+    <h2>Self-hosted application</h2>
+    <p>The Pulsyr software stores account identifiers, project content, audit events, API-token hashes, integration configuration, and other data entered by its operator or users. The operator chooses the infrastructure, integrations, access policy, retention period, backups, and legal basis. Questions about a particular instance should go to that instance's operator.</p>
+    <h2>Contact and changes</h2>
+    <p>Privacy or legal questions about this public website can be sent to <a href="mailto:legal@pulsyr.dev">legal@pulsyr.dev</a>. If the website later adds analytics, forms, hosted accounts, or materially different processing, this notice will be updated before or alongside that change.</p>
+  </article>
+</PublicLayout>

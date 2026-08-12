@@ -4,7 +4,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from starlette.datastructures import MutableHeaders
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.config import settings
 from app.templates_config import templates  # noqa: F401 — re-exported for legacy imports
@@ -24,6 +26,32 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger("pulsyr")
+
+
+class PrivateIndexingMiddleware:
+    """Keep every response from the application origin out of search indexes.
+
+    `app.pulsyr.dev` contains authenticated project data and is deliberately separate
+    from the public site at `pulsyr.dev`. Applying the header at the ASGI boundary also
+    covers redirects, error responses, static assets, APIs, MCP and webhooks. It is a
+    crawler policy, never an access-control mechanism.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_indexing_policy(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers["X-Robots-Tag"] = "noindex, nofollow"
+            await send(message)
+
+        await self.app(scope, receive, send_with_indexing_policy)
 
 
 @asynccontextmanager
@@ -72,9 +100,19 @@ def create_app() -> FastAPI:
     from app.ui.router import router as ui_router
     from app.webhooks.router import router as webhooks_router
 
-    app = FastAPI(title="Pulsyr", lifespan=lifespan)
+    # Interactive API documentation is a development aid. Production exposes only
+    # the documented product endpoints, not Swagger/ReDoc or the OpenAPI document.
+    docs_enabled = settings.debug
+    app = FastAPI(
+        title="Pulsyr",
+        lifespan=lifespan,
+        docs_url="/docs" if docs_enabled else None,
+        redoc_url="/redoc" if docs_enabled else None,
+        openapi_url="/openapi.json" if docs_enabled else None,
+    )
     from fastapi.staticfiles import StaticFiles
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
+    app.add_middleware(PrivateIndexingMiddleware)
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.secret_key,

@@ -1,0 +1,37 @@
+---
+import CallToAction from "../../../components/CallToAction.astro";
+import PageHero from "../../../components/PageHero.astro";
+import PublicLayout from "../../../layouts/PublicLayout.astro";
+---
+
+<PublicLayout title="MCP integration" description="Connect an MCP-compatible coding agent to a project-scoped Pulsyr token and let it read context and maintain the backlog as it works.">
+  <PageHero eyebrow="MCP integration" title="One project context your agent can read and maintain." lead="Pulsyr exposes a remote MCP endpoint over HTTP. Create a scoped project token, add the endpoint to your client, and let the agent work through structured tools instead of scraping a dashboard.">
+    <div class="actions"><a class="button button-dark" href="/docs/primeros-pasos/#connect">Connect a client</a><a class="button button-outline" href="https://github.com/rlcuevas14/PULSYR/blob/main/docs/MCP.md">Read the protocol guide</a></div>
+  </PageHero>
+  <section class="section container">
+    <div class="grid-3">
+      <article class="card lavender"><span class="kicker">1 · Scope</span><h2>Create a project token</h2><p>The raw token appears once. Pulsyr stores its hash and binds the credential to a single project with read or write scope.</p></article>
+      <article class="card peach"><span class="kicker">2 · Connect</span><h2>Add the HTTP endpoint</h2><p>Your client sends the token as a Bearer credential to `/mcp`. No editor-specific plugin is required.</p></article>
+      <article class="card teal"><span class="kicker">3 · Work</span><h2>Start with context</h2><p>Call <code>pulsyr_context</code> to load priorities, blockers, quick wins, incidents, and active Threads before changing code.</p></article>
+    </div>
+  </section>
+  <section class="section-tight container split">
+    <div><p class="eyebrow">The contract</p><h2>Tools reflect project operations, not UI clicks.</h2><p class="lead">Agents search, create, advance, complete, link, document, and plan through explicit arguments and validated outcomes.</p></div>
+    <div class="tool-groups">
+      <article><h3>Backlog</h3><p><code>pulsyr_context</code>, <code>pulsyr_search</code>, <code>pulsyr_list</code>, <code>pulsyr_create</code>, <code>pulsyr_advance</code>, <code>pulsyr_complete</code></p></article>
+      <article><h3>Structure</h3><p><code>pulsyr_link</code>, <code>pulsyr_move_area</code>, Thread tools and incident tools.</p></article>
+      <article><h3>Management</h3><p>Versioned documents, action items, and a three-level project plan edited through MCP.</p></article>
+    </div>
+  </section>
+  <CallToAction title="Connect the agent you already use." body="Pulsyr is an MCP server. Any compatible client that supports remote HTTP and Bearer headers can connect." />
+</PublicLayout>
+
+<style>
+  .card h2 { margin-top:1.7rem; font-size:1.6rem; }
+  code { font-size:.88em; }
+  .split { display:grid; grid-template-columns:1fr 1fr; gap:clamp(2rem,8vw,7rem); }
+  .tool-groups { display:grid; gap:.75rem; }
+  .tool-groups article { padding:1.3rem; border-radius:16px; background:var(--soft); border:1px solid var(--line); }
+  .tool-groups p { color:var(--muted); margin-bottom:0; }
+  @media(max-width:800px){ .split { grid-template-columns:1fr; } }
+</style>

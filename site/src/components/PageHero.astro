@@ -1,0 +1,26 @@
+---
+interface Props {
+  eyebrow: string;
+  title: string;
+  lead: string;
+  compact?: boolean;
+}
+const { eyebrow, title, lead, compact = false } = Astro.props;
+---
+
+<section class:list={["page-hero", compact && "compact"]}>
+  <div class="container narrow">
+    <p class="eyebrow">{eyebrow}</p>
+    <h1>{title}</h1>
+    <p class="lead">{lead}</p>
+    <slot />
+  </div>
+</section>
+
+<style>
+  .page-hero { padding:clamp(5rem,10vw,9rem) 0 3.5rem; }
+  .page-hero.compact { padding-bottom:1.5rem; }
+  .narrow { max-width:900px; margin-inline:auto; }
+  h1 { max-width:18ch; }
+  .lead { max-width:720px; font-size:clamp(1.1rem,2vw,1.35rem); color:var(--body); line-height:1.65; }
+</style>

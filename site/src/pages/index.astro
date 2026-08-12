@@ -1,0 +1,129 @@
+---
+import CallToAction from "../components/CallToAction.astro";
+import PublicLayout from "../layouts/PublicLayout.astro";
+---
+
+<PublicLayout title="Pulsyr" description="An open-source, self-hosted backlog that MCP-compatible coding agents can read and maintain while they work.">
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">Agent-native project management</p>
+        <h1>Your agent writes code. Pulsyr keeps the work legible.</h1>
+        <p class="lead">A self-hosted backlog built around MCP. Your coding agent can read priorities, create work, follow dependencies, and close what it finishes—without a second system to update by hand.</p>
+        <div class="actions">
+          <a class="button button-dark" href="/docs/primeros-pasos/">Self-host Pulsyr</a>
+          <a class="button button-outline" href="/integraciones/mcp/">See the MCP workflow</a>
+        </div>
+        <p class="hero-note">MIT-licensed code · Postgres-backed · Works with MCP-compatible clients</p>
+      </div>
+      <div class="product-scene" aria-label="Illustration of a Pulsyr agent session updating a project backlog">
+        <div class="scene-top">
+          <span class="scene-brand">pulsyr / launch</span>
+          <span class="live-dot">Agent connected</span>
+        </div>
+        <div class="agent-message">
+          <span class="agent-icon" aria-hidden="true">›_</span>
+          <div><strong>Context loaded</strong><p>3 priorities · 1 blocker · 2 quick wins</p></div>
+        </div>
+        <div class="board">
+          <div class="column">
+            <span>Backlog</span>
+            <article><b>Document OAuth setup</b><small>docs · P2</small></article>
+          </div>
+          <div class="column active">
+            <span>In progress</span>
+            <article><b>Ship MCP token isolation</b><small>security · P0</small></article>
+          </div>
+          <div class="column">
+            <span>Done</span>
+            <article><b>Map project dependencies</b><small>core · completed</small></article>
+          </div>
+        </div>
+        <div class="pulse-line" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container" aria-labelledby="problem-heading">
+    <div class="section-heading">
+      <div><p class="eyebrow">One source of truth</p><h2 id="problem-heading">Stop translating agent work into status updates.</h2></div>
+      <p>Most backlogs are designed for humans to update after the real work happens. Pulsyr exposes the same structured project context to you and your coding agent.</p>
+    </div>
+    <div class="grid-3">
+      <article class="card pink"><span class="kicker">Before a session</span><h3>Start with context</h3><p>The agent reads priorities, blockers, incidents, active threads, and quick wins through one MCP call.</p></article>
+      <article class="card teal"><span class="kicker">During the work</span><h3>Keep the graph current</h3><p>Create items, add typed dependencies, move lifecycle stages, and attach decisions as the implementation evolves.</p></article>
+      <article class="card lavender"><span class="kicker">After the work</span><h3>Close the loop</h3><p>Completion records a reason, linked commit, events, and newly unblocked work instead of leaving stale tickets behind.</p></article>
+    </div>
+  </section>
+
+  <section class="section workflow-band" aria-labelledby="workflow-heading">
+    <div class="container">
+      <p class="eyebrow">A workflow with guardrails</p>
+      <h2 id="workflow-heading">Your agent can act. It cannot invent the rules.</h2>
+      <div class="workflow-grid">
+        <div class="flow-step"><b>01</b><h3>Connect a project</h3><p>Each token belongs to exactly one project and carries a read or write scope.</p></div>
+        <div class="flow-step"><b>02</b><h3>Read structured context</h3><p>Backlog state, graph edges, management docs, pendings, and incidents stay queryable.</p></div>
+        <div class="flow-step"><b>03</b><h3>Move through a lifecycle</h3><p>Transitions are validated. Terminal work requires a reason. Blocking derives from the graph.</p></div>
+        <div class="flow-step"><b>04</b><h3>Review every change</h3><p>Humans retain the web interface, event history, role controls, and final judgment.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container" aria-labelledby="fit-heading">
+    <div class="grid-2 fit-grid">
+      <div><p class="eyebrow">Designed for focused teams</p><h2 id="fit-heading">Small enough to run yourself. Structured enough to trust.</h2></div>
+      <div class="feature-stack">
+        <article><span class="feature-number">26</span><div><h3>MCP tools</h3><p>Context, backlog, dependencies, threads, incidents, management documents, pendings, and plans.</p></div></article>
+        <article><span class="feature-number">1:1</span><div><h3>Token-to-project isolation</h3><p>An agent token cannot silently write to the wrong project.</p></div></article>
+        <article><span class="feature-number">3</span><div><h3>UI languages</h3><p>English, Spanish, and French are available in the authenticated product.</p></div></article>
+      </div>
+    </div>
+  </section>
+
+  <CallToAction />
+</PublicLayout>
+
+<style>
+  .hero { padding:clamp(4.5rem,9vw,8rem) 0; overflow:hidden; }
+  .hero-grid { display:grid; grid-template-columns:1.05fr .95fr; align-items:center; gap:clamp(2.5rem,6vw,6rem); }
+  .hero h1 { max-width:12ch; }
+  .hero-copy .lead { max-width:690px; }
+  .hero-note { margin-top:1.3rem; color:var(--muted); font-size:.78rem; font-weight:650; }
+  .product-scene { position:relative; min-height:520px; padding:1.2rem; overflow:hidden; border-radius:32px; background:var(--teal); box-shadow:var(--shadow); color:#fff; transform:rotate(1deg); }
+  .product-scene::before { content:""; position:absolute; width:310px; height:310px; right:-90px; top:-110px; border-radius:50%; background:var(--pink); opacity:.9; }
+  .scene-top,.agent-message,.board { position:relative; z-index:1; }
+  .scene-top { display:flex; justify-content:space-between; gap:1rem; align-items:center; font-size:.72rem; font-weight:700; }
+  .scene-brand { letter-spacing:.08em; text-transform:uppercase; }
+  .live-dot { display:flex; align-items:center; gap:.4rem; padding:.3rem .6rem; border-radius:999px; background:rgb(255 255 255 / 14%); }
+  .live-dot::before { content:""; width:.45rem; height:.45rem; border-radius:50%; background:#4ade80; box-shadow:0 0 0 4px rgb(74 222 128 / 18%); }
+  .agent-message { margin:4.5rem 0 1rem; display:flex; gap:.8rem; align-items:center; padding:1rem; border-radius:16px; color:var(--ink); background:var(--mint); }
+  .agent-message p { margin:0; font-size:.78rem; }
+  .agent-icon { display:grid; place-items:center; width:42px; height:42px; border-radius:12px; background:var(--ink); color:#fff; font:700 .9rem monospace; }
+  .board { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; }
+  .column { min-height:220px; padding:.7rem; border:1px solid rgb(255 255 255 / 15%); border-radius:15px; background:rgb(255 255 255 / 7%); }
+  .column > span { font-size:.65rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+  .column article { margin-top:.7rem; padding:.75rem; border-radius:11px; background:var(--canvas); color:var(--ink); }
+  .column article b { display:block; font-size:.72rem; line-height:1.35; }
+  .column article small { color:var(--muted); font-size:.58rem; }
+  .column.active article { background:var(--peach); }
+  .pulse-line { position:absolute; left:1.4rem; right:1.4rem; bottom:1.7rem; height:34px; display:flex; align-items:center; gap:8px; opacity:.85; }
+  .pulse-line::before,.pulse-line::after { content:""; height:3px; flex:1; background:var(--pink); border-radius:3px; }
+  .pulse-line i { display:block; width:3px; height:12px; transform:skew(-18deg); background:var(--pink); }
+  .pulse-line i:nth-child(2) { height:32px; }.pulse-line i:nth-child(3) { height:18px; }.pulse-line i:nth-child(4) { height:28px; }
+  .section-heading { display:grid; grid-template-columns:1.1fr .7fr; align-items:end; gap:3rem; margin-bottom:2.5rem; }
+  .section-heading p:last-child { color:var(--muted); }
+  .workflow-band { background:var(--soft); border-block:1px solid var(--line); }
+  .workflow-band h2 { max-width:17ch; }
+  .workflow-grid { margin-top:3rem; display:grid; grid-template-columns:repeat(4,1fr); gap:1px; border:1px solid var(--line); border-radius:24px; overflow:hidden; background:var(--line); }
+  .flow-step { padding:2rem 1.4rem; background:var(--canvas); }
+  .flow-step b { color:#9b1c52; font-size:.75rem; letter-spacing:.08em; }
+  .flow-step h3 { margin-top:2.5rem; }
+  .flow-step p { color:var(--muted); font-size:.9rem; }
+  .fit-grid { align-items:start; gap:clamp(2rem,8vw,7rem); }
+  .feature-stack { display:grid; gap:.75rem; }
+  .feature-stack article { display:grid; grid-template-columns:84px 1fr; gap:1rem; align-items:start; padding:1.25rem 0; border-bottom:1px solid var(--line); }
+  .feature-number { color:#9b1c52; font-size:1.45rem; font-weight:800; letter-spacing:-.05em; }
+  .feature-stack p { color:var(--muted); margin:0; }
+  @media (max-width:950px) { .hero-grid { grid-template-columns:1fr; } .product-scene { min-height:480px; transform:none; } .workflow-grid { grid-template-columns:1fr 1fr; } }
+  @media (max-width:650px) { .section-heading { grid-template-columns:1fr; gap:.5rem; } .workflow-grid { grid-template-columns:1fr; } .product-scene { min-height:450px; } .board { grid-template-columns:1fr; } .column { min-height:auto; } .column:nth-child(n+2) { display:none; } }
+</style>
