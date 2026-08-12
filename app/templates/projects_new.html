@@ -12,14 +12,14 @@
   <form method="post" action="/projects/new" class="p-card p-6 space-y-4">
     <div>
       <label class="p-label" for="name">{{ t("common.name") }} <span class="text-error">*</span></label>
-      <input id="name" name="name" type="text" required autofocus
+      <input id="name" name="name" type="text" required autofocus autocomplete="organization"
         class="w-full p-input text-sm"
         placeholder="{{ t('projects.name_placeholder') }}">
     </div>
     <div>
       <label class="p-label" for="slug">{{ t("common.slug") }}</label>
       <p class="text-xs text-muted mb-1">{{ t("projects.slug_hint") }}</p>
-      <input id="slug" name="slug" type="text"
+      <input id="slug" name="slug" type="text" autocomplete="off"
         class="w-full p-input text-sm"
         placeholder="{{ t('projects.slug_placeholder') }}">
     </div>
@@ -29,8 +29,8 @@
         class="w-full p-input text-sm"
         placeholder="{{ t('projects.description_placeholder') }}">
     </div>
-    <div>
-      <label class="p-label">{{ t("common.color") }}</label>
+    <div role="group" aria-labelledby="new-project-color-label">
+      <p id="new-project-color-label" class="p-label">{{ t("common.color") }}</p>
       {{ color_picker(None, t("projects.new")) }}
     </div>
     <div class="flex gap-3 pt-2">

@@ -17,11 +17,12 @@
     <form method="post" action="/login" class="space-y-4">
       <div>
         <label class="p-label" for="email">{{ t("login.email") }}</label>
-        <input id="email" name="email" type="email" required autofocus class="p-input" placeholder="you@example.com">
+        <input id="email" name="email" type="email" required autofocus autocomplete="username"
+               inputmode="email" class="p-input" placeholder="you@example.com">
       </div>
       <div>
         <label class="p-label" for="password">{{ t("login.password") }}</label>
-        <input id="password" name="password" type="password" required class="p-input">
+        <input id="password" name="password" type="password" required autocomplete="current-password" class="p-input">
       </div>
       <button type="submit" class="p-btn p-btn-primary w-full">{{ t("login.submit") }}</button>
     </form>

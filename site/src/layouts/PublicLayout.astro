@@ -49,7 +49,7 @@ const schema = robots === "index,follow" ? structuredData(path, title, descripti
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <SiteHeader />
-    <main id="main-content"><slot /></main>
+    <main id="main-content" tabindex="-1"><slot /></main>
     <SiteFooter />
   </body>
 </html>

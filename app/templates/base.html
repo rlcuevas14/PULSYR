@@ -5,6 +5,7 @@
   {% include "partials/_head.html" %}
 </head>
 <body class="bg-canvas text-body font-sans min-h-screen flex flex-col">
+  <a class="p-skip-link" href="#main-content">{{ t("nav.skip_content") }}</a>
   {% set NAV = [("/management", t("nav.management")), ("/backlog", t("nav.backlog")), ("/priority", t("nav.priority")), ("/threads", t("nav.threads")), ("/incidents", t("nav.incidents")), ("/archive", t("nav.archive"))] %}
   {% set lang_next = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
   <header class="sticky top-0 z-50 bg-surface-soft backdrop-blur border-b border-hairline">
@@ -82,7 +83,8 @@
   </header>
 
   {# drawer móvil: reutiliza el sistema de modales (Esc, backdrop, scroll-lock) #}
-  <div id="nav-drawer" data-modal class="hidden fixed inset-0 z-[90] bg-black/40 md:hidden">
+  <div id="nav-drawer" data-modal role="dialog" aria-modal="true" aria-label="{{ t('nav.open_menu') }}"
+       class="hidden fixed inset-0 z-[90] bg-black/40 md:hidden">
     <div class="absolute inset-y-0 left-0 w-72 max-w-[85%] bg-surface-card border-r border-hairline p-5 flex flex-col gap-1 overflow-y-auto">
       <div class="flex items-center justify-between mb-3">
         <span class="text-lg font-semibold tracking-tight text-ink">pulsyr</span>
@@ -103,7 +105,7 @@
     </div>
   </div>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full flex-1">
+  <main id="main-content" tabindex="-1" class="max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full flex-1">
     {% block content %}{% endblock %}
   </main>
 
@@ -189,66 +191,8 @@
     })();
   </script>
 
-  {# FE-06: helper de modales. Cierra con Esc y con clic en el backdrop,
-     enfoca el primer input al abrir y bloquea el scroll del body (clave en móvil).
-     Marca cada overlay con data-modal y usa estas funciones en vez de toggle directo. #}
   <script>
     (function () {
-      function bodyScrollLock(lock) {
-        document.body.style.overflow = lock ? "hidden" : "";
-      }
-
-      var lastModalTrigger = null;
-
-      window.openModal = function (id) {
-        var el = document.getElementById(id);
-        if (!el) return;
-        lastModalTrigger = document.activeElement;
-        el.classList.remove("hidden");
-        bodyScrollLock(true);
-        var first = el.querySelector("input, select, textarea, button");
-        if (first) {
-          try { first.focus(); } catch (e) { /* skip focus if not focusable */ }
-        }
-      };
-
-      window.closeModal = function (id) {
-        var el = document.getElementById(id);
-        if (!el) return;
-        el.classList.add("hidden");
-        bodyScrollLock(false);
-        // a11y: return focus to whatever opened the modal
-        if (lastModalTrigger) {
-          try { lastModalTrigger.focus(); } catch (e) { /* trigger may be gone */ }
-          lastModalTrigger = null;
-        }
-      };
-
-      function anyModalOpen() {
-        var modals = document.querySelectorAll("[data-modal]");
-        for (var i = 0; i < modals.length; i++) {
-          if (!modals[i].classList.contains("hidden")) return modals[i];
-        }
-        return null;
-      }
-
-      // Cerrar con clic en el backdrop (el overlay mismo, no su contenido).
-      document.addEventListener("click", function (event) {
-        var overlay = event.target;
-        if (overlay && overlay.matches && overlay.matches("[data-modal]") &&
-            !overlay.classList.contains("hidden")) {
-          window.closeModal(overlay.id);
-        }
-      });
-
-      // Cerrar con Esc el modal abierto.
-      document.addEventListener("keydown", function (event) {
-        if (event.key === "Escape") {
-          var open = anyModalOpen();
-          if (open) window.closeModal(open.id);
-        }
-      });
-
       // Cierra los <details class="p-menu"> abiertos al hacer clic fuera.
       document.addEventListener("click", function (event) {
         document.querySelectorAll("details.p-menu[open]").forEach(function (d) {

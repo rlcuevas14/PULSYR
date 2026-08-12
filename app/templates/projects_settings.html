@@ -53,6 +53,7 @@
 
     {% if tokens %}
     <table class="w-full text-sm">
+      <caption class="sr-only">{{ t("projects.api_tokens") }}</caption>
       <thead><tr>
         <th class="p-label text-left pb-2">{{ t("common.name") }}</th>
         <th class="p-label text-left pb-2">{{ t("common.scope") }}</th>
@@ -68,8 +69,7 @@
         <td class="py-2 border-t border-hairline text-right">
           <form method="post" action="/projects/{{ project.slug }}/tokens/{{ tok.id }}/revoke" class="inline">
             <button type="submit" class="p-btn p-btn-sm p-btn-ghost text-error"
-              data-confirm="{{ t('projects.revoke_confirm', name=tok.name) }}"
-              onclick="return confirm(this.dataset.confirm)">{{ t("projects.revoke") }}</button>
+              data-confirm="{{ t('projects.revoke_confirm', name=tok.name) }}">{{ t("projects.revoke") }}</button>
           </form>
         </td>
       </tr>
@@ -91,22 +91,22 @@
     <form method="post" action="/projects/{{ project.slug }}/settings" class="space-y-4">
       <div class="grid grid-cols-2 gap-4">
         <div class="col-span-2">
-          <label class="p-label">{{ t("common.name") }}</label>
-          <input name="name" type="text" required value="{{ project.name }}"
+          <label class="p-label" for="project-settings-name">{{ t("common.name") }}</label>
+          <input id="project-settings-name" name="name" type="text" required autocomplete="organization" value="{{ project.name }}"
             class="w-full p-input text-sm">
         </div>
         <div class="col-span-2">
-          <label class="p-label">{{ t("common.description") }}</label>
-          <input name="description" type="text" value="{{ project.description or '' }}"
+          <label class="p-label" for="project-settings-description">{{ t("common.description") }}</label>
+          <input id="project-settings-description" name="description" type="text" value="{{ project.description or '' }}"
             class="w-full p-input text-sm">
         </div>
-        <div class="col-span-2">
-          <label class="p-label">{{ t("common.color") }}</label>
+        <div class="col-span-2" role="group" aria-labelledby="project-settings-color-label">
+          <p id="project-settings-color-label" class="p-label">{{ t("common.color") }}</p>
           {{ color_picker(project.color, project.name) }}
         </div>
         <div class="col-span-2">
-          <label class="p-label">{{ t("projects.repo_url") }}</label>
-          <input name="repo_url" type="url" value="{{ project.repo_url or '' }}"
+          <label class="p-label" for="project-settings-repo-url">{{ t("projects.repo_url") }}</label>
+          <input id="project-settings-repo-url" name="repo_url" type="url" autocomplete="url" inputmode="url" value="{{ project.repo_url or '' }}"
             placeholder="https://github.com/user/repo"
             class="w-full p-input text-sm">
         </div>
@@ -116,16 +116,16 @@
         <summary class="text-sm text-muted cursor-pointer hover:text-ink">{{ t("projects.webhook_secrets") }}</summary>
         <div class="grid grid-cols-2 gap-3 mt-3">
           <div>
-            <label class="p-label">{{ t("projects.github_webhook_secret") }}</label>
+            <label class="p-label" for="project-settings-github-secret">{{ t("projects.github_webhook_secret") }}</label>
             {% if project.github_webhook_secret %}<p class="text-xs text-success mb-2">{{ t("common.secret_configured") }}</p>{% endif %}
-            <input name="github_webhook_secret" type="password" autocomplete="new-password"
+            <input id="project-settings-github-secret" name="github_webhook_secret" type="password" autocomplete="new-password"
               value="" placeholder="{{ t('common.replace_secret') }}"
               class="w-full p-input text-xs font-mono">
             {% if project.github_webhook_secret %}<label class="text-xs text-muted mt-2 flex items-center gap-2"><input type="checkbox" name="clear_github_webhook_secret" value="true">{{ t("common.clear_secret") }}</label>{% endif %}
           </div>
           <div>
-            <label class="p-label">{{ t("projects.sentry_slug") }}</label>
-            <input name="sentry_project_slug" type="text" value="{{ project.sentry_project_slug or '' }}"
+            <label class="p-label" for="project-settings-sentry-slug">{{ t("projects.sentry_slug") }}</label>
+            <input id="project-settings-sentry-slug" name="sentry_project_slug" type="text" autocomplete="off" value="{{ project.sentry_project_slug or '' }}"
               class="w-full p-input text-xs font-mono" placeholder="my-sentry-project">
             <p class="text-xs text-muted mt-1">{{ t("projects.sentry_slug_help") }}</p>
           </div>
