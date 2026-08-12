@@ -4,12 +4,16 @@ interface Props {
   title: string;
   lead: string;
   compact?: boolean;
+  breadcrumbLabel?: string;
 }
-const { eyebrow, title, lead, compact = false } = Astro.props;
+const { eyebrow, title, lead, compact = false, breadcrumbLabel = eyebrow } = Astro.props;
 ---
 
 <section class:list={["page-hero", compact && "compact"]}>
   <div class="container narrow">
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="/">Home</a><span aria-hidden="true">/</span><span aria-current="page">{breadcrumbLabel}</span>
+    </nav>
     <p class="eyebrow">{eyebrow}</p>
     <h1>{title}</h1>
     <p class="lead">{lead}</p>

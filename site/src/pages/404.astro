@@ -1,0 +1,14 @@
+---
+import PublicLayout from "../layouts/PublicLayout.astro";
+---
+
+<PublicLayout title="Page not found" description="The requested Pulsyr page does not exist. Return to the product overview, documentation, or home page." robots="noindex,follow">
+  <section class="error-page container">
+    <p class="eyebrow">404 · Page not found</p>
+    <h1>This path has no item in the backlog.</h1>
+    <p class="lead">The address may have changed, or the page may never have existed.</p>
+    <div class="actions"><a class="button button-dark" href="/">Return home</a><a class="button button-outline" href="/docs/primeros-pasos/">Read the docs</a></div>
+  </section>
+</PublicLayout>
+
+<style>.error-page{padding:clamp(6rem,14vw,11rem) 0}.error-page h1{max-width:15ch}.error-page .lead{max-width:620px}</style>
