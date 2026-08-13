@@ -2,7 +2,7 @@
 
 - **Fecha:** 2026-08-12
 - **Deploy/DNS/cuentas externas:** no ejecutados
-- **Estado al crear la evidencia:** candidato validado localmente; CI y baseline remoto pendientes
+- **Estado:** PR #25 fusionado; CI de PR aprobado; baseline remoto capturado
 
 ## Brechas cerradas
 
@@ -25,6 +25,23 @@
   el umbral; `check:budget` y las pruebas privadas aprobaron nuevamente.
 - La suite Python completa no pudo iniciar los tests con PostgreSQL porque Docker Desktop no estaba activo; CI Linux con servicio PostgreSQL es la evidencia autoritativa.
 
-## Evidencia pendiente de GitHub
+## Evidencia de GitHub
 
-Esta sección se completa después del merge con la PR, el run de CI en `main` y el run manual `Web baseline`. El workflow de baseline es de observación HTTP/DNS/TLS exclusivamente y no despliega.
+- [PR #25](https://github.com/rlcuevas14/PULSYR/pull/25) fusionado en `main`
+  (`ee7c0bbf6bc100b4dd633169e5a5e58bc70bb6a0`).
+- [CI de PR 31654375190](https://github.com/rlcuevas14/PULSYR/actions/runs/31654375190):
+  10/10 jobs aprobados, incluida la prueba privada restaurada.
+- [Web baseline 31654667586](https://github.com/rlcuevas14/PULSYR/actions/runs/31654667586):
+  workflow manual aprobado y artefacto JSON conservado 30 días. DNS resolvió
+  `app.pulsyr.dev` a `161.153.193.32`; TLS devolvió `TLSV1_ALERT_INTERNAL_ERROR` y
+  por ello las siete observaciones HTTP registraron error de conexión. Es evidencia
+  operativa externa pendiente, no un fallo silenciado por el workflow.
+
+## Auditoría no-deploy
+
+- Ningún workflow `Deploy`, `VM Caddy site` o `VM env sync` fue ejecutado por estas
+  fases. El último `Deploy` del repositorio fue el run 31543265493 del 11 de agosto,
+  anterior al plan; Caddy tampoco registra runs posteriores a esa fecha.
+- `Web baseline` sólo leyó DNS/TLS/HTTP y no contiene pasos de publicación.
+- Resolver el hallazgo TLS requiere una ventana de infraestructura autorizada y queda
+  fuera de este trabajo por la restricción explícita de no desplegar.
