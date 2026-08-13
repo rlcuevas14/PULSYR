@@ -1,6 +1,5 @@
 ---
 import CallToAction from "../../../components/CallToAction.astro";
-import AmbientVideo from "../../../components/AmbientVideo.astro";
 import PageHero from "../../../components/PageHero.astro";
 import PublicLayout from "../../../layouts/PublicLayout.astro";
 ---
@@ -8,12 +7,6 @@ import PublicLayout from "../../../layouts/PublicLayout.astro";
   <PageHero eyebrow="Producto" title="Un backlog diseñado para el trabajo de personas y agentes." lead="Pulsyr mantiene el estado del proyecto estructurado, autorizado y visible. La interfaz web sigue siendo amigable para las personas y MCP ofrece a los agentes una forma deliberada de leer y actualizar el mismo sistema.">
     <div class="actions"><a class="button button-dark" data-analytics-event="cta_docs" href="/es/docs/primeros-pasos/">Pruébalo tú mismo</a><a class="button button-outline" href="/es/integraciones/mcp/">Explora MCP</a></div>
   </PageHero>
-  <AmbientVideo
-    src="/media/pulsyr-signal.mp4"
-    poster="/media/pulsyr-signal-poster.webp"
-    label="Señal animada de Pulsyr que representa la actividad estructurada del proyecto"
-    fallback="Abrir el video de la señal del proyecto"
-  />
   <section class="section container"><div class="grid-3">
     <article class="card pink"><span class="kicker">Núcleo</span><h2>Backlog consciente del ciclo de vida</h2><p>Los ítems avanzan por estados validados desde la idea hasta el cierre. Cerrar exige una razón y cada modificación deja un evento.</p></article>
     <article class="card teal"><span class="kicker">Grafo</span><h2>Dependencias que calculan</h2><p>Relaciones tipadas —bloquea, requiere, entra en conflicto, relacionado y forma parte— convierten el bloqueo en estado derivado.</p></article>

@@ -2,40 +2,64 @@
 interface Props {
   src: string;
   poster: string;
-  label: string;
-  fallback: string;
-  variant?: "hero" | "band";
+  variant?: "hero" | "section";
 }
 
-const { src, poster, label, fallback, variant = "band" } = Astro.props;
+const { src, poster, variant = "section" } = Astro.props;
 ---
 
-<div class:list={["ambient-video", variant]}>
+<div class:list={["ambient-video", variant]} data-ambient-video aria-hidden="true">
   <video
     muted
     loop
     playsinline
-    controls
-    controlslist="nodownload noremoteplayback noplaybackrate"
     disablepictureinpicture
     preload="none"
     poster={poster}
-    aria-label={label}
+    tabindex="-1"
   >
     <source src={src} type="video/mp4" />
-    <a href={src}>{fallback}</a>
   </video>
 </div>
 
+<script>
+  const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const videos = document.querySelectorAll<HTMLVideoElement>("[data-ambient-video] video");
+
+  const syncPlayback = (video: HTMLVideoElement, visible: boolean) => {
+    if (!visible || motionPreference.matches) {
+      video.pause();
+      return;
+    }
+    void video.play().catch(() => undefined);
+  };
+
+  const observer = new IntersectionObserver(
+    (entries) => entries.forEach((entry) => syncPlayback(entry.target as HTMLVideoElement, entry.isIntersecting)),
+    { rootMargin: "120px 0px", threshold: 0.08 },
+  );
+
+  videos.forEach((video) => observer.observe(video));
+  motionPreference.addEventListener("change", () => {
+    videos.forEach((video) => syncPlayback(video, video.getBoundingClientRect().bottom > 0 && video.getBoundingClientRect().top < window.innerHeight));
+  });
+</script>
+
 <style>
-  .ambient-video { overflow:hidden; background:var(--canvas); border:1px solid var(--line); }
+  .ambient-video { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; background:var(--canvas); }
+  .ambient-video::after { content:""; position:absolute; inset:0; }
   video { display:block; width:100%; height:100%; object-fit:cover; background:var(--canvas); }
-  .hero { position:absolute; inset:0; border-radius:32px; }
-  .hero::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(90deg,var(--canvas) 0%,rgb(255 250 240 / 96%) 40%,rgb(255 250 240 / 58%) 58%,rgb(255 250 240 / 8%) 80%); }
-  .band { width:min(1180px,calc(100% - 2rem)); aspect-ratio:16 / 9; max-height:620px; margin:0 auto clamp(2rem,5vw,4rem); border-radius:28px; box-shadow:var(--shadow); }
+  .hero video { object-position:center right; }
+  .hero::after { background:linear-gradient(90deg,var(--canvas) 0%,rgb(255 250 240 / 96%) 37%,rgb(255 250 240 / 68%) 57%,rgb(255 250 240 / 14%) 82%),linear-gradient(0deg,rgb(255 250 240 / 28%),transparent 48%); }
+  .section { background:#170b13; }
+  .section video { object-position:center; filter:saturate(.8) contrast(1.08); }
+  .section::after { background:linear-gradient(90deg,rgb(12 7 11 / 94%) 0%,rgb(18 8 14 / 76%) 48%,rgb(12 7 11 / 88%) 100%),linear-gradient(0deg,rgb(8 5 7 / 48%),transparent 45%,rgb(8 5 7 / 36%)); }
   @media(max-width:760px){
-    .hero::after { background:rgb(255 250 240 / 84%); }
-    .hero video { object-position:70% center; }
-    .band { width:min(100% - 1.25rem,1180px); border-radius:20px; }
+    .hero video { object-position:68% center; }
+    .hero::after { background:linear-gradient(90deg,rgb(255 250 240 / 94%),rgb(255 250 240 / 82%)),linear-gradient(0deg,rgb(255 250 240 / 88%),transparent); }
+    .section::after { background:rgb(12 7 11 / 84%); }
+  }
+  @media(prefers-reduced-motion:reduce){
+    video { display:none; }
   }
 </style>

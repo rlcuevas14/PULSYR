@@ -1,6 +1,5 @@
 ---
 import CallToAction from "../../components/CallToAction.astro";
-import AmbientVideo from "../../components/AmbientVideo.astro";
 import PageHero from "../../components/PageHero.astro";
 import PublicLayout from "../../layouts/PublicLayout.astro";
 ---
@@ -9,12 +8,6 @@ import PublicLayout from "../../layouts/PublicLayout.astro";
   <PageHero eyebrow="Product" title="A backlog designed for work done by people and agents." lead="Pulsyr keeps project state structured, permissioned, and visible. The web interface remains human-friendly while MCP gives coding agents a deliberate way to read and update the same system.">
     <div class="actions"><a class="button button-dark" data-analytics-event="cta_docs" href="/docs/primeros-pasos/">Run it yourself</a><a class="button button-outline" href="/integraciones/mcp/">Explore MCP</a></div>
   </PageHero>
-  <AmbientVideo
-    src="/media/pulsyr-signal.mp4"
-    poster="/media/pulsyr-signal-poster.webp"
-    label="Animated Pulsyr signal showing structured project activity"
-    fallback="Open the Pulsyr project signal video"
-  />
   <section class="section container">
     <div class="grid-3">
       <article class="card pink"><span class="kicker">Core</span><h2>Lifecycle-aware backlog</h2><p>Items move through validated states from idea to done. Closing requires a reason, and every mutation leaves an event trail.</p></article>

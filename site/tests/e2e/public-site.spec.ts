@@ -102,17 +102,29 @@ test("language selector links equivalent English and Spanish pages", async ({ pa
   );
 });
 
-test("ambient videos use local optimized sources, posters, and playback controls", async ({ page }) => {
+test("ambient videos behave as decorative backgrounds", async ({ page }) => {
   await page.goto("/");
   const heroVideo = page.locator(".hero video");
   await expect(heroVideo).toHaveAttribute("poster", "/media/pulsyr-hero-poster.webp");
-  await expect(heroVideo).toHaveAttribute("controls", "");
+  await expect(heroVideo).not.toHaveAttribute("controls", "");
+  await expect(heroVideo).toHaveAttribute("muted", "");
+  await expect(heroVideo).toHaveAttribute("loop", "");
+  await expect(heroVideo).toHaveAttribute("playsinline", "");
+  await expect(heroVideo.locator("..")).toHaveAttribute("aria-hidden", "true");
   await expect(heroVideo.locator("source")).toHaveAttribute("src", "/media/pulsyr-hero.mp4");
+  await expect.poll(() => heroVideo.evaluate((video) => !video.paused)).toBe(true);
 
-  await page.goto("/producto/");
-  const signalVideo = page.locator(".ambient-video.band video");
+  const signalVideo = page.locator(".workflow-band .ambient-video.section video");
   await expect(signalVideo).toHaveAttribute("poster", "/media/pulsyr-signal-poster.webp");
   await expect(signalVideo.locator("source")).toHaveAttribute("src", "/media/pulsyr-signal.mp4");
+  await expect(page.locator(".workflow-actions a")).toHaveCount(2);
+  await signalVideo.scrollIntoViewIfNeeded();
+  await expect.poll(() => signalVideo.evaluate((video) => !video.paused)).toBe(true);
+
+  await page.goto("/producto/");
+  await expect(page.locator("video")).toHaveCount(0);
+  await page.goto("/integraciones/mcp/");
+  await expect(page.locator("video")).toHaveCount(0);
 });
 
 for (const width of [320, 1024, 1440]) {

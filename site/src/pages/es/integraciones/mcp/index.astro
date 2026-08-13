@@ -1,6 +1,5 @@
 ---
 import CallToAction from "../../../../components/CallToAction.astro";
-import AmbientVideo from "../../../../components/AmbientVideo.astro";
 import PageHero from "../../../../components/PageHero.astro";
 import PublicLayout from "../../../../layouts/PublicLayout.astro";
 ---
@@ -8,12 +7,6 @@ import PublicLayout from "../../../../layouts/PublicLayout.astro";
   <PageHero eyebrow="Integración MCP" title="Un contexto de proyecto que tu agente puede leer y mantener." lead="Pulsyr expone un endpoint MCP remoto mediante HTTP. Crea un token limitado al proyecto, agrega el endpoint al cliente y permite que el agente use herramientas estructuradas en vez de extraer datos de un panel.">
     <div class="actions"><a class="button button-dark" data-analytics-event="cta_docs" href="/es/docs/primeros-pasos/#connect">Conecta un cliente</a><a class="button button-outline" data-analytics-event="cta_github" href="https://github.com/rlcuevas14/PULSYR/blob/main/docs/MCP.md">Lee la guía del protocolo</a></div>
   </PageHero>
-  <AmbientVideo
-    src="/media/pulsyr-signal.mp4"
-    poster="/media/pulsyr-signal-poster.webp"
-    label="Señal animada de Pulsyr que representa el contexto del agente y del proyecto"
-    fallback="Abrir el video de la señal MCP de Pulsyr"
-  />
   <section class="section container"><div class="grid-3">
     <article class="card lavender"><span class="kicker">1 · Alcance</span><h2>Crea un token de proyecto</h2><p>El token aparece una sola vez. Pulsyr guarda su hash y vincula la credencial a un proyecto con alcance de lectura o escritura.</p></article>
     <article class="card peach"><span class="kicker">2 · Conexión</span><h2>Agrega el endpoint HTTP</h2><p>Tu cliente envía el token como credencial Bearer a <code>/mcp</code>. No hace falta un plugin específico del editor.</p></article>

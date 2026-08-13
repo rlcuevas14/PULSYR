@@ -6,14 +6,12 @@ import PublicLayout from "../layouts/PublicLayout.astro";
 
 <PublicLayout title="Pulsyr" description="An open-source, self-hosted backlog that MCP-compatible coding agents can read and maintain while they work.">
   <section class="hero">
+    <AmbientVideo
+      variant="hero"
+      src="/media/pulsyr-hero.mp4"
+      poster="/media/pulsyr-hero-poster.webp"
+    />
     <div class="container hero-shell">
-      <AmbientVideo
-        variant="hero"
-        src="/media/pulsyr-hero.mp4"
-        poster="/media/pulsyr-hero-poster.webp"
-        label="Animated Pulsyr signal over a soft waveform"
-        fallback="Open the Pulsyr signal video"
-      />
       <div class="hero-copy">
         <p class="eyebrow">Agent-native project management</p>
         <h1>Your agent writes code. Pulsyr keeps the work legible.</h1>
@@ -40,9 +38,18 @@ import PublicLayout from "../layouts/PublicLayout.astro";
   </section>
 
   <section class="section workflow-band" aria-labelledby="workflow-heading">
+    <AmbientVideo
+      variant="section"
+      src="/media/pulsyr-signal.mp4"
+      poster="/media/pulsyr-signal-poster.webp"
+    />
     <div class="container">
       <p class="eyebrow">A workflow with guardrails</p>
       <h2 id="workflow-heading">Your agent can act. It cannot invent the rules.</h2>
+      <div class="actions workflow-actions">
+        <a class="button button-light" href="/integraciones/mcp/">Explore the MCP workflow</a>
+        <a class="button button-outline-on-dark" data-analytics-event="cta_signup" href="https://app.pulsyr.dev/signup">Start free</a>
+      </div>
       <div class="workflow-grid">
         <div class="flow-step"><b>01</b><h3>Connect a project</h3><p>Each token belongs to exactly one project and carries a read or write scope.</p></div>
         <div class="flow-step"><b>02</b><h3>Read structured context</h3><p>Backlog state, graph edges, management docs, pendings, and incidents stay queryable.</p></div>
@@ -67,26 +74,30 @@ import PublicLayout from "../layouts/PublicLayout.astro";
 </PublicLayout>
 
 <style>
-  .hero { padding:clamp(3rem,7vw,6rem) 0; overflow:hidden; }
-  .hero-shell { position:relative; display:flex; align-items:center; min-height:clamp(580px,55vw,680px); overflow:hidden; border-radius:32px; box-shadow:var(--shadow); }
-  .hero-copy { position:relative; z-index:2; width:min(58%,660px); min-width:0; padding:clamp(2rem,5vw,5rem); }
+  .hero { position:relative; isolation:isolate; overflow:hidden; border-bottom:1px solid var(--line); }
+  .hero-shell { position:relative; z-index:1; display:flex; align-items:center; min-height:clamp(620px,65vw,760px); }
+  .hero-copy { width:min(58%,660px); min-width:0; padding:clamp(3rem,7vw,6rem) 0; }
   .hero h1 { max-width:12ch; overflow-wrap:normal; word-break:normal; hyphens:none; }
   .hero-copy .lead { max-width:690px; }
   .hero-note { margin-top:1.3rem; color:var(--muted); font-size:.78rem; font-weight:650; }
   .section-heading { display:grid; grid-template-columns:1.1fr .7fr; align-items:end; gap:3rem; margin-bottom:2.5rem; }
   .section-heading p:last-child { color:var(--muted); }
-  .workflow-band { background:var(--soft); border-block:1px solid var(--line); }
+  .workflow-band { position:relative; isolation:isolate; overflow:hidden; color:#fff; border-block:1px solid rgb(255 255 255 / 14%); }
+  .workflow-band > .container { position:relative; z-index:1; }
+  .workflow-band .eyebrow { color:#ff91b9; }
+  .workflow-band h2,.workflow-band h3 { color:#fff; }
   .workflow-band h2 { max-width:17ch; }
-  .workflow-grid { margin-top:3rem; display:grid; grid-template-columns:repeat(4,1fr); gap:1px; border:1px solid var(--line); border-radius:24px; overflow:hidden; background:var(--line); }
-  .flow-step { padding:2rem 1.4rem; background:var(--canvas); }
-  .flow-step b { color:#9b1c52; font-size:.75rem; letter-spacing:.08em; }
+  .workflow-actions { margin-top:1.5rem; }
+  .workflow-grid { margin-top:3rem; display:grid; grid-template-columns:repeat(4,1fr); gap:1px; border:1px solid rgb(255 255 255 / 20%); border-radius:24px; overflow:hidden; background:rgb(255 255 255 / 18%); box-shadow:0 24px 70px rgb(0 0 0 / 24%); }
+  .flow-step { padding:2rem 1.4rem; background:rgb(13 8 12 / 70%); backdrop-filter:blur(12px); }
+  .flow-step b { color:#ff91b9; font-size:.75rem; letter-spacing:.08em; }
   .flow-step h3 { margin-top:2.5rem; }
-  .flow-step p { color:var(--muted); font-size:.9rem; }
+  .flow-step p { color:rgb(255 255 255 / 78%); font-size:.9rem; }
   .fit-grid { align-items:start; gap:clamp(2rem,8vw,7rem); }
   .feature-stack { display:grid; gap:.75rem; }
   .feature-stack article { display:grid; grid-template-columns:84px 1fr; gap:1rem; align-items:start; padding:1.25rem 0; border-bottom:1px solid var(--line); }
   .feature-number { color:#9b1c52; font-size:1.45rem; font-weight:800; letter-spacing:-.05em; }
   .feature-stack p { color:var(--muted); margin:0; }
   @media (max-width:950px) { .hero-copy { width:min(76%,660px); } .workflow-grid { grid-template-columns:1fr 1fr; } }
-  @media (max-width:650px) { .hero-shell { min-height:650px; border-radius:22px; } .hero-copy { width:100%; padding:1.5rem; } .hero h1 { font-size:clamp(2.45rem,12vw,3.5rem); } .section-heading { grid-template-columns:1fr; gap:.5rem; } .workflow-grid { grid-template-columns:1fr; } }
+  @media (max-width:650px) { .hero-shell { min-height:680px; } .hero-copy { width:100%; padding:3rem 0; } .hero h1 { font-size:clamp(2.45rem,12vw,3.5rem); } .section-heading { grid-template-columns:1fr; gap:.5rem; } .workflow-grid { grid-template-columns:1fr; } }
 </style>
