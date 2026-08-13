@@ -3,6 +3,7 @@
   "rules": {
     "attribute-boolean-style": "off",
     "doctype-style": "off",
+    "no-autoplay": "off",
     "no-inline-style": "off",
     "prefer-native-element": "off",
     "void-style": "off"

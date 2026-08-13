@@ -107,6 +107,7 @@ test("ambient videos behave as decorative backgrounds", async ({ page }) => {
   const heroVideo = page.locator(".hero video");
   await expect(heroVideo).toHaveAttribute("poster", "/media/pulsyr-hero-poster.webp");
   await expect(heroVideo).not.toHaveAttribute("controls", "");
+  await expect(heroVideo).toHaveAttribute("autoplay", "");
   await expect(heroVideo).toHaveAttribute("muted", "");
   await expect(heroVideo).toHaveAttribute("loop", "");
   await expect(heroVideo).toHaveAttribute("playsinline", "");

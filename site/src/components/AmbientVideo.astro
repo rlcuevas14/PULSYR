@@ -10,6 +10,7 @@ const { src, poster, variant = "section" } = Astro.props;
 
 <div class:list={["ambient-video", variant]} data-ambient-video aria-hidden="true">
   <video
+    autoplay
     muted
     loop
     playsinline
@@ -21,29 +22,6 @@ const { src, poster, variant = "section" } = Astro.props;
     <source src={src} type="video/mp4" />
   </video>
 </div>
-
-<script>
-  const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const videos = document.querySelectorAll<HTMLVideoElement>("[data-ambient-video] video");
-
-  const syncPlayback = (video: HTMLVideoElement, visible: boolean) => {
-    if (!visible || motionPreference.matches) {
-      video.pause();
-      return;
-    }
-    void video.play().catch(() => undefined);
-  };
-
-  const observer = new IntersectionObserver(
-    (entries) => entries.forEach((entry) => syncPlayback(entry.target as HTMLVideoElement, entry.isIntersecting)),
-    { rootMargin: "120px 0px", threshold: 0.08 },
-  );
-
-  videos.forEach((video) => observer.observe(video));
-  motionPreference.addEventListener("change", () => {
-    videos.forEach((video) => syncPlayback(video, video.getBoundingClientRect().bottom > 0 && video.getBoundingClientRect().top < window.innerHeight));
-  });
-</script>
 
 <style>
   .ambient-video { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; background:var(--canvas); }
