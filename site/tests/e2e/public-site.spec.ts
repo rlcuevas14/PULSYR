@@ -112,14 +112,14 @@ test("ambient videos behave as decorative backgrounds", async ({ page }) => {
   await expect(heroVideo).toHaveAttribute("playsinline", "");
   await expect(heroVideo.locator("..")).toHaveAttribute("aria-hidden", "true");
   await expect(heroVideo.locator("source")).toHaveAttribute("src", "/media/pulsyr-hero.mp4");
-  await expect.poll(() => heroVideo.evaluate((video) => !video.paused)).toBe(true);
+  await expect.poll(() => heroVideo.evaluate((video) => !(video as HTMLVideoElement).paused)).toBe(true);
 
   const signalVideo = page.locator(".workflow-band .ambient-video.section video");
   await expect(signalVideo).toHaveAttribute("poster", "/media/pulsyr-signal-poster.webp");
   await expect(signalVideo.locator("source")).toHaveAttribute("src", "/media/pulsyr-signal.mp4");
   await expect(page.locator(".workflow-actions a")).toHaveCount(2);
   await signalVideo.scrollIntoViewIfNeeded();
-  await expect.poll(() => signalVideo.evaluate((video) => !video.paused)).toBe(true);
+  await expect.poll(() => signalVideo.evaluate((video) => !(video as HTMLVideoElement).paused)).toBe(true);
 
   await page.goto("/producto/");
   await expect(page.locator("video")).toHaveCount(0);
