@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import oauth
 from app.auth.models import User
+from app.auth.rate_limit import oauth_rate_limiter
 from app.auth.service import authenticate, create_user
 from app.config import settings
 from app.database import get_db
@@ -23,9 +24,16 @@ def github_configured(monkeypatch):
     monkeypatch.setattr(settings, "base_url", "https://app.pulsyr.dev")
 
 
+@pytest.fixture(autouse=True)
+def reset_oauth_rate_limit():
+    oauth_rate_limiter.reset()
+    yield
+    oauth_rate_limiter.reset()
+
+
 def fake_identity(monkeypatch, email: str, name: str = "Someone"):
     async def _fake(provider, code):
-        return oauth.Identity(email=email, name=name)
+        return oauth.Identity(email=email, name=name, subject=f"subject:{email}")
 
     monkeypatch.setattr(oauth, "fetch_identity", _fake)
 
@@ -50,6 +58,12 @@ async def _seed_user(client, email: str) -> None:
 def test_state_roundtrips(github_configured):
     state = oauth.make_state("github")
     assert oauth.check_state(state, "github") is True
+
+
+def test_signup_state_carries_signed_intent_and_terms(github_configured):
+    state = oauth.make_state("github", intent="signup", terms_version="v1")
+    assert oauth.read_state(state, "github")["i"] == "signup"
+    assert oauth.read_state(state, "github")["v"] == "v1"
 
 
 def test_state_is_bound_to_its_provider(github_configured):
@@ -100,6 +114,27 @@ async def test_oauth_start_redirects_to_provider(client, github_configured):
     resp = await client.get("/login/github", follow_redirects=False)
     assert resp.status_code == 303
     assert resp.headers["location"].startswith("https://github.com/login/oauth/authorize?")
+
+
+@pytest.mark.asyncio
+async def test_signup_requires_consent_before_oauth(client, github_configured, monkeypatch):
+    await _seed_user(client, "signup-gate@test.cl")
+    monkeypatch.setattr(settings, "public_signup", True)
+
+    page = await client.get("/signup")
+    assert page.status_code == 200
+    assert 'name="accept_terms"' in page.text
+
+    refused = await client.post("/signup", data={"provider": "github"})
+    assert refused.status_code == 422
+
+    accepted = await client.post(
+        "/signup",
+        data={"provider": "github", "accept_terms": "true"},
+        follow_redirects=False,
+    )
+    assert accepted.status_code == 303
+    assert accepted.headers["location"].startswith("https://github.com/login/oauth/authorize?")
 
 
 @pytest.mark.asyncio
@@ -167,10 +202,13 @@ async def test_callback_creates_account_when_signup_open(client, github_configur
     await _seed_user(client, "resident2@test.cl")
     fake_identity(monkeypatch, "newcomer@test.cl", name="New Comer")
     monkeypatch.setattr(settings, "public_signup", True)
-    state = oauth.make_state("github")
+    state = oauth.make_state(
+        "github", intent="signup", terms_version=settings.terms_version
+    )
 
     resp = await client.get(f"/callback/github?code=abc&state={state}", follow_redirects=False)
     assert resp.status_code == 303
+    assert resp.headers["location"] == "/welcome"
     assert "pulsyr_session" in resp.cookies
 
     async for db in client.app.dependency_overrides[get_db]():
@@ -178,6 +216,56 @@ async def test_callback_creates_account_when_signup_open(client, github_configur
         # No credential is stored for them, which is the whole point.
         assert user.password_hash is None
         assert user.account_role == "owner"
+        assert user.terms_version == settings.terms_version
+        from app.accounts.models import AccountSubscription
+        from app.auth.models import OAuthIdentity
+        from app.projects.models import Project
+
+        subscription = await db.scalar(
+            select(AccountSubscription).where(AccountSubscription.account_id == user.account_id)
+        )
+        assert subscription is not None and subscription.plan_code == "free"
+        assert await db.scalar(select(Project.id).where(Project.account_id == user.account_id))
+        assert await db.scalar(select(OAuthIdentity.id).where(OAuthIdentity.user_id == user.id))
+        break
+
+    welcome = await client.get("/welcome")
+    assert welcome.status_code == 200
+    completed = await client.post(
+        "/welcome",
+        data={"project_name": "My Product", "token_name": "codex"},
+    )
+    assert completed.status_code == 200
+    assert "My Product" in completed.text
+
+    async for db in client.app.dependency_overrides[get_db]():
+        from app.accounts.models import AccountSubscription
+        from app.auth.models import ApiToken
+        from app.projects.models import Project
+
+        user = (await db.execute(select(User).where(User.email == "newcomer@test.cl"))).scalar_one()
+        subscription = await db.scalar(
+            select(AccountSubscription).where(AccountSubscription.account_id == user.account_id)
+        )
+        project = await db.scalar(select(Project).where(Project.account_id == user.account_id))
+        assert subscription is not None and subscription.onboarding_completed_at is not None
+        assert project is not None and project.name == "My Product" and project.slug == "my-product"
+        assert await db.scalar(select(ApiToken.id).where(ApiToken.project_id == project.id))
+        break
+
+
+@pytest.mark.asyncio
+async def test_login_intent_does_not_silently_register(client, github_configured, monkeypatch):
+    await _seed_user(client, "resident3@test.cl")
+    fake_identity(monkeypatch, "new-login@test.cl")
+    monkeypatch.setattr(settings, "public_signup", True)
+    state = oauth.make_state("github", intent="login")
+
+    resp = await client.get(f"/callback/github?code=abc&state={state}")
+
+    assert resp.status_code == 403
+    async for db in client.app.dependency_overrides[get_db]():
+        assert await db.scalar(select(User.id).where(User.email == "new-login@test.cl")) is None
         break
 
 
@@ -216,7 +304,7 @@ def _github_handler(emails, *, token_ok=True):
         if url.endswith("/user/emails"):
             return httpx.Response(200, json=emails)
         if url.endswith("/user"):
-            return httpx.Response(200, json={"name": "Octo Cat", "login": "octocat"})
+            return httpx.Response(200, json={"id": 123, "name": "Octo Cat", "login": "octocat"})
         return httpx.Response(404)
     return handle
 
@@ -260,7 +348,7 @@ def _google_handler(userinfo):
     def handle(request: httpx.Request) -> httpx.Response:
         if "oauth2.googleapis.com/token" in str(request.url):
             return httpx.Response(200, json={"access_token": "tok"})
-        return httpx.Response(200, json=userinfo)
+        return httpx.Response(200, json={"sub": "google-123", **userinfo})
     return handle
 
 

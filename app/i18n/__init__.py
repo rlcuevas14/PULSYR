@@ -18,8 +18,15 @@ from fastapi import Request
 
 DEFAULT_LANG = "en"
 # (code, native label) — order defines the selector menu.
-LANGS: list[tuple[str, str]] = [("en", "English"), ("es", "Español"), ("fr", "Français")]
+LANGS: list[tuple[str, str]] = [("en", "English"), ("es", "Español")]
 SUPPORTED = frozenset(code for code, _ in LANGS)
+
+_SPANISH_COUNTRIES = frozenset(
+    {
+        "AR", "BO", "CL", "CO", "CR", "CU", "DO", "EC", "ES", "GQ",
+        "GT", "HN", "MX", "NI", "PA", "PE", "PR", "PY", "SV", "UY", "VE",
+    }
+)
 
 _DIR = Path(__file__).parent / "locales"
 _catalogs: dict[str, dict[str, str]] = {
@@ -29,9 +36,15 @@ _catalogs: dict[str, dict[str, str]] = {
 
 
 def resolve_lang(request: Request) -> str:
-    """Language for this request: session choice if valid, else English."""
+    """Session choice, then country at the edge, then browser preference."""
     lang = request.session.get("lang")
-    return lang if lang in SUPPORTED else DEFAULT_LANG
+    if lang in SUPPORTED:
+        return lang
+    country = request.headers.get("cf-ipcountry", "").upper()
+    if country:
+        return "es" if country in _SPANISH_COUNTRIES else DEFAULT_LANG
+    accepted = request.headers.get("accept-language", "").lower()
+    return "es" if accepted.startswith("es") else DEFAULT_LANG
 
 
 def t(key: str, lang: str = DEFAULT_LANG, **kwargs: Any) -> str:

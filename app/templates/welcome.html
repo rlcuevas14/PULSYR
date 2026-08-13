@@ -1,0 +1,37 @@
+{% extends "auth_base.html" %}
+{% block title %}{{ t("welcome.title") }}{% endblock %}
+{% block tagline %}{{ t("welcome.subtitle") }}{% endblock %}
+
+{% block card %}
+  {% if raw_token %}
+    <div class="bg-success/10 border border-success/30 rounded-xl p-4 mb-4">
+      <h2 class="font-semibold text-ink mb-1">{{ t("welcome.ready") }}</h2>
+      <p class="text-sm text-ink mb-1">{{ project.name }}</p>
+      <p class="text-xs text-muted mb-3">{{ t("welcome.token_once") }}</p>
+      <code class="block bg-canvas border border-hairline rounded-lg p-3 text-xs break-all select-all text-ink">{{ raw_token }}</code>
+    </div>
+    <a href="/" class="p-btn p-btn-primary w-full justify-center">{{ t("welcome.open_dashboard") }}</a>
+  {% else %}
+    <div class="rounded-xl border border-hairline bg-surface-strong p-4 mb-4">
+      <div class="flex items-center justify-between gap-3 mb-1">
+        <strong class="text-ink">{{ t("plan.free.name") }}</strong>
+        <span class="p-pill bg-success/15 text-success">{{ t("welcome.active") }}</span>
+      </div>
+      <p class="text-xs text-muted">{{ t("plan.free.summary", projects=FREE_LIMITS.projects, members=FREE_LIMITS.members, tokens=FREE_LIMITS.tokens_per_project, storage=FREE_LIMITS.storage_bytes // 1024 // 1024) }}</p>
+    </div>
+    <form method="post" action="/welcome" class="space-y-4">
+      <div>
+        <label class="p-label" for="project-name">{{ t("welcome.project_name") }}</label>
+        <input id="project-name" name="project_name" required autofocus class="p-input"
+               value="{{ project.name if project.name != 'Default' else '' }}"
+               placeholder="{{ t('projects.name_placeholder') }}">
+      </div>
+      <div>
+        <label class="p-label" for="token-name">{{ t("welcome.token_name") }}</label>
+        <input id="token-name" name="token_name" required class="p-input" value="my-agent">
+      </div>
+      <p class="text-xs text-muted">{{ t("welcome.token_hint") }}</p>
+      <button class="p-btn p-btn-primary w-full justify-center">{{ t("welcome.finish") }}</button>
+    </form>
+  {% endif %}
+{% endblock %}

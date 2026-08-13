@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.accounts.plans import PlanLimitError
 from app.auth.deps import current_user_ui
 from app.auth.models import User
 from app.database import get_db
@@ -213,8 +214,13 @@ async def ui_create_compartment(
         return guard
     try:
         await mservice.create_compartment(db, pid, name, description or None, user.email)
-    except mservice.ManagementError as e:
-        return Response(content=str(e), status_code=422)
+    except (mservice.ManagementError, PlanLimitError) as e:
+        message = (
+            _t(f"plan.limit.{e.resource}", resolve_lang(request), limit=e.limit)
+            if isinstance(e, PlanLimitError)
+            else str(e)
+        )
+        return Response(content=message, status_code=422)
     await db.commit()
     flash_success(request, message=_t("management.flash.compartment_created", resolve_lang(request)))
     return _refresh_to("/management/documentos")
@@ -253,8 +259,13 @@ async def ui_upload_deliverable(
             summary_md=summary_md or None, status=status or None, owner=owner or None,
             note=note or None,
         )
-    except mservice.ManagementError as e:
-        return Response(content=str(e), status_code=422)
+    except (mservice.ManagementError, PlanLimitError) as e:
+        message = (
+            _t(f"plan.limit.{e.resource}", resolve_lang(request), limit=e.limit)
+            if isinstance(e, PlanLimitError)
+            else str(e)
+        )
+        return Response(content=message, status_code=422)
     await db.commit()
     flash_success(request, message=_t("management.flash.deliverable_saved", resolve_lang(request)))
     return _refresh_to("/management/documentos")
@@ -274,8 +285,13 @@ async def ui_rollback_deliverable(
         return guard
     try:
         await mservice.rollback_deliverable(db, pid, deliverable_id, version_no, user.email)
-    except mservice.ManagementError as e:
-        return Response(content=str(e), status_code=422)
+    except (mservice.ManagementError, PlanLimitError) as e:
+        message = (
+            _t(f"plan.limit.{e.resource}", resolve_lang(request), limit=e.limit)
+            if isinstance(e, PlanLimitError)
+            else str(e)
+        )
+        return Response(content=message, status_code=422)
     await db.commit()
     flash_success(request, message=_t("management.flash.rolled_back", resolve_lang(request)))
     return _refresh_to(f"/management/documentos/{deliverable_id}")

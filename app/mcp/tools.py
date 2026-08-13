@@ -676,6 +676,8 @@ async def pulsyr_doc_get(db: AsyncSession, token: ApiToken, args: dict) -> dict:
 
 
 async def pulsyr_doc_put(db: AsyncSession, token: ApiToken, args: dict) -> dict:
+    from app.accounts.plans import PlanLimitError
+
     pid = _pid(token)
     b64 = args.get("content_base64")
     raw = args.get("content")
@@ -695,7 +697,7 @@ async def pulsyr_doc_put(db: AsyncSession, token: ApiToken, args: dict) -> dict:
             actor=await actor_for(db, token), summary_md=args.get("summary_md"),
             status=args.get("status"), owner=args.get("owner"), note=args.get("note"),
         )
-    except mgmt.ManagementError as e:
+    except (mgmt.ManagementError, PlanLimitError) as e:
         raise ToolError(str(e)) from e
     return {**_deliverable_brief(d), "new_version": created}
 

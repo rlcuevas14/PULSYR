@@ -124,7 +124,7 @@ Transitions are validated: the agent can't make illegal moves. Terminal states (
 - **Semantic search**: embedding-based neighbor lookup via Gemini + pgvector. Optional; requires both `GEMINI_API_KEY` and a Postgres instance with pgvector.
 - **No Node.js**: Tailwind and HTMX load from CDN. Server renders HTML; HTMX handles partial updates.
 - **Sign-in**: email and password out of the box. Optionally "Continue with GitHub/Google", which also removes the need for this app to ever send email: the provider vouches for the address, so there is no confirmation mail and no password reset to build. With no OAuth keys set, the buttons never render.
-- **Multilingual UI**: English (default), Spanish, and French, switchable from the navbar. Adding a language = one JSON file in `app/i18n/locales/` (CI enforces catalog completeness).
+- **Multilingual UI**: English and Spanish, selected from the edge country/browser preference and switchable from the navbar. Adding a language = one JSON file in `app/i18n/locales/` (CI enforces catalog completeness).
 - **Archive**: closed items grouped by ISO week with close reasons and linked commits, plus an on-demand AI weekly summary.
 
 ---
@@ -139,6 +139,13 @@ Transitions are validated: the agent can't make illegal moves. Terminal states (
 | `OAUTH_GITHUB_CLIENT_ID` / `_SECRET` | No | Enables "Continue with GitHub". Callback: `BASE_URL` + `/callback/github` |
 | `OAUTH_GOOGLE_CLIENT_ID` / `_SECRET` | No | Enables "Continue with Google". Callback: `BASE_URL` + `/callback/google` |
 | `PUBLIC_SIGNUP` | No | `true` lets anyone with a provider account register. Default `false` |
+| `FREE_MAX_PROJECTS` | No | Active projects included in hosted Free accounts (default `1`) |
+| `FREE_MAX_MEMBERS` | No | Additional teammates included in hosted Free accounts (default `1`) |
+| `FREE_MAX_TOKENS_PER_PROJECT` | No | Active MCP tokens per project on Free (default `3`) |
+| `FREE_MAX_STORAGE_MB` | No | Total document-version storage on Free (default `25`) |
+| `OAUTH_RATE_LIMIT_ATTEMPTS` | No | OAuth attempts allowed per client/window (default `20`) |
+| `OAUTH_RATE_LIMIT_WINDOW_SECONDS` | No | OAuth fixed-window duration (default `600`) |
+| `TERMS_VERSION` | No | Legal notice version recorded with hosted signup consent |
 | `ANTHROPIC_API_KEY` | No | Enables AI impact/effort estimation and Sentry triage |
 | `GEMINI_API_KEY` | No | Enables semantic neighbor search (requires pgvector) |
 | `SENTRY_CLIENT_SECRET` | No | HMAC secret for Sentry webhook signature verification |

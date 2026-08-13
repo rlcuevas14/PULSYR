@@ -2,7 +2,26 @@
 import PageHero from "../../../components/PageHero.astro";
 import PublicLayout from "../../../layouts/PublicLayout.astro";
 ---
-<PublicLayout title="Privacidad" description="Información de privacidad del sitio público de Pulsyr y responsabilidades separadas que corresponden al operador de una instalación autohospedada.">
-  <PageHero compact eyebrow="Legal" breadcrumbLabel="Privacidad" title="Privacidad" lead="Este aviso describe el sitio público de Pulsyr. Cada instancia autohospedada es operada por quien la despliega y ese operador determina sus propias prácticas de datos." />
-  <article class="section-tight container prose"><p><strong>Fecha de vigencia:</strong> 12 de agosto de 2026</p><h2>Sitio público</h2><p>El sitio público entrega información del producto y del proyecto. No ofrece cuentas, recibe formularios, instala cookies publicitarias ni crea perfiles individuales. En producción, Pulsyr puede usar una configuración ligera de Plausible Analytics para contar visitas agregadas y algunos eventos de navegación. La integración está deshabilitada en staging y no se ejecuta dentro de la aplicación privada.</p><h2>Destinos externos</h2><p>Los enlaces a GitHub y al host separado de la aplicación conducen a servicios con sus propias condiciones. Pulsyr no controla cómo procesan datos una cuenta independiente de GitHub, un cliente MCP, un proxy inverso o una instalación autohospedada.</p><h2>Aplicación autohospedada</h2><p>El software almacena identificadores de cuenta, contenido de proyectos, auditoría, hashes de tokens, configuración de integraciones y otros datos ingresados por el operador o sus usuarios. El operador elige infraestructura, integraciones, acceso, retención, respaldos y base legal.</p><h2>Contacto y cambios</h2><p>Las consultas legales o de privacidad pueden enviarse a <a data-analytics-event="contact" href="mailto:legal@pulsyr.dev">legal@pulsyr.dev</a>. Si el sitio incorpora formularios, cuentas alojadas, publicidad o tratamientos distintos, este aviso se actualizará junto con el cambio.</p></article>
+
+<PublicLayout title="Privacidad" description="Aviso de privacidad del sitio público, el servicio alojado Gratuito de Pulsyr y las instalaciones autohospedadas operadas separadamente.">
+  <PageHero compact eyebrow="Legal" breadcrumbLabel="Privacidad" title="Aviso de privacidad" lead="Este aviso explica qué trata Pulsyr cuando visitas el sitio público o creas una cuenta alojada. Las instalaciones autohospedadas permanecen bajo control de su operador." />
+  <article class="section-tight container prose">
+    <p><strong>Fecha de vigencia:</strong> 12 de agosto de 2026 · <strong>Versión:</strong> 2026-08-12</p>
+    <h2>Quién es responsable</h2>
+    <p>Avonlea Systems SpA opera pulsyr.dev y la aplicación alojada en app.pulsyr.dev. Las solicitudes de privacidad pueden enviarse a <a data-analytics-event="contact" href="mailto:legal@pulsyr.dev">legal@pulsyr.dev</a>.</p>
+    <h2>Datos que tratamos</h2>
+    <p>Para cuentas alojadas tratamos el nombre, correo verificado e identificador estable entregado por GitHub o Google; registros de cuenta, suscripción y onboarding; contenido e historial de auditoría de los proyectos; hashes de tokens API y configuración de integraciones; y registros limitados de seguridad y operación. Los tokens MCP originales se muestran una vez y no se almacenan. El límite de intentos OAuth usa un resumen criptográfico temporal en lugar de conservar la dirección IP original.</p>
+    <h2>Para qué los usamos</h2>
+    <p>Usamos estos datos para crear y autenticar la cuenta, entregar el servicio solicitado, aplicar los límites del plan, proteger y diagnosticar la plataforma, prevenir abuso, comunicar cambios relevantes y cumplir obligaciones aplicables. No vendemos datos personales, no creamos perfiles publicitarios ni usamos contenido privado de proyectos para publicidad.</p>
+    <h2>Proveedores y tratamiento internacional</h2>
+    <p>GitHub o Google gestiona la identificación bajo sus propios términos. Proveedores de hosting, monitoreo, correo e infraestructura pueden tratar datos limitados por nuestra cuenta y operar en otras jurisdicciones. Limitamos su acceso a lo necesario y aplicamos salvaguardas contractuales y técnicas apropiadas.</p>
+    <h2>Conservación y opciones</h2>
+    <p>Los datos de cuenta y proyecto se conservan mientras la cuenta alojada esté activa y durante el tiempo razonablemente necesario para seguridad, recuperación de respaldos, controversias u obligaciones legales. Puedes solicitar acceso, rectificación, eliminación, oposición o portabilidad cuando corresponda escribiendo al contacto anterior. Podemos verificar que quien solicita controla la cuenta.</p>
+    <h2>Sitio público</h2>
+    <p>El sitio público puede usar una configuración ligera de Plausible Analytics para visitas agregadas y algunos eventos de navegación. No usa cookies publicitarias ni envía contenido privado de la aplicación a la analítica pública.</p>
+    <h2>Instalaciones autohospedadas</h2>
+    <p>Una instalación autohospedada es operada independientemente. Su operador define infraestructura, integraciones, accesos, retención, respaldos y base legal, y debe mantener su propio aviso de privacidad.</p>
+    <h2>Cambios</h2>
+    <p>Los cambios materiales se publicarán aquí con una nueva fecha de versión. Si un cambio exige renovar la aceptación para cuentas alojadas, Pulsyr la solicitará antes de continuar el uso.</p>
+  </article>
 </PublicLayout>

@@ -20,8 +20,13 @@ class CsrfAsyncClient(AsyncClient):
 
     async def request(self, method, url, **kwargs):
         if method.upper() not in {"GET", "HEAD", "OPTIONS", "TRACE"}:
-            token = self.cookies.get(CSRF_COOKIE, "test-csrf-token")
-            self.cookies.set(CSRF_COOKIE, token)
+            token = next(
+                (cookie.value for cookie in self.cookies.jar if cookie.name == CSRF_COOKIE),
+                None,
+            )
+            if token is None:
+                token = "test-csrf-token"
+                self.cookies.set(CSRF_COOKIE, token)
             headers = dict(kwargs.pop("headers", {}) or {})
             headers.setdefault("X-CSRF-Token", token)
             kwargs["headers"] = headers

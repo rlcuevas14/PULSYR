@@ -22,6 +22,9 @@ async def current_user(
     user = await get_user_by_id(db, uuid.UUID(user_id))
     if user is None:
         raise HTTPException(status_code=401, detail="Invalid session")
+    from app.accounts.plans import active_plan_code
+
+    setattr(user, "plan_code", await active_plan_code(db, user.account_id))
     return user
 
 
@@ -36,6 +39,9 @@ async def current_user_ui(
     user = await get_user_by_id(db, uuid.UUID(user_id))
     if user is None:
         raise HTTPException(status_code=303, headers={"Location": "/login"})
+    from app.accounts.plans import active_plan_code
+
+    setattr(user, "plan_code", await active_plan_code(db, user.account_id))
     return user
 
 
@@ -78,6 +84,9 @@ async def api_or_session_user(
     if user_id:
         user = await get_user_by_id(db, uuid.UUID(user_id))
         if user:
+            from app.accounts.plans import active_plan_code
+
+            setattr(user, "plan_code", await active_plan_code(db, user.account_id))
             return user
     raise HTTPException(status_code=401, detail="Not authenticated")
 

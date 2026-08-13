@@ -2,12 +2,15 @@ import re
 import unicodedata
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.accounts.models import Account
+from app.accounts.plans import SELF_HOSTED, add_subscription
 from app.auth.models import User
 from app.auth.service import hash_password
+from app.enums import PLAN_CODES, SUBSCRIPTION_STATUSES
 
 
 class AccountError(Exception):
@@ -35,21 +38,24 @@ async def create_account(
     password: str | None,
     *,
     is_superadmin: bool = False,
+    plan_code: str = SELF_HOSTED,
 ) -> tuple[Account, User]:
-    """Create an account and its owner user in one transaction.
+    """Stage an account, its owner and subscription in the caller's transaction.
 
     Reusable, as designed: the setup wizard and the super-admin panel pass a
     password; the public OAuth signup passes None, because the provider holds the
-    credential and this side stores no secret for that user.
+    credential and this side stores no secret for that user. The caller owns the
+    commit so it can atomically add the initial project, token or OAuth identity.
     """
     name = name.strip()
     if not name:
         raise AccountError("Account name cannot be empty.")
-    if not owner_email.strip():
+    owner_email = owner_email.strip().casefold()
+    if not owner_email:
         raise AccountError("Owner email cannot be empty.")
     if password is not None and len(password) < 8:
         raise AccountError("Password must be at least 8 characters.")
-    if await db.scalar(select(User.id).where(User.email == owner_email)):
+    if await db.scalar(select(User.id).where(func.lower(User.email) == owner_email)):
         raise AccountError("A user with that email already exists.")
 
     acc = Account(name=name, slug=await _unique_slug(db, _slugify(name)))
@@ -64,14 +70,17 @@ async def create_account(
         is_superadmin=is_superadmin,
     )
     db.add(owner)
-    await db.commit()
-    await db.refresh(acc)
-    await db.refresh(owner)
+    await db.flush()
+    await add_subscription(db, acc.id, plan_code)
     return acc, owner
 
 
 async def list_accounts(db: AsyncSession) -> list[Account]:
-    result = await db.execute(select(Account).order_by(Account.created_at.desc()))
+    result = await db.execute(
+        select(Account)
+        .options(selectinload(Account.subscription))
+        .order_by(Account.created_at.desc())
+    )
     return list(result.scalars().all())
 
 
@@ -80,3 +89,22 @@ async def set_account_active(db: AsyncSession, account_id: uuid.UUID, active: bo
     if acc is not None:
         acc.is_active = active
         await db.commit()
+
+
+async def update_subscription(
+    db: AsyncSession,
+    account_id: uuid.UUID,
+    *,
+    plan_code: str,
+    status: str,
+) -> None:
+    if plan_code not in PLAN_CODES or status not in SUBSCRIPTION_STATUSES:
+        raise AccountError("Invalid subscription plan or status.")
+    from app.accounts.plans import subscription_for
+
+    subscription = await subscription_for(db, account_id, for_update=True)
+    if subscription is None:
+        subscription = await add_subscription(db, account_id, plan_code)
+    subscription.plan_code = plan_code
+    subscription.status = status
+    await db.commit()

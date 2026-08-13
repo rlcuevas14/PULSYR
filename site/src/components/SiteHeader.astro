@@ -38,7 +38,7 @@ const spanishChoice = languageChoiceUrl("es", languageReturnPath);
           <a href={spanishChoice} lang="es" aria-current={locale === "es" ? "true" : undefined}>Español</a>
         </div>
       </details>
-      <a class="button button-dark button-small" data-analytics-event="cta_app" href="https://app.pulsyr.dev/login">{isSpanish ? "Abrir la aplicación" : "Open the app"}</a>
+      <a class="button button-dark button-small" data-analytics-event="cta_signup" href="https://app.pulsyr.dev/signup">{isSpanish ? "Comenzar gratis" : "Start free"}</a>
     </div>
     <details class="mobile-menu">
       <summary aria-label={isSpanish ? "Abrir navegación" : "Open navigation"}>{isSpanish ? "Menú" : "Menu"}</summary>
@@ -49,7 +49,7 @@ const spanishChoice = languageChoiceUrl("es", languageReturnPath);
           <a href={englishChoice} lang="en" aria-current={locale === "en" ? "true" : undefined}>EN</a>
           <a href={spanishChoice} lang="es" aria-current={locale === "es" ? "true" : undefined}>ES</a>
         </div>
-        <a data-analytics-event="cta_app" href="https://app.pulsyr.dev/login">{isSpanish ? "Abrir la aplicación" : "Open the app"}</a>
+        <a data-analytics-event="cta_signup" href="https://app.pulsyr.dev/signup">{isSpanish ? "Comenzar gratis" : "Start free"}</a>
       </div>
     </details>
   </nav>

@@ -51,6 +51,9 @@ async def create_project(
     description: str | None = None,
     color: str | None = None,
 ) -> Project:
+    from app.accounts.plans import ensure_project_capacity
+
+    await ensure_project_capacity(db, account_id)
     name = name.strip()
     if not name:
         raise ProjectError("Project name cannot be empty.")
@@ -76,6 +79,21 @@ async def update_project(db: AsyncSession, project: Project, changes: dict) -> P
     for field, value in changes.items():
         if hasattr(project, field):
             setattr(project, field, value)
+    await db.flush()
+    return project
+
+
+async def rename_project(db: AsyncSession, project: Project, name: str) -> Project:
+    """Rename a starter project and keep its human-readable slug aligned."""
+    name = name.strip()
+    if not name:
+        raise ProjectError("Project name cannot be empty.")
+    slug = _slugify(name)
+    existing = await get_by_slug(db, slug, project.account_id)
+    if existing is not None and existing.id != project.id:
+        raise ProjectError(f"A project with slug '{slug}' already exists.")
+    project.name = name
+    project.slug = slug
     await db.flush()
     return project
 

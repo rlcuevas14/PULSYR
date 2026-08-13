@@ -606,13 +606,11 @@ async def test_lang_default_english_and_switch(client: AsyncClient):
     r_es = await client.get("/ui/lang/es?next=/login", follow_redirects=True)
     assert 'lang="es"' in r_es.text and "Entrar" in r_es.text
 
-    r_fr = await client.get("/ui/lang/fr?next=/login", follow_redirects=True)
-    assert 'lang="fr"' in r_fr.text and "Se connecter" in r_fr.text
-
 
 @pytest.mark.asyncio
 async def test_lang_switch_guards(client: AsyncClient):
     assert (await client.get("/ui/lang/xx?next=/")).status_code == 404
+    assert (await client.get("/ui/lang/fr?next=/")).status_code == 404
     r = await client.get("/ui/lang/en?next=//evil.com", follow_redirects=False)
     assert r.headers["location"] == "/"
 
@@ -622,20 +620,21 @@ async def test_lang_selector_in_navbar(client: AsyncClient):
     _uid, pid = await _login(client)
     r = await client.get("/")
     assert r.status_code == 200
-    for code in ("en", "es", "fr"):
+    for code in ("en", "es"):
         assert f"/ui/lang/{code}?next=" in r.text
+    assert "/ui/lang/fr?next=" not in r.text
 
 
 @pytest.mark.asyncio
 async def test_all_screens_render_in_all_languages(client: AsyncClient):
-    """Smoke: cada pantalla renderiza 200 en en/es/fr (errores de runtime de i18n)."""
+    """Smoke: cada pantalla renderiza 200 en en/es (errores de runtime de i18n)."""
     _uid, pid = await _login(client)
     item_id, _ = await _seed_item(client, pid, title="Lang smoke item")
     screens = ("/", "/backlog", "/backlog?view=board", "/backlog?group=status",
                "/archive", "/priority", "/threads", "/incidents",
                "/projects", f"/items/{item_id}", "/admin", "/account/members")
-    probes = {"es": ("Actividad reciente", "/"), "fr": ("Activité récente", "/")}
-    for code in ("en", "es", "fr"):
+    probes = {"es": ("Actividad reciente", "/")}
+    for code in ("en", "es"):
         await client.get(f"/ui/lang/{code}?next=/")
         for path in screens:
             r = await client.get(path)

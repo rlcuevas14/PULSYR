@@ -8,20 +8,20 @@ const {
   body,
 } = Astro.props;
 const isSpanish = Astro.url.pathname === "/es" || Astro.url.pathname.startsWith("/es/");
-const resolvedTitle = title ?? (isSpanish ? "Dale a tu agente un backlog que pueda mantener actualizado." : "Give your agent a backlog it can keep current.");
-const resolvedBody = body ?? (isSpanish ? "Aloja Pulsyr, crea un token de proyecto y conecta cualquier agente compatible con MCP." : "Self-host Pulsyr, create a project token, and connect any MCP-compatible coding agent.");
+const resolvedTitle = title ?? (isSpanish ? "Conecta tu primer proyecto sin configurar infraestructura." : "Connect your first project without configuring infrastructure.");
+const resolvedBody = body ?? (isSpanish ? "El plan Gratuito incluye un proyecto, un colaborador, tres tokens MCP y 25 MB de documentos. Sin tarjeta." : "The Free plan includes one project, one teammate, three MCP tokens and 25 MB of documents. No card required.");
 const docsPath = isSpanish ? "/es/docs/primeros-pasos/" : "/docs/primeros-pasos/";
 ---
 
 <section class="container cta" aria-labelledby="cta-heading">
   <div>
-    <p class="eyebrow">{isSpanish ? "Comienza en tu propia infraestructura" : "Start with your own infrastructure"}</p>
+    <p class="eyebrow">{isSpanish ? "Plan Gratuito" : "Free plan"}</p>
     <h2 id="cta-heading">{resolvedTitle}</h2>
     <p>{resolvedBody}</p>
   </div>
   <div class="actions">
-    <a class="button button-light" data-analytics-event="cta_docs" href={docsPath}>{isSpanish ? "Lee la guía inicial" : "Read the quick start"}</a>
-    <a class="button button-outline-on-dark" data-analytics-event="cta_github" href="https://github.com/rlcuevas14/PULSYR">{isSpanish ? "Ver en GitHub" : "View on GitHub"}</a>
+    <a class="button button-light" data-analytics-event="cta_signup" href="https://app.pulsyr.dev/signup">{isSpanish ? "Comenzar gratis" : "Start free"}</a>
+    <a class="button button-outline-on-dark" data-analytics-event="cta_docs" href={docsPath}>{isSpanish ? "Prefiero autohospedarlo" : "I prefer to self-host"}</a>
   </div>
 </section>
 
