@@ -128,9 +128,117 @@
     });
   }
 
+  var toastTimer = null;
+  function showToast(message, kind) {
+    var toast = document.getElementById("toast");
+    if (!toast || !message) return;
+    toast.textContent = message;
+    toast.classList.remove("hidden", "bg-error", "bg-success");
+    toast.classList.add(kind === "success" ? "bg-success" : "bg-error");
+    if (toastTimer) window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(function () {
+      toast.classList.add("hidden");
+    }, kind === "success" ? 3000 : 5000);
+  }
+  window.showToast = showToast;
+
+  function colorForeground(color) {
+    var value = color.replace("#", "");
+    var channels = [0, 2, 4].map(function (offset) {
+      var channel = parseInt(value.substr(offset, 2), 16) / 255;
+      return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+    });
+    return (0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]) > 0.35
+      ? "#0a0a0a" : "#ffffff";
+  }
+
+  function previewColor(picker, color) {
+    var input = picker.querySelector("[data-color-input]");
+    var preview = picker.querySelector("[data-color-preview]");
+    picker.querySelectorAll("[data-color-pick]").forEach(function (button) {
+      button.style.outline = button.dataset.colorPick === color ? "2px solid var(--ink)" : "";
+      button.style.outlineOffset = button.dataset.colorPick === color ? "2px" : "";
+    });
+    if (input) input.value = color;
+    if (preview) {
+      preview.style.background = color;
+      preview.style.color = colorForeground(color);
+    }
+  }
+
+  function editPending(data) {
+    var title = document.getElementById("pending-modal-title");
+    if (!title) return;
+    title.textContent = data ? title.dataset.edit : title.dataset.new;
+    var values = {
+      "pm-id": data ? data.id : "",
+      "pm-title": data ? data.title : "",
+      "pm-detail": data ? data.detail : "",
+      "pm-owner": data ? data.owner : "",
+      "pm-status": data ? data.status : "open",
+      "pm-due": data ? data.due : "",
+      "pm-task": data ? data.task : ""
+    };
+    Object.keys(values).forEach(function (id) {
+      var field = document.getElementById(id);
+      if (field) field.value = values[id] || "";
+    });
+    window.openModal("pending-modal");
+  }
+
+  var boardInstances = [];
+  function boardMove(itemId, toStatus) {
+    var form = document.getElementById("filters");
+    var values = { status: toStatus };
+    if (form) new FormData(form).forEach(function (value, key) { values[key] = value; });
+    window.htmx.ajax("POST", "/ui/items/" + itemId + "/board-move", {
+      target: "#items-view", swap: "innerHTML", values: values
+    });
+  }
+
+  function initBoard() {
+    var root = document.getElementById("board-root");
+    boardInstances.forEach(function (sortable) { sortable.destroy(); });
+    boardInstances = [];
+    if (!root || !root.dataset.canWrite || !window.Sortable) return;
+    root.querySelectorAll("[data-board-col]").forEach(function (column) {
+      boardInstances.push(window.Sortable.create(column, {
+        group: "pulsyr-board",
+        animation: 150,
+        sort: false,
+        draggable: "[data-card]",
+        handle: "[data-drag-handle]",
+        ghostClass: "opacity-40",
+        onEnd: function (event) {
+          var to = event.to.dataset.status;
+          var from = event.from.dataset.status;
+          if (to && to !== from) boardMove(event.item.dataset.itemId, to);
+        }
+      }));
+    });
+  }
+
+  function initializeDeclarativeUi(root) {
+    (root || document).querySelectorAll("[data-hint-id]").forEach(function (hint) {
+      try {
+        if (!localStorage.getItem("hint-" + hint.dataset.hintId)) {
+          hint.classList.remove("hidden");
+          hint.classList.add("flex");
+        }
+      } catch (_) {}
+    });
+    (root || document).querySelectorAll("[data-auto-remove]").forEach(function (element) {
+      window.setTimeout(function () { if (element.isConnected) element.remove(); }, Number(element.dataset.autoRemove));
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     protectForms(document);
     enhanceForms(document);
+    initializeDeclarativeUi(document);
+    initBoard();
+    var toast = document.getElementById("toast");
+    if (toast && toast.dataset.initialMessage) showToast(toast.dataset.initialMessage, "success");
   });
   document.addEventListener("submit", function (event) {
     var form = event.target;
@@ -163,6 +271,8 @@
   document.addEventListener("htmx:afterSwap", function (event) {
     protectForms(event.target);
     enhanceForms(event.target);
+    initializeDeclarativeUi(event.target);
+    if (event.target && (event.target.id === "items-view" || event.target.id === "backlog-root")) initBoard();
   });
   document.addEventListener("htmx:afterRequest", function (event) {
     var source = event.detail && event.detail.elt;
@@ -219,8 +329,72 @@
 
   document.addEventListener("click", function (event) {
     var target = event.target;
+    var action = target && target.closest ? target.closest(
+      "[data-theme-toggle], [data-modal-open], [data-modal-close], [data-remove], " +
+      "[data-copy-target], [data-clear-target], [data-hint-dismiss], [data-color-pick], " +
+      "[data-pending-new], [data-pending-edit]"
+    ) : null;
+    if (action) {
+      if (action.hasAttribute("data-theme-toggle")) window.toggleTheme();
+      if (action.dataset.modalOpen) window.openModal(action.dataset.modalOpen);
+      if (action.dataset.modalClose) window.closeModal(action.dataset.modalClose);
+      if (action.hasAttribute("data-remove")) action.remove();
+      if (action.dataset.clearTarget) {
+        var clearTarget = document.getElementById(action.dataset.clearTarget);
+        if (clearTarget) clearTarget.replaceChildren();
+      }
+      if (action.dataset.copyTarget) {
+        var copyTarget = document.getElementById(action.dataset.copyTarget);
+        var copyText = copyTarget && (copyTarget.value || copyTarget.textContent || "");
+        navigator.clipboard.writeText(copyText).then(function () {
+          action.textContent = action.dataset.copied;
+          window.setTimeout(function () { action.textContent = action.dataset.copy; }, 1500);
+        });
+      }
+      if (action.hasAttribute("data-hint-dismiss")) {
+        var hint = action.closest("[data-hint-id]");
+        if (hint) {
+          try { localStorage.setItem("hint-" + hint.dataset.hintId, "1"); } catch (_) {}
+          hint.remove();
+        }
+      }
+      if (action.dataset.colorPick) previewColor(action.closest("[data-color-picker]"), action.dataset.colorPick);
+      if (action.hasAttribute("data-pending-new")) editPending(null);
+      if (action.dataset.pendingEdit) editPending(JSON.parse(action.dataset.pendingEdit));
+    }
     if (target && target.matches && target.matches("[data-modal]:not(.hidden)")) {
       window.closeModal(target.id);
     }
+    document.querySelectorAll("details.p-menu[open]").forEach(function (details) {
+      if (!details.contains(target)) details.removeAttribute("open");
+    });
+  });
+
+  document.addEventListener("change", function (event) {
+    var target = event.target;
+    if (target && target.matches("[data-auto-submit]") && target.form) target.form.requestSubmit();
+    if (target && target.matches("[data-color-input]")) previewColor(target.closest("[data-color-picker]"), target.value);
+  });
+
+  document.addEventListener("htmx:responseError", function (event) {
+    var xhr = event.detail && event.detail.xhr;
+    var body = xhr && xhr.responseText ? xhr.responseText.trim() : "";
+    if (body && body.charAt(0) === "<") {
+      var temporary = document.createElement("div");
+      temporary.innerHTML = body;
+      body = (temporary.textContent || "").trim();
+    }
+    var toast = document.getElementById("toast");
+    var status = xhr ? xhr.status : "";
+    var generic = toast ? toast.dataset.errorGeneric : "Request failed__S__";
+    showToast(body || generic.replace("__S__", status ? " (" + status + ")" : ""));
+  });
+  document.addEventListener("htmx:sendError", function () {
+    var toast = document.getElementById("toast");
+    showToast(toast ? toast.dataset.offline : "Offline");
+  });
+  document.addEventListener("pulsyr:toast", function (event) {
+    var detail = event.detail || {};
+    showToast(detail.message || "", detail.kind || "error");
   });
 })();

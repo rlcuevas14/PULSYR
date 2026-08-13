@@ -6,7 +6,7 @@
         action="/ui/threads/{{ thread.id }}/advance" method="post">
     <textarea name="artifact_content" rows="12" class="p-input font-mono">{{ draft.content }}</textarea>
     <div class="flex justify-end gap-2 mt-2">
-      <button type="button" onclick="document.getElementById('draft-area').innerHTML=''"
+      <button type="button" data-clear-target="draft-area"
               class="p-btn p-btn-ghost p-btn-sm">{{ t("threads.discard_draft") }}</button>
       <button type="submit" class="p-btn p-btn-primary p-btn-sm">{{ t("threads.save_and_advance") }}</button>
     </div>

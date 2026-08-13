@@ -2,7 +2,7 @@
 
 - **Fecha:** 2026-08-12
 - **Deploy/DNS/cuentas externas:** no ejecutados
-- **Fase:** CI aprobado; pendiente merge del PR
+- **Fase:** PR #24 fusionado; CI de `main` aprobado
 
 ## Implementado
 
@@ -33,6 +33,10 @@ que se registra a continuación.
 
 ## Evidencia de CI
 
+- [PR #24](https://github.com/rlcuevas14/PULSYR/pull/24) fusionado en `main`
+  (`ca34bd6fb489426e2185e5c5373beddfc860cbcd`).
+- [Run de `main` 31652602004](https://github.com/rlcuevas14/PULSYR/actions/runs/31652602004):
+  10/10 jobs aprobados tras el merge.
 - [Run 31651793180](https://github.com/rlcuevas14/PULSYR/actions/runs/31651793180):
   10 jobs aprobados, incluidos los 6 gates web con sus artefactos.
 - Lighthouse: docs y producto 1,00 en las cuatro categorías; homepage 0,97 en

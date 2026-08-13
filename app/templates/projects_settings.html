@@ -28,7 +28,7 @@
     <div class="flex items-center gap-3 mt-2">
       <button type="button" class="p-btn p-btn-ghost p-btn-sm"
               data-copy="{{ t('common.copy') }}" data-copied="{{ t('common.copied') }}"
-              onclick="var b=this;navigator.clipboard.writeText(document.getElementById('mcp-snippet').innerText).then(function(){b.textContent=b.dataset.copied;setTimeout(function(){b.textContent=b.dataset.copy;},1500);})">{{ t("common.copy") }}</button>
+              data-copy-target="mcp-snippet">{{ t("common.copy") }}</button>
       <p class="text-xs text-muted">{{ t("projects.replace_token_hint") }}</p>
     </div>
   </div>

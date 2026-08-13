@@ -9,8 +9,8 @@
     <input type="search" name="q" value="{{ q }}" placeholder="{{ t('management.doc.search') }}"
            aria-label="{{ t('management.doc.search') }}" class="p-input">
   </form>
-  <button onclick="openModal('new-compartment-modal')" class="p-btn p-btn-ghost p-btn-sm">{{ t("management.doc.new_compartment") }}</button>
-  <button onclick="openModal('upload-modal')" class="p-btn p-btn-primary p-btn-sm">{{ t("management.doc.upload") }}</button>
+  <button data-modal-open="new-compartment-modal" class="p-btn p-btn-ghost p-btn-sm">{{ t("management.doc.new_compartment") }}</button>
+  <button data-modal-open="upload-modal" class="p-btn p-btn-primary p-btn-sm">{{ t("management.doc.upload") }}</button>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-[14rem_1fr] gap-5">
@@ -87,7 +87,7 @@
         <textarea id="up-summary" name="summary_md" rows="2" class="p-input"></textarea>
       </div>
       <div class="flex justify-end gap-2 pt-1">
-        <button type="button" onclick="closeModal('upload-modal')" class="p-btn p-btn-ghost p-btn-sm">{{ t("common.cancel") }}</button>
+        <button type="button" data-modal-close="upload-modal" class="p-btn p-btn-ghost p-btn-sm">{{ t("common.cancel") }}</button>
         <button type="submit" class="p-btn p-btn-primary p-btn-sm">{{ t("management.doc.save") }}</button>
       </div>
     </form>
@@ -109,7 +109,7 @@
         <textarea id="nc-desc" name="description" rows="2" class="p-input"></textarea>
       </div>
       <div class="flex justify-end gap-2 pt-1">
-        <button type="button" onclick="closeModal('new-compartment-modal')" class="p-btn p-btn-ghost p-btn-sm">{{ t("common.cancel") }}</button>
+        <button type="button" data-modal-close="new-compartment-modal" class="p-btn p-btn-ghost p-btn-sm">{{ t("common.cancel") }}</button>
         <button type="submit" class="p-btn p-btn-primary p-btn-sm">{{ t("management.doc.create") }}</button>
       </div>
     </form>

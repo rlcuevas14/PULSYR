@@ -14,7 +14,7 @@
 
 ## Temporary CSP exception
 
-The existing Jinja UI still contains inline style attributes, page scripts, and event handlers. CSP is enforced with `unsafe-inline` for script/style during their staged extraction. Network code remains restricted to `self`, framing is denied, objects are disabled, and all CDN dependencies are removed. Removing this exception is tracked with the UI extraction work; enabling a stricter directive before that refactor would disable existing controls.
+Executable Jinja page scripts and event handlers were extracted into the content-hashed application asset. Both the private app and public site therefore enforce `script-src` without `unsafe-inline`; private executable code is restricted to `self`, while the public site additionally permits the configured Plausible origin. Dynamic project and brand colors still require inline style attributes, so `style-src 'unsafe-inline'` remains the single temporary exception. Removing it requires replacing server-rendered color values with a finite class/token contract without reducing tenant customization.
 
 ## Credential encryption evaluation
 

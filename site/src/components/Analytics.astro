@@ -6,16 +6,7 @@ const domain = import.meta.env.PUBLIC_ANALYTICS_DOMAIN || "pulsyr.dev";
 
 {enabled && (
   <>
-    <script is:inline>
-      window.plausible = window.plausible || function () {
-        (window.plausible.q = window.plausible.q || []).push(arguments);
-      };
-      document.addEventListener("click", function (event) {
-        var target = event.target && event.target.closest && event.target.closest("[data-analytics-event]");
-        if (!target) return;
-        window.plausible(target.dataset.analyticsEvent);
-      });
-    </script>
+    <script is:inline defer src="/analytics.js"></script>
     <script is:inline defer data-domain={domain} src="https://plausible.io/js/script.js"></script>
   </>
 )}

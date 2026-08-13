@@ -8,7 +8,7 @@ recompilar. Ningún job publica imágenes, modifica DNS ni despliega. El artefac
 |---|---|---|
 | SEO crawl | 100 % de 9 rutas con title, description, canonical, `h1`, hreflang y política de indexación válidos; 0 URLs privadas en sitemap; 0 enlaces internos rotos | `seo-crawl-report` |
 | HTML | 0 errores de `html-validate` | `html-validation-report` |
-| Browser/axe | 0 errores de consola/red; 0 violaciones axe serious/critical; 0 overflow en 5 anchos; smoke de `/`, `/producto/` y quickstart en Chromium, Firefox y WebKit | `browser-axe-report` |
+| Browser/axe | 0 errores de consola/red; 0 violaciones axe serious/critical; 0 overflow en 5 anchos; comportamiento de modales/formularios privados; smoke de `/`, `/producto/` y quickstart en Chromium, Firefox y WebKit | `browser-axe-report` |
 | Lighthouse | Performance ≥ 0,90; Accessibility ≥ 0,95; Best Practices ≥ 0,95; SEO = 1,00; LCP ≤ 2.500 ms; CLS ≤ 0,10; TBT ≤ 200 ms en 3 rutas | `lighthouse-report` |
 | Delivery | CSP y cabeceras base presentes; HTML con revalidación a 5 min; assets hashed con caché immutable por un año; gzip activo; 404 conserva status | `delivery-contract-report` |
 | Links | 0 destinos internos/fragments rotos; 0 fallos en 6 journeys externos críticos, con 3 intentos | `link-integrity-report` |

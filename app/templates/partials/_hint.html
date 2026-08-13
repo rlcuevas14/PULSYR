@@ -1,13 +1,8 @@
 {% macro hint(id, text) %}
-<div id="hint-{{ id }}" class="hidden items-start gap-3 text-sm text-muted bg-surface-soft border border-hairline rounded-xl px-4 py-3 mb-4">
+<div id="hint-{{ id }}" data-hint-id="{{ id }}" class="hidden items-start gap-3 text-sm text-muted bg-surface-soft border border-hairline rounded-xl px-4 py-3 mb-4">
   <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 8h.01M11 12h1v4h1"/></svg>
   <p class="flex-1">{{ text }}</p>
   <button type="button" class="shrink-0 hover:text-ink" aria-label="{{ t('hint.dismiss') }}"
-          onclick="try{localStorage.setItem('hint-{{ id }}','1')}catch(e){};document.getElementById('hint-{{ id }}').remove()">✕</button>
+          data-hint-dismiss>✕</button>
 </div>
-<script>
-  try { if (!localStorage.getItem("hint-{{ id }}")) {
-    var h = document.getElementById("hint-{{ id }}"); h.classList.remove("hidden"); h.classList.add("flex");
-  } } catch (e) {}
-</script>
 {% endmacro %}

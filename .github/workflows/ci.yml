@@ -239,6 +239,11 @@ jobs:
         env:
           PLAYWRIGHT_REPORT_NAME: chromium-quality
         run: npm run test:e2e
+      - name: Private UI modal and form behavior gate
+        working-directory: site
+        env:
+          PLAYWRIGHT_REPORT_NAME: private-ui
+        run: npm run test:private-ui
       - name: Cross-browser smoke gate
         working-directory: site
         env:

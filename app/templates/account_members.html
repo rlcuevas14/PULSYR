@@ -34,7 +34,7 @@
           <form method="post" action="/account/members/grant" class="inline">
             <input type="hidden" name="user_id" value="{{ m.id }}">
             <input type="hidden" name="project_id" value="{{ p.id }}">
-            <select name="role" onchange="this.form.submit()" class="p-input p-input-sm"
+            <select name="role" data-auto-submit class="p-input p-input-sm"
                     aria-label="{{ t('members.role_for', member=m.name, project=p.name) }}">
               <option value="none" {% if not cur %}selected{% endif %}>—</option>
               <option value="viewer" {% if cur == 'viewer' %}selected{% endif %}>{{ t("role.viewer") }}</option>
