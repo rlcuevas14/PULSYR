@@ -3,6 +3,7 @@ import SiteFooter from "../components/SiteFooter.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import Analytics from "../components/Analytics.astro";
 import { DEFAULT_SOCIAL_IMAGE, absoluteUrl, structuredData } from "../lib/seo";
+import { localeFromPath, localizedPath } from "../lib/i18n";
 import "../styles/global.css";
 
 interface Props {
@@ -12,17 +13,23 @@ interface Props {
 }
 
 const { title, description, robots = "index,follow" } = Astro.props;
-const documentTitle = title === "Pulsyr" ? "Pulsyr — The backlog your agent maintains" : `${title} — Pulsyr`;
 const path = Astro.url.pathname;
+const locale = localeFromPath(path);
+const documentTitle = title === "Pulsyr"
+  ? locale === "es" ? "Pulsyr — El backlog que tu agente mantiene" : "Pulsyr — The backlog your agent maintains"
+  : `${title} — Pulsyr`;
 const canonical = absoluteUrl(path);
+const englishUrl = absoluteUrl(localizedPath(path, "en"));
+const spanishUrl = absoluteUrl(localizedPath(path, "es"));
 const socialImage = absoluteUrl(DEFAULT_SOCIAL_IMAGE);
-const schema = robots === "index,follow" ? structuredData(path, title, description) : null;
+const schema = robots === "index,follow" ? structuredData(path, title, description, locale) : null;
+const socialAlt = locale === "es" ? "Pulsyr — El backlog que tu agente mantiene" : "Pulsyr — The backlog your agent maintains";
 const googleVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
 const bingVerification = import.meta.env.PUBLIC_BING_SITE_VERIFICATION;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={locale}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
@@ -32,8 +39,9 @@ const bingVerification = import.meta.env.PUBLIC_BING_SITE_VERIFICATION;
     {googleVerification && <meta name="google-site-verification" content={googleVerification} />}
     {bingVerification && <meta name="msvalidate.01" content={bingVerification} />}
     <link rel="canonical" href={canonical} />
-    <link rel="alternate" hreflang="en" href={canonical} />
-    <link rel="alternate" hreflang="x-default" href={canonical} />
+    <link rel="alternate" hreflang="en" href={englishUrl} />
+    <link rel="alternate" hreflang="es" href={spanishUrl} />
+    <link rel="alternate" hreflang="x-default" href={englishUrl} />
     <meta property="og:title" content={documentTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
@@ -41,19 +49,21 @@ const bingVerification = import.meta.env.PUBLIC_BING_SITE_VERIFICATION;
     <meta property="og:image" content={socialImage} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Pulsyr — The backlog your agent maintains" />
+    <meta property="og:image:alt" content={socialAlt} />
+    <meta property="og:locale" content={locale === "es" ? "es_ES" : "en_US"} />
+    <meta property="og:locale:alternate" content={locale === "es" ? "en_US" : "es_ES"} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={documentTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialImage} />
-    <meta name="twitter:image:alt" content="Pulsyr — The backlog your agent maintains" />
+    <meta name="twitter:image:alt" content={socialAlt} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <Analytics />
     <title>{documentTitle}</title>
     {schema && <script is:inline type="application/ld+json" set:html={JSON.stringify(schema)}></script>}
   </head>
   <body>
-    <a class="skip-link" href="#main-content">Skip to content</a>
+    <a class="skip-link" href="#main-content">{locale === "es" ? "Saltar al contenido" : "Skip to content"}</a>
     <SiteHeader />
     <main id="main-content" tabindex="-1"><slot /></main>
     <SiteFooter />

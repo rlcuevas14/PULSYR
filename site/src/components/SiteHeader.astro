@@ -1,18 +1,29 @@
 ---
 import BrandMark from "./BrandMark.astro";
+import { languageChoiceUrl, localeFromPath, localizedPath } from "../lib/i18n";
 
 const path = Astro.url.pathname;
-const links = [
+const locale = localeFromPath(path);
+const isSpanish = locale === "es";
+const links = (isSpanish ? [
+  ["/producto/", "Producto"],
+  ["/integraciones/mcp/", "Integración MCP"],
+  ["/open-source/", "Código abierto"],
+  ["/docs/primeros-pasos/", "Documentación"],
+] : [
   ["/producto/", "Product"],
   ["/integraciones/mcp/", "MCP integration"],
   ["/open-source/", "Open source"],
   ["/docs/primeros-pasos/", "Docs"],
-];
+]).map(([href, label]) => [localizedPath(href, locale), label]);
+const languageReturnPath = path === "/404/" || path === "/500/" ? "/" : path;
+const englishChoice = languageChoiceUrl("en", languageReturnPath);
+const spanishChoice = languageChoiceUrl("es", languageReturnPath);
 ---
 
 <header class="site-header">
-  <nav class="container nav" aria-label="Primary navigation">
-    <a class="logo-link" href="/" aria-label="Pulsyr home"><BrandMark /></a>
+  <nav class="container nav" aria-label={isSpanish ? "Navegación principal" : "Primary navigation"}>
+    <a class="logo-link" href={localizedPath("/", locale)} aria-label={isSpanish ? "Inicio de Pulsyr" : "Pulsyr home"}><BrandMark /></a>
     <div class="desktop-links">
       {links.map(([href, label]) => (
         <a href={href} aria-current={path.startsWith(href) ? "page" : undefined}>{label}</a>
@@ -20,14 +31,25 @@ const links = [
     </div>
     <div class="desktop-actions">
       <a class="text-link" data-analytics-event="cta_github" href="https://github.com/rlcuevas14/PULSYR">GitHub</a>
-      <a class="button button-dark button-small" data-analytics-event="cta_app" href="https://app.pulsyr.dev/login">Open the app</a>
+      <details class="language-menu">
+        <summary aria-label={isSpanish ? "Seleccionar idioma" : "Select language"}><span aria-hidden="true">◎</span> {locale.toUpperCase()}</summary>
+        <div class="language-panel">
+          <a href={englishChoice} lang="en" aria-current={locale === "en" ? "true" : undefined}>English</a>
+          <a href={spanishChoice} lang="es" aria-current={locale === "es" ? "true" : undefined}>Español</a>
+        </div>
+      </details>
+      <a class="button button-dark button-small" data-analytics-event="cta_app" href="https://app.pulsyr.dev/login">{isSpanish ? "Abrir la aplicación" : "Open the app"}</a>
     </div>
     <details class="mobile-menu">
-      <summary aria-label="Open navigation">Menu</summary>
+      <summary aria-label={isSpanish ? "Abrir navegación" : "Open navigation"}>{isSpanish ? "Menú" : "Menu"}</summary>
       <div class="mobile-panel">
         {links.map(([href, label]) => <a href={href}>{label}</a>)}
         <a data-analytics-event="cta_github" href="https://github.com/rlcuevas14/PULSYR">GitHub</a>
-        <a data-analytics-event="cta_app" href="https://app.pulsyr.dev/login">Open the app</a>
+        <div class="mobile-languages" role="group" aria-label={isSpanish ? "Seleccionar idioma" : "Select language"}>
+          <a href={englishChoice} lang="en" aria-current={locale === "en" ? "true" : undefined}>EN</a>
+          <a href={spanishChoice} lang="es" aria-current={locale === "es" ? "true" : undefined}>ES</a>
+        </div>
+        <a data-analytics-event="cta_app" href="https://app.pulsyr.dev/login">{isSpanish ? "Abrir la aplicación" : "Open the app"}</a>
       </div>
     </details>
   </nav>
@@ -43,8 +65,18 @@ const links = [
   .mobile-menu { display:none; position:relative; }
   .mobile-menu summary { cursor:pointer; list-style:none; min-height:44px; display:flex; align-items:center; padding:0 1rem; border:1px solid var(--line); border-radius:12px; font-weight:700; }
   .mobile-menu summary::-webkit-details-marker { display:none; }
+  .language-menu { position:relative; }
+  .language-menu summary { cursor:pointer; list-style:none; display:flex; align-items:center; gap:.35rem; min-height:44px; color:var(--muted); font-size:.82rem; font-weight:750; }
+  .language-menu summary::-webkit-details-marker { display:none; }
+  .language-panel { position:absolute; right:0; top:calc(100% + .5rem); min-width:145px; padding:.45rem; display:grid; background:var(--canvas); border:1px solid var(--line); border-radius:13px; box-shadow:var(--shadow); }
+  .language-panel a { padding:.7rem .8rem; border-radius:9px; color:var(--body); text-decoration:none; font-size:.88rem; }
+  .language-panel a:hover { background:var(--soft); }
+  .language-panel a[aria-current="true"] { background:var(--soft); color:var(--ink); font-weight:750; }
   .mobile-panel { position:absolute; right:0; top:calc(100% + .6rem); width:min(82vw,280px); padding:.6rem; display:grid; background:var(--canvas); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); }
   .mobile-panel a { color:var(--ink); text-decoration:none; padding:.85rem; border-radius:10px; }
   .mobile-panel a:hover { background:var(--soft); }
+  .mobile-languages { display:flex; gap:.45rem; padding:.65rem .85rem; border-block:1px solid var(--line); }
+  .mobile-languages a { min-width:44px; padding:.45rem .7rem; text-align:center; border:1px solid var(--line); }
+  .mobile-languages a[aria-current="true"] { color:var(--canvas); background:var(--ink); border-color:var(--ink); }
   @media (max-width:900px) { .desktop-links,.desktop-actions { display:none; } .mobile-menu { display:block; } }
 </style>

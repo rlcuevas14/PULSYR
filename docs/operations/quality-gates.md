@@ -6,7 +6,7 @@ recompilar. Ningún job publica imágenes, modifica DNS ni despliega. El artefac
 
 | Gate | Umbral de bloqueo | Evidencia |
 |---|---|---|
-| SEO crawl | 100 % de 9 rutas con title, description, canonical, `h1`, hreflang y política de indexación válidos; 0 URLs privadas en sitemap; 0 enlaces internos rotos | `seo-crawl-report` |
+| SEO crawl | 100 % de 18 rutas EN/ES con title, description, canonical, `h1`, hreflang y política de indexación válidos; 0 URLs privadas en sitemap; 0 enlaces internos rotos | `seo-crawl-report` |
 | HTML | 0 errores de `html-validate` | `html-validation-report` |
 | Browser/axe | 0 errores de consola/red; 0 violaciones axe serious/critical; 0 overflow en 5 anchos; comportamiento de modales/formularios privados; smoke de `/`, `/producto/` y quickstart en Chromium, Firefox y WebKit | `browser-axe-report` |
 | Lighthouse | Mediana de 3 muestras por ruta: Performance ≥ 0,90; Accessibility ≥ 0,95; Best Practices ≥ 0,95; SEO = 1,00; LCP ≤ 2.500 ms; CLS ≤ 0,10; TBT ≤ 200 ms en 3 rutas | `lighthouse-report` |

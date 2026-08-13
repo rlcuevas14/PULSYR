@@ -22,12 +22,13 @@ artefacto estático independiente, sin base de datos ni sesión.
 2. `https://app.pulsyr.dev` seguirá sirviendo la aplicación FastAPI autenticada.
 3. El sitio público se generará con Astro en modo SSG dentro de `site/`. Node será una
    dependencia de build, no del runtime Python ni de la imagen actual de la app.
-4. La versión pública inicial tendrá inglés en `/` como idioma principal y `x-default`,
-   porque README, documentación técnica y audiencia de herramientas MCP son hoy
-   principalmente globales. Español se publicará bajo `/es/` cuando cada página tenga
-   traducción humana completa. Francés se difiere hasta contar con el mismo estándar.
-5. No se harán redirecciones automáticas por IP o `Accept-Language`; el selector de
-   idioma será explícito y cada variante tendrá canonical/hreflang propio.
+4. La versión pública tendrá inglés en `/` y español en `/es/`, con traducción humana
+   completa para cada página indexable. Inglés seguirá siendo `x-default`; francés no se
+   publicará en el sitio de marketing.
+5. Cloudflare elegirá el idioma inicial según el país de la IP sólo al entrar por `/`.
+   Una selección explícita EN/ES se guardará en una cookie y siempre tendrá prioridad.
+   Cada variante tendrá canonical/hreflang propio y no habrá redirecciones permanentes
+   por idioma.
 6. `www.pulsyr.dev` redirigirá permanentemente a `pulsyr.dev`. HTTP redirigirá a HTTPS.
 7. El sitio público será `index,follow` por defecto. La app, login, setup, APIs,
    webhooks, MCP, descargas y staging quedarán fuera del sitemap y declararán `noindex`

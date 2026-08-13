@@ -12,7 +12,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 SITE_ORIGIN = "https://pulsyr.dev"
-EXPECTED_ROUTES = (
+ENGLISH_ROUTES = (
     "/",
     "/producto/",
     "/integraciones/mcp/",
@@ -22,6 +22,9 @@ EXPECTED_ROUTES = (
     "/privacidad/",
     "/terminos/",
     "/contacto/",
+)
+EXPECTED_ROUTES = ENGLISH_ROUTES + tuple(
+    "/es/" if route == "/" else f"/es{route}" for route in ENGLISH_ROUTES
 )
 ERROR_ROUTES = ("/404/", "/500/")
 
@@ -96,6 +99,13 @@ def route_file(dist: Path, route: str) -> Path:
     if route in ERROR_ROUTES:
         return dist / f"{route.strip('/')}.html"
     return dist.joinpath(*route.strip("/").split("/"), "index.html")
+
+
+def localized_route(route: str, locale: str) -> str:
+    base = route[3:] if route.startswith("/es/") else "/" if route == "/es/" else route
+    if locale == "en":
+        return base
+    return "/es/" if base == "/" else f"/es{base}"
 
 
 def _schema_types(parser: DocumentContract, route: str, errors: list[str]) -> set[str]:
@@ -187,8 +197,9 @@ def inspect_site(dist: Path) -> list[str]:
         parser.feed(path.read_text(encoding="utf-8"))
         documents[route] = parser
         canonical = f"{SITE_ORIGIN}{route}"
-        if parser.lang != "en":
-            errors.append(f"{route}: expected html lang=en")
+        locale = "es" if route == "/es/" or route.startswith("/es/") else "en"
+        if parser.lang != locale:
+            errors.append(f"{route}: expected html lang={locale}")
         if parser.h1_count != 1:
             errors.append(f"{route}: expected exactly one h1, found {parser.h1_count}")
         if not parser.title.strip():
@@ -199,8 +210,16 @@ def inspect_site(dist: Path) -> list[str]:
             errors.append(f"{route}: expected robots index,follow")
         if parser.canonical != canonical:
             errors.append(f"{route}: expected canonical {canonical}, found {parser.canonical!r}")
-        if parser.hreflang != {"en": canonical, "x-default": canonical}:
+        english_url = f"{SITE_ORIGIN}{localized_route(route, 'en')}"
+        spanish_url = f"{SITE_ORIGIN}{localized_route(route, 'es')}"
+        expected_hreflang = {"en": english_url, "es": spanish_url, "x-default": english_url}
+        if parser.hreflang != expected_hreflang:
             errors.append(f"{route}: incorrect hreflang alternates: {parser.hreflang}")
+        social_alt = (
+            "Pulsyr — El backlog que tu agente mantiene"
+            if locale == "es"
+            else "Pulsyr — The backlog your agent maintains"
+        )
         required_meta = {
             "og:title": parser.title,
             "og:description": parser.description,
@@ -209,12 +228,14 @@ def inspect_site(dist: Path) -> list[str]:
             "og:image": f"{SITE_ORIGIN}/og/pulsyr-social.png",
             "og:image:width": "1200",
             "og:image:height": "630",
-            "og:image:alt": "Pulsyr — The backlog your agent maintains",
+            "og:image:alt": social_alt,
+            "og:locale": "es_ES" if locale == "es" else "en_US",
+            "og:locale:alternate": "en_US" if locale == "es" else "es_ES",
             "twitter:card": "summary_large_image",
             "twitter:title": parser.title,
             "twitter:description": parser.description,
             "twitter:image": f"{SITE_ORIGIN}/og/pulsyr-social.png",
-            "twitter:image:alt": "Pulsyr — The backlog your agent maintains",
+            "twitter:image:alt": social_alt,
         }
         for key, expected in required_meta.items():
             if parser.meta.get(key) != expected:
@@ -226,9 +247,9 @@ def inspect_site(dist: Path) -> list[str]:
         schema_types = _schema_types(parser, route, errors)
         expected_types = (
             {"Organization", "WebSite"}
-            if route == "/"
+            if route in ("/", "/es/")
             else {"SoftwareApplication", "BreadcrumbList"}
-            if route == "/producto/"
+            if route in ("/producto/", "/es/producto/")
             else {"BreadcrumbList"}
         )
         if not expected_types <= schema_types:
@@ -250,6 +271,8 @@ def inspect_site(dist: Path) -> list[str]:
                 continue
             target = parsed.path
             if target.startswith(("/favicon", "/og/")) or "." in Path(target).name:
+                continue
+            if target.startswith("/__language/"):
                 continue
             normalized = target if target.endswith("/") else f"{target}/"
             if normalized not in EXPECTED_ROUTES and not route_file(dist, normalized).is_file():

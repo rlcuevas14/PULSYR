@@ -2,35 +2,52 @@ import json
 import struct
 from pathlib import Path
 
-from scripts.check_public_site import EXPECTED_ROUTES, DocumentContract, inspect_site, route_file
+from scripts.check_public_site import (
+    EXPECTED_ROUTES,
+    DocumentContract,
+    inspect_site,
+    localized_route,
+    route_file,
+)
 
 
 def _document(route: str, title: str, description: str, *, robots: str = "index,follow") -> str:
     canonical = f"https://pulsyr.dev{route}"
+    locale = "es" if route == "/es/" or route.startswith("/es/") else "en"
+    english = f"https://pulsyr.dev{localized_route(route, 'en')}"
+    spanish = f"https://pulsyr.dev{localized_route(route, 'es')}"
+    social_alt = (
+        "Pulsyr — El backlog que tu agente mantiene"
+        if locale == "es"
+        else "Pulsyr — The backlog your agent maintains"
+    )
     schema_types = (
         ["Organization", "WebSite"]
-        if route == "/"
+        if route in ("/", "/es/")
         else ["SoftwareApplication", "BreadcrumbList"]
-        if route == "/producto/"
+        if route in ("/producto/", "/es/producto/")
         else ["BreadcrumbList"]
     )
     schema = json.dumps(
         {"@context": "https://schema.org", "@graph": [{"@type": kind} for kind in schema_types]}
     )
-    return f"""<!doctype html><html lang="en"><head>
+    return f"""<!doctype html><html lang="{locale}"><head>
     <title>{title}</title><meta name="description" content="{description}">
     <meta name="robots" content="{robots}"><link rel="canonical" href="{canonical}">
-    <link rel="alternate" hreflang="en" href="{canonical}">
-    <link rel="alternate" hreflang="x-default" href="{canonical}">
+    <link rel="alternate" hreflang="en" href="{english}">
+    <link rel="alternate" hreflang="es" href="{spanish}">
+    <link rel="alternate" hreflang="x-default" href="{english}">
     <meta property="og:title" content="{title}"><meta property="og:description" content="{description}">
     <meta property="og:type" content="website"><meta property="og:url" content="{canonical}">
     <meta property="og:image" content="https://pulsyr.dev/og/pulsyr-social.png">
     <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="Pulsyr — The backlog your agent maintains">
+    <meta property="og:image:alt" content="{social_alt}">
+    <meta property="og:locale" content="{'es_ES' if locale == 'es' else 'en_US'}">
+    <meta property="og:locale:alternate" content="{'en_US' if locale == 'es' else 'es_ES'}">
     <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{title}">
     <meta name="twitter:description" content="{description}">
     <meta name="twitter:image" content="https://pulsyr.dev/og/pulsyr-social.png">
-    <meta name="twitter:image:alt" content="Pulsyr — The backlog your agent maintains">
+    <meta name="twitter:image:alt" content="{social_alt}">
     <script type="application/ld+json">{schema}</script></head><body>
     <nav><a href="/producto/">Product</a><a href="https://app.pulsyr.dev/login">App</a></nav>
     <main><h1>Heading</h1></main></body></html>"""
@@ -78,6 +95,7 @@ def test_document_contract_extracts_rendered_fields():
     assert parser.canonical == "https://pulsyr.dev/"
     assert parser.hreflang == {
         "en": "https://pulsyr.dev/",
+        "es": "https://pulsyr.dev/es/",
         "x-default": "https://pulsyr.dev/",
     }
     assert parser.executable_scripts == []

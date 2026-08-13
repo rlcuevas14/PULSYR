@@ -7,12 +7,13 @@ interface Props {
   breadcrumbLabel?: string;
 }
 const { eyebrow, title, lead, compact = false, breadcrumbLabel = eyebrow } = Astro.props;
+const isSpanish = Astro.url.pathname === "/es" || Astro.url.pathname.startsWith("/es/");
 ---
 
 <section class:list={["page-hero", compact && "compact"]}>
   <div class="container narrow">
     <nav class="breadcrumbs" aria-label="Breadcrumb">
-      <a href="/">Home</a><span aria-hidden="true">/</span><span aria-current="page">{breadcrumbLabel}</span>
+      <a href={isSpanish ? "/es/" : "/"}>{isSpanish ? "Inicio" : "Home"}</a><span aria-hidden="true">/</span><span aria-current="page">{breadcrumbLabel}</span>
     </nav>
     <p class="eyebrow">{eyebrow}</p>
     <h1>{title}</h1>

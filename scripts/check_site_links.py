@@ -9,11 +9,12 @@ import time
 from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 from urllib.error import HTTPError, URLError
-from urllib.parse import unquote, urljoin, urlparse
+from urllib.parse import parse_qs, unquote, urljoin, urlparse
 from urllib.request import Request, urlopen
 
 SITE_ORIGIN = "https://pulsyr.dev"
 ALLOWED_EXTERNAL_HOSTS = {"github.com", "app.pulsyr.dev"}
+LANGUAGE_ENDPOINTS = {"/__language/en", "/__language/es"}
 
 
 class Links(HTMLParser):
@@ -74,6 +75,17 @@ def check_internal(dist: Path) -> tuple[list[str], set[str], int]:
                     errors.append(f"{routes[source]}: external host is not approved: {parsed.netloc}")
                 continue
             checked += 1
+            if parsed.path.rstrip("/") in LANGUAGE_ENDPOINTS:
+                next_values = parse_qs(parsed.query).get("next", [])
+                if len(next_values) != 1:
+                    errors.append(f"{routes[source]}: language link requires one next path: {href}")
+                    continue
+                next_path = urlparse(next_values[0]).path
+                if not target_file(dist, next_path).resolve().is_file():
+                    errors.append(
+                        f"{routes[source]}: language link points from missing page: {next_path}"
+                    )
+                continue
             target = target_file(dist, parsed.path).resolve()
             if not target.is_file():
                 errors.append(f"{routes[source]}: missing internal target {href}")
