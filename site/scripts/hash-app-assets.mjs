@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { transform } from "esbuild";
 
 const siteRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const staticRoot = resolve(siteRoot, "../app/static");
@@ -26,7 +27,14 @@ for (const [logicalName, source] of Object.entries(sources)) {
   const rawContent = readFileSync(source);
   // Git may materialize text as CRLF on Windows and LF on Linux. Hash and emit a
   // canonical LF representation so committed assets are reproducible in CI.
-  const content = Buffer.from(rawContent.toString("utf8").replace(/\r\n/g, "\n"));
+  let content = Buffer.from(rawContent.toString("utf8").replace(/\r\n/g, "\n"));
+  if (logicalName === "app.js") {
+    const result = await transform(content.toString("utf8"), {
+      minify: true,
+      target: "es2018",
+    });
+    content = Buffer.from(result.code);
+  }
   const hash = createHash("sha256").update(content).digest("hex").slice(0, 12);
   const extension = logicalName.split(".").at(-1);
   const filename = `${basename(logicalName, `.${extension}`)}.${hash}.${extension}`;

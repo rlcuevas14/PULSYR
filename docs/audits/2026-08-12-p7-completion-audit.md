@@ -20,6 +20,9 @@
 - Astro check: 0 errores, 0 warnings, 0 hints; HTML validation aprobada.
 - 55 pruebas públicas Chromium y 9 smokes Chromium/Firefox/WebKit aprobados.
 - Builds de analítica habilitada y deshabilitada aprobaron su contrato.
+- El primer run de PR detectó que el JavaScript extraído excedía el presupuesto de
+  12 KiB. El generador ahora minifica sólo el asset emitido: 10.546 B, sin relajar
+  el umbral; `check:budget` y las pruebas privadas aprobaron nuevamente.
 - La suite Python completa no pudo iniciar los tests con PostgreSQL porque Docker Desktop no estaba activo; CI Linux con servicio PostgreSQL es la evidencia autoritativa.
 
 ## Evidencia pendiente de GitHub
