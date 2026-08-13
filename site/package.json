@@ -28,7 +28,7 @@
     "@astrojs/check": "0.9.6",
     "@axe-core/playwright": "4.10.2",
     "@playwright/test": "1.62.1",
-    "@types/node": "24.13.3",
+    "@types/node": "26.2.0",
     "esbuild": "0.28.2",
     "html-validate": "11.6.2",
     "lighthouse": "13.4.1",
