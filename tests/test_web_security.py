@@ -17,7 +17,10 @@ async def test_security_headers_and_private_cache_cover_html_and_errors():
         missing = await client.get("/missing-security-test", headers={"Accept": "text/html"})
 
     for response in (html, missing):
-        assert response.headers["content-security-policy"].startswith("default-src 'self'")
+        csp = response.headers["content-security-policy"]
+        assert csp.startswith("default-src 'self'")
+        assert "script-src 'self'" in csp
+        assert "script-src 'self' 'unsafe-inline'" not in csp
         assert response.headers["x-frame-options"] == "DENY"
         assert response.headers["x-content-type-options"] == "nosniff"
         assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"

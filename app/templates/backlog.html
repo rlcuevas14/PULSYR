@@ -9,7 +9,7 @@
     <span class="text-sm text-muted">{% if capped %}{{ t("backlog.items_capped", n=items|length) }}{% else %}{{ tn("common.items", items|length) }}{% endif %}</span>
   </div>
   <div class="flex gap-2">
-    <button onclick="openModal('new-item-modal')" class="p-btn p-btn-primary p-btn-sm">{{ t("backlog.new_item") }}</button>
+    <button data-modal-open="new-item-modal" class="p-btn p-btn-primary p-btn-sm">{{ t("backlog.new_item") }}</button>
   </div>
 </div>
 
@@ -29,48 +29,5 @@
    validates the lifecycle transition and returns the re-rendered board
    (counts, blocked/ready recomputed). Invalid moves snap back + toast. #}
 <script src="{{ asset_url('sortable.js') }}"></script>
-<script>
-  (function () {
-    var instances = [];
-
-    function boardMove(itemId, toStatus) {
-      var form = document.getElementById("filters");
-      var values = { status: toStatus };
-      if (form) new FormData(form).forEach(function (v, k) { values[k] = v; });
-      // Partial swap of the board; server is source of truth for derived state.
-      window.htmx.ajax("POST", "/ui/items/" + itemId + "/board-move", {
-        target: "#items-view", swap: "innerHTML", values: values
-      });
-    }
-
-    function initBoard() {
-      var root = document.getElementById("board-root");
-      instances.forEach(function (s) { s.destroy(); });
-      instances = [];
-      if (!root || !root.dataset.canWrite || !window.Sortable) return;
-      root.querySelectorAll("[data-board-col]").forEach(function (col) {
-        instances.push(window.Sortable.create(col, {
-          group: "pulsyr-board",
-          animation: 150,
-          sort: false,                 // no reordering within a column (no stored rank yet)
-          draggable: "[data-card]",
-          handle: "[data-drag-handle]",
-          ghostClass: "opacity-40",
-          onEnd: function (evt) {
-            var to = evt.to.dataset.status, from = evt.from.dataset.status;
-            if (!to || to === from) return;   // same column → nothing to persist
-            boardMove(evt.item.dataset.itemId, to);
-          }
-        }));
-      });
-    }
-
-    document.addEventListener("DOMContentLoaded", initBoard);
-    // Re-init after every board swap (filter change, view toggle, or a move).
-    document.body.addEventListener("htmx:afterSwap", function (e) {
-      if (e.target && (e.target.id === "items-view" || e.target.id === "backlog-root")) initBoard();
-    });
-  })();
-</script>
 
 {% endblock %}

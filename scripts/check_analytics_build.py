@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 SNIPPET = "https://plausible.io/js/script.js"
+BOOTSTRAP = 'src="/analytics.js"'
 REQUIRED_EVENTS = {"cta_app", "cta_github", "cta_docs", "quick_start_complete", "contact"}
 
 
@@ -13,10 +14,16 @@ def validate(root: Path, enabled: bool) -> None:
         raise SystemExit("no generated HTML found")
     joined = "\n".join(page.read_text(encoding="utf-8") for page in pages)
     for page in pages:
-        count = page.read_text(encoding="utf-8").count(SNIPPET)
+        source = page.read_text(encoding="utf-8")
+        count = source.count(SNIPPET)
+        bootstrap_count = source.count(BOOTSTRAP)
         expected = 1 if enabled else 0
         if count != expected:
             raise SystemExit(f"{page}: expected {expected} analytics snippet, found {count}")
+        if bootstrap_count != expected:
+            raise SystemExit(
+                f"{page}: expected {expected} self-hosted analytics bootstrap, found {bootstrap_count}"
+            )
     if enabled:
         missing = {event for event in REQUIRED_EVENTS if f'data-analytics-event="{event}"' not in joined}
         if missing:

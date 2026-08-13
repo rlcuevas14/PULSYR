@@ -74,12 +74,12 @@ class ResponsePolicyMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         response = await call_next(request)
         headers = response.headers
-        # Inline styles and legacy handlers remain temporarily allowed while the UI is
-        # migrated to external modules. All network-loaded code is nevertheless self-hosted.
+        # Dynamic brand/project colors still need inline styles. Executable code is
+        # external and self-hosted, so scripts need no inline exception.
         headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
-            "form-action 'self'; script-src 'self' 'unsafe-inline'; "
+            "form-action 'self'; script-src 'self'; "
             "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
             "font-src 'self'; connect-src 'self'; frame-src 'self'; manifest-src 'self'"
         )

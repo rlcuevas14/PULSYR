@@ -1,27 +1,14 @@
 {% macro color_picker(current, label) %}
-<div class="flex items-center gap-2 flex-wrap">
+<div class="flex items-center gap-2 flex-wrap" data-color-picker>
   {% for c in BRAND_PRESETS %}
   <button type="button" class="w-7 h-7 rounded-full border border-hairline hover:scale-110 transition-transform"
-          style="background:{{ c }}" onclick="pkPick('{{ c }}')" aria-label="{{ t('common.pick_color', color=c) }}"></button>
+          style="background:{{ c }}" data-color-pick="{{ c }}" aria-label="{{ t('common.pick_color', color=c) }}"></button>
   {% endfor %}
-  <input type="color" name="color" id="pk-input" value="{{ current or '#6366f1' }}"
+  <input type="color" name="color" id="pk-input" value="{{ current or '#6366f1' }}" data-color-input
          class="w-9 h-9 rounded-xl border border-hairline cursor-pointer" aria-label="{{ t('common.custom_color') }}"
-         oninput="pkPreview(this.value)">
-  <span id="pk-preview" class="p-pill ml-1" style="background:{{ current or '#6366f1' }};color:{{ accent_fg(current) }}">
+         >
+  <span id="pk-preview" data-color-preview class="p-pill ml-1" style="background:{{ current or '#6366f1' }};color:{{ accent_fg(current) }}">
     <span class="inline-block w-2 h-2 rounded-full bg-current opacity-70"></span>{{ label }}
   </span>
 </div>
-<script>
-  function pkPick(c) { var i = document.getElementById("pk-input"); i.value = c; pkPreview(c); }
-  function pkPreview(c) {
-    var p = document.getElementById("pk-preview");
-    p.style.background = c; p.style.color = pkFg(c);
-  }
-  function pkFg(c) {  /* espejo JS de accent_fg (umbral 0.35) */
-    c = c.replace("#", "");
-    var r = parseInt(c.substr(0, 2), 16) / 255, g = parseInt(c.substr(2, 2), 16) / 255, b = parseInt(c.substr(4, 2), 16) / 255;
-    function L(x) { return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }
-    return (0.2126 * L(r) + 0.7152 * L(g) + 0.0722 * L(b)) > 0.35 ? "#0a0a0a" : "#ffffff";
-  }
-</script>
 {% endmacro %}

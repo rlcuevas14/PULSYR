@@ -29,7 +29,7 @@
                class="p-input">
       </div>
       <div class="flex justify-end gap-2 pt-2">
-        <button type="button" onclick="closeModal('{{ _mid }}')"
+        <button type="button" data-modal-close="{{ _mid }}"
                 class="p-btn p-btn-ghost p-btn-sm">{{ t("common.cancel") }}</button>
         <button type="submit" class="p-btn p-btn-primary p-btn-sm">{{ t("backlog.confirm_close") }}</button>
       </div>
@@ -37,7 +37,7 @@
     {% else %}
     <p class="text-sm text-muted">{{ t("backlog.already_closed") }}</p>
     <div class="flex justify-end pt-2">
-      <button type="button" onclick="closeModal('{{ _mid }}')" class="p-btn p-btn-ghost p-btn-sm">{{ t("common.close") }}</button>
+      <button type="button" data-modal-close="{{ _mid }}" class="p-btn p-btn-ghost p-btn-sm">{{ t("common.close") }}</button>
     </div>
     {% endif %}
   </div>

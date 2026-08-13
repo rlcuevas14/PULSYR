@@ -10,6 +10,7 @@
     "check": "astro check",
     "build:app": "tailwindcss -c tailwind.app.config.mjs -i app-assets/tailwind.css -o ../app/static/.build/app.css --minify && node scripts/hash-app-assets.mjs",
     "test:e2e": "playwright test tests/e2e/public-site.spec.ts",
+    "test:private-ui": "playwright test tests/e2e/private-ui-behavior.spec.ts",
     "test:browsers": "playwright test tests/e2e/cross-browser.spec.ts",
     "check:html": "html-validate \"dist/**/*.html\"",
     "check:lighthouse": "node scripts/check-lighthouse-reports.mjs",

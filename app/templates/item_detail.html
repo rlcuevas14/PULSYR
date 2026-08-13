@@ -180,7 +180,7 @@
       </button>
 
       {% if item.status not in ('done','discarded') %}
-      <button onclick="openModal('close-modal')"
+      <button data-modal-open="close-modal"
         class="p-btn p-btn-primary w-full">{{ t("item.close_action") }}</button>
       {% else %}
       <form hx-post="/ui/items/{{ item.id }}/reopen" hx-swap="none"

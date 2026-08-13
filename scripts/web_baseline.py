@@ -30,6 +30,7 @@ DEFAULT_ROUTES = (
     "/robots.txt",
     "/sitemap.xml",
     "/llms.txt",
+    "/favicon.svg",
     "/definitely-missing-web-baseline",
 )
 

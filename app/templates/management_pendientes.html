@@ -8,20 +8,20 @@
   "blocked": "bg-error/15", "done": "bg-success/15"} %}
 
 <form method="get" action="/management/pendientes" class="flex flex-wrap items-center gap-2 mb-4">
-  <select name="status" onchange="this.form.submit()" class="p-input p-input-sm" aria-label="{{ t('management.pending.status') }}">
+  <select name="status" data-auto-submit class="p-input p-input-sm" aria-label="{{ t('management.pending.status') }}">
     <option value="">{{ t("management.pending.all_status") }}</option>
     {% for s in statuses %}<option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ t("pstatus." ~ s) }}</option>{% endfor %}
   </select>
-  <select name="group" onchange="this.form.submit()" class="p-input p-input-sm" aria-label="{{ t('management.pending.group_by') }}">
+  <select name="group" data-auto-submit class="p-input p-input-sm" aria-label="{{ t('management.pending.group_by') }}">
     {% for g in ["status", "owner", "due", "none"] %}<option value="{{ g }}" {% if filters.group == g %}selected{% endif %}>{{ t("management.pending.groupby." ~ g) }}</option>{% endfor %}
   </select>
   <label class="p-pill border cursor-pointer {% if filters.overdue %}text-accent-fg{% else %}border-hairline text-body{% endif %}"
          {% if filters.overdue %}style="background:var(--accent);border-color:var(--accent)"{% endif %}>
-    <input type="checkbox" name="overdue" value="true" class="sr-only" onchange="this.form.submit()" {% if filters.overdue %}checked{% endif %}>
+    <input type="checkbox" name="overdue" value="true" class="sr-only" data-auto-submit {% if filters.overdue %}checked{% endif %}>
     {{ t("management.pending.chip_overdue") }}
   </label>
   <span class="flex-1"></span>
-  <button type="button" onclick="editPending(null)" class="p-btn p-btn-primary p-btn-sm">{{ t("management.pending.new") }}</button>
+  <button type="button" data-pending-new class="p-btn p-btn-primary p-btn-sm">{{ t("management.pending.new") }}</button>
 </form>
 
 {% set ns = namespace(total=0) %}
@@ -58,7 +58,7 @@
     </div>
     <span class="p-pill {{ PSTATUS_TINT.get(p.status, 'bg-surface-strong') }} text-ink">{{ t("pstatus." ~ p.status) }}</span>
     <button type="button" class="text-muted hover:text-ink text-xs px-2 py-1.5"
-            onclick='editPending({{ {"id": p.id|string, "title": p.title, "detail": p.detail_md or "", "owner": p.owner or "", "status": p.status, "due": (p.due_date|string if p.due_date else ""), "task": (p.plan_task_id|string if p.plan_task_id else "")} | tojson }})'>{{ t("management.pending.edit") }}</button>
+            data-pending-edit="{{ {"id": p.id|string, "title": p.title, "detail": p.detail_md or "", "owner": p.owner or "", "status": p.status, "due": (p.due_date|string if p.due_date else ""), "task": (p.plan_task_id|string if p.plan_task_id else "")} | tojson | forceescape }}">{{ t("management.pending.edit") }}</button>
     <form action="/ui/management/pendientes/{{ p.id }}/delete" method="post" class="inline"
           hx-post="/ui/management/pendientes/{{ p.id }}/delete" hx-swap="none"
           hx-confirm="{{ t('management.pending.delete_confirm') }}">
@@ -112,25 +112,11 @@
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-1">
-        <button type="button" onclick="closeModal('pending-modal')" class="p-btn p-btn-ghost p-btn-sm">{{ t("common.cancel") }}</button>
+        <button type="button" data-modal-close="pending-modal" class="p-btn p-btn-ghost p-btn-sm">{{ t("common.cancel") }}</button>
         <button type="submit" class="p-btn p-btn-primary p-btn-sm">{{ t("management.pending.save") }}</button>
       </div>
     </form>
   </div>
 </div>
 
-<script>
-  function editPending(p) {
-    var title = document.getElementById("pending-modal-title");
-    title.textContent = p ? title.dataset.edit : title.dataset.new;
-    document.getElementById("pm-id").value    = p ? p.id : "";
-    document.getElementById("pm-title").value  = p ? p.title : "";
-    document.getElementById("pm-detail").value = p ? p.detail : "";
-    document.getElementById("pm-owner").value  = p ? p.owner : "";
-    document.getElementById("pm-status").value = p ? p.status : "open";
-    document.getElementById("pm-due").value    = p ? p.due : "";
-    document.getElementById("pm-task").value   = p ? p.task : "";
-    openModal("pending-modal");
-  }
-</script>
 {% endblock %}

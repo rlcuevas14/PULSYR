@@ -5,7 +5,7 @@ async function loadFixture(page: Page) {
   await page.setContent(`<!doctype html><html lang="en"><head><style>
     .hidden { display:none } dialog::backdrop { background:#0008 }
   </style></head><body>
-    <button id="open" onclick="openModal('example-modal')">Open</button>
+    <button id="open" data-modal-open="example-modal">Open</button>
     <div id="example-modal" data-modal role="dialog" aria-modal="true" aria-labelledby="modal-title" class="hidden">
       <h2 id="modal-title">Example</h2><button id="first">First</button><button id="last">Last</button>
     </div>

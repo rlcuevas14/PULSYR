@@ -30,7 +30,7 @@
                class="w-full p-input text-xs font-mono">
         <button type="button" class="p-btn p-btn-ghost p-btn-sm shrink-0"
                 data-copy="{{ t('common.copy') }}" data-copied="{{ t('common.copied') }}"
-                onclick="var b=this;navigator.clipboard.writeText(document.getElementById('sentry-webhook-url').value).then(function(){b.textContent=b.dataset.copied;setTimeout(function(){b.textContent=b.dataset.copy;},1500);})">{{ t("common.copy") }}</button>
+                data-copy-target="sentry-webhook-url">{{ t("common.copy") }}</button>
       </div>
     </div>
     <div>

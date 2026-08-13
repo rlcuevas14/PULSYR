@@ -12,7 +12,7 @@
       {{ t("dashboard.monthly_ai_cost", amount="%.2f"|format(monthly_cost)) }}
     </p>
   </div>
-  <button onclick="openModal('new-item-modal')" class="p-btn p-btn-primary">{{ t("dashboard.new_item_button") }}</button>
+  <button data-modal-open="new-item-modal" class="p-btn p-btn-primary">{{ t("dashboard.new_item_button") }}</button>
 </div>
 
 <div id="home-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

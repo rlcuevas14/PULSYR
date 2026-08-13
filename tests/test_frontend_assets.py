@@ -13,6 +13,14 @@ def test_private_templates_have_no_runtime_cdn_dependencies():
         assert forbidden not in source
 
 
+def test_private_templates_have_no_inline_executable_code():
+    templates = Path("app/templates")
+    source = "\n".join(path.read_text(encoding="utf-8") for path in templates.rglob("*.html"))
+
+    assert not re.search(r"<script(?![^>]*\bsrc=)[^>]*>", source, re.IGNORECASE)
+    assert not re.search(r"\son(?:click|change|input|submit|keydown)\s*=", source, re.IGNORECASE)
+
+
 def test_asset_manifest_points_only_to_existing_content_hashed_files():
     static_root = Path("app/static")
     manifest = json.loads((static_root / "asset-manifest.json").read_text(encoding="utf-8"))
