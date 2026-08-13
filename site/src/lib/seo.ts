@@ -11,16 +11,30 @@ export const INDEXABLE_ROUTES = [
   "/privacidad/",
   "/terminos/",
   "/contacto/",
+  "/es/",
+  "/es/producto/",
+  "/es/integraciones/mcp/",
+  "/es/open-source/",
+  "/es/docs/primeros-pasos/",
+  "/es/seguridad/",
+  "/es/privacidad/",
+  "/es/terminos/",
+  "/es/contacto/",
 ] as const;
 
 export function absoluteUrl(path: string): string {
   return new URL(path, SITE_ORIGIN).href;
 }
 
-export function structuredData(path: string, title: string, description: string) {
+export function structuredData(
+  path: string,
+  title: string,
+  description: string,
+  locale: "en" | "es" = "en",
+) {
   const graph: Record<string, unknown>[] = [];
 
-  if (path === "/") {
+  if (path === "/" || path === "/es/") {
     graph.push(
       {
         "@type": "Organization",
@@ -35,13 +49,13 @@ export function structuredData(path: string, title: string, description: string)
         "@id": `${SITE_ORIGIN}/#website`,
         name: "Pulsyr",
         url: `${SITE_ORIGIN}/`,
-        inLanguage: "en",
+        inLanguage: locale,
         publisher: { "@id": `${SITE_ORIGIN}/#organization` },
       },
     );
   }
 
-  if (path === "/producto/") {
+  if (path === "/producto/" || path === "/es/producto/") {
     graph.push({
       "@type": "SoftwareApplication",
       "@id": `${SITE_ORIGIN}/producto/#software`,
@@ -52,19 +66,19 @@ export function structuredData(path: string, title: string, description: string)
       operatingSystem: "Web, Linux",
       license: "https://github.com/rlcuevas14/PULSYR/blob/main/LICENSE",
       codeRepository: "https://github.com/rlcuevas14/PULSYR",
-      inLanguage: "en",
+      inLanguage: locale,
     });
   }
 
-  if (path !== "/") {
+  if (path !== "/" && path !== "/es/") {
     graph.push({
       "@type": "BreadcrumbList",
       itemListElement: [
         {
           "@type": "ListItem",
           position: 1,
-          name: "Home",
-          item: `${SITE_ORIGIN}/`,
+          name: locale === "es" ? "Inicio" : "Home",
+          item: locale === "es" ? `${SITE_ORIGIN}/es/` : `${SITE_ORIGIN}/`,
         },
         {
           "@type": "ListItem",

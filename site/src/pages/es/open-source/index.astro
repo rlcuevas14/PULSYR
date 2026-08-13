@@ -1,0 +1,14 @@
+---
+import CallToAction from "../../../components/CallToAction.astro";
+import PageHero from "../../../components/PageHero.astro";
+import PublicLayout from "../../../layouts/PublicLayout.astro";
+---
+<PublicLayout title="Código abierto" description="Pulsyr es software de código abierto y autohospedado bajo licencia MIT, con código, versiones, guía de contribución y política de marca transparentes.">
+  <PageHero eyebrow="Código abierto" title="Tu sistema de proyectos debe seguir siendo tuyo." lead="El código de Pulsyr está disponible bajo la licencia MIT. Ejecútalo en tu infraestructura, revisa cómo funciona el aislamiento, adáptalo a tu flujo y contribuye mejoras al proyecto.">
+    <div class="actions"><a class="button button-dark" data-analytics-event="cta_github" href="https://github.com/rlcuevas14/PULSYR">Explora el código</a><a class="button button-outline" data-analytics-event="cta_docs" href="/es/docs/primeros-pasos/">Alójalo tú mismo</a></div>
+  </PageHero>
+  <section class="section container"><div class="grid-3"><article class="card pink"><span class="kicker">MIT</span><h2>Usa y modifica el código</h2><p>Ejecuta Pulsyr en forma privada o comercial, crea una bifurcación, redistribúyelo y construye sobre él según la licencia.</p></article><article class="card teal"><span class="kicker">Autohospedado</span><h2>Controla el límite operativo</h2><p>La aplicación, Postgres, secretos, red, respaldos y actualizaciones permanecen bajo control del operador.</p></article><article class="card ochre"><span class="kicker">Transparente</span><h2>Revisa la implementación</h2><p>Autenticación, tokens, migraciones, CI, webhooks y herramientas MCP están disponibles en el repositorio público.</p></article></div></section>
+  <section class="section-tight container prose"><h2>La libertad del código y la identidad de marca son distintas.</h2><p>El software Pulsyr usa licencia MIT. “Pulsyr”, su símbolo de pulso y punto, y su logotipo son marcas de Avonlea Systems SpA. Las bifurcaciones públicas deben usar su propio nombre e identidad visual y describir su origen fielmente.</p><p>Lee la <a href="https://github.com/rlcuevas14/PULSYR/blob/main/LICENSE">licencia</a>, la <a href="https://github.com/rlcuevas14/PULSYR/blob/main/TRADEMARK.md">política de marcas</a> y la <a href="https://github.com/rlcuevas14/PULSYR/blob/main/CONTRIBUTING.md">guía de contribución</a> antes de redistribuir una versión modificada.</p></section>
+  <CallToAction title="Bifurca el código. Mantén comprensible el flujo." body="Comienza con la configuración Docker reproducible y contribuye mediante issues o pull requests en GitHub." />
+</PublicLayout>
+<style>.card h2{margin-top:1.7rem;font-size:1.6rem}</style>

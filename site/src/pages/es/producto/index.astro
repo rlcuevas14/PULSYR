@@ -1,0 +1,23 @@
+---
+import CallToAction from "../../../components/CallToAction.astro";
+import PageHero from "../../../components/PageHero.astro";
+import PublicLayout from "../../../layouts/PublicLayout.astro";
+---
+<PublicLayout title="Producto" description="Conoce el backlog nativo para agentes de Pulsyr, su grafo de dependencias, tokens MCP por proyecto, hilos, incidentes y espacio de gestión.">
+  <PageHero eyebrow="Producto" title="Un backlog diseñado para el trabajo de personas y agentes." lead="Pulsyr mantiene el estado del proyecto estructurado, autorizado y visible. La interfaz web sigue siendo amigable para las personas y MCP ofrece a los agentes una forma deliberada de leer y actualizar el mismo sistema.">
+    <div class="actions"><a class="button button-dark" data-analytics-event="cta_docs" href="/es/docs/primeros-pasos/">Pruébalo tú mismo</a><a class="button button-outline" href="/es/integraciones/mcp/">Explora MCP</a></div>
+  </PageHero>
+  <section class="section container"><div class="grid-3">
+    <article class="card pink"><span class="kicker">Núcleo</span><h2>Backlog consciente del ciclo de vida</h2><p>Los ítems avanzan por estados validados desde la idea hasta el cierre. Cerrar exige una razón y cada modificación deja un evento.</p></article>
+    <article class="card teal"><span class="kicker">Grafo</span><h2>Dependencias que calculan</h2><p>Relaciones tipadas —bloquea, requiere, entra en conflicto, relacionado y forma parte— convierten el bloqueo en estado derivado.</p></article>
+    <article class="card lavender"><span class="kicker">Acceso</span><h2>Tokens de agente por proyecto</h2><p>Los alcances de lectura y escritura son explícitos. Cada token pertenece a un proyecto y no puede desviarse hacia otro espacio.</p></article>
+    <article class="card peach"><span class="kicker">Descubrimiento</span><h2>Prioridad y búsqueda</h2><p>Filtra por ciclo de vida, área, prioridad y esfuerzo. La IA opcional puede estimar impacto y detectar tareas rápidas.</p></article>
+    <article class="card ochre"><span class="kicker">Planificación</span><h2>Hilos y gestión</h2><p>Lleva ideas grandes por investigación y especificación; luego controla documentos, pendientes y un plan Gantt de tres niveles.</p></article>
+    <article class="card"><span class="kicker">Operaciones</span><h2>Incidentes y webhooks</h2><p>Integra incidentes de Sentry y cierra trabajo mediante eventos firmados de GitHub vinculados a un commit.</p></article>
+  </div></section>
+  <section class="section container comparison" aria-labelledby="control-heading"><div><p class="eyebrow">El control humano permanece visible</p><h2 id="control-heading">Automatización sin cajas negras.</h2></div><div class="control-grid">
+    <article><b>Transiciones validadas</b><p>El ciclo de vida rechaza movimientos ilegales en vez de aceptar estados inconsistentes.</p></article><article><b>Interfaz según el rol</b><p>Propietarios, miembros, lectores y administradores ven sólo los controles permitidos.</p></article><article><b>IA opcional</b><p>Sin claves externas, el backlog central sigue funcionando y las capacidades se degradan con elegancia.</p></article><article><b>Datos autohospedados</b><p>Tú eliges servidor, base de datos, integraciones, retención, red y calendario de actualizaciones.</p></article>
+  </div></section>
+  <CallToAction title="Usa el producto y el protocolo en conjunto." body="Comienza con la imagen Docker y conecta un token de proyecto a tu agente compatible con MCP." />
+</PublicLayout>
+<style>.card h2{margin:1.8rem 0 .8rem;font-size:1.65rem}.comparison{display:grid;grid-template-columns:.85fr 1.15fr;gap:clamp(2rem,8vw,7rem)}.control-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem 2rem}.control-grid article{padding-top:1rem;border-top:2px solid var(--line)}.control-grid b{color:var(--ink)}.control-grid p{color:var(--muted)}@media(max-width:800px){.comparison,.control-grid{grid-template-columns:1fr}}</style>

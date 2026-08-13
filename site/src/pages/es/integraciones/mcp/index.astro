@@ -1,0 +1,20 @@
+---
+import CallToAction from "../../../../components/CallToAction.astro";
+import PageHero from "../../../../components/PageHero.astro";
+import PublicLayout from "../../../../layouts/PublicLayout.astro";
+---
+<PublicLayout title="Integración MCP" description="Conecta un agente de programación compatible con MCP a un token de Pulsyr por proyecto para leer contexto y mantener el backlog mientras trabaja.">
+  <PageHero eyebrow="Integración MCP" title="Un contexto de proyecto que tu agente puede leer y mantener." lead="Pulsyr expone un endpoint MCP remoto mediante HTTP. Crea un token limitado al proyecto, agrega el endpoint al cliente y permite que el agente use herramientas estructuradas en vez de extraer datos de un panel.">
+    <div class="actions"><a class="button button-dark" data-analytics-event="cta_docs" href="/es/docs/primeros-pasos/#connect">Conecta un cliente</a><a class="button button-outline" data-analytics-event="cta_github" href="https://github.com/rlcuevas14/PULSYR/blob/main/docs/MCP.md">Lee la guía del protocolo</a></div>
+  </PageHero>
+  <section class="section container"><div class="grid-3">
+    <article class="card lavender"><span class="kicker">1 · Alcance</span><h2>Crea un token de proyecto</h2><p>El token aparece una sola vez. Pulsyr guarda su hash y vincula la credencial a un proyecto con alcance de lectura o escritura.</p></article>
+    <article class="card peach"><span class="kicker">2 · Conexión</span><h2>Agrega el endpoint HTTP</h2><p>Tu cliente envía el token como credencial Bearer a <code>/mcp</code>. No hace falta un plugin específico del editor.</p></article>
+    <article class="card teal"><span class="kicker">3 · Trabajo</span><h2>Comienza con contexto</h2><p>Invoca <code>pulsyr_context</code> para cargar prioridades, bloqueos, tareas rápidas, incidentes e hilos activos antes de cambiar código.</p></article>
+  </div></section>
+  <section class="section-tight container split"><div><p class="eyebrow">El contrato</p><h2>Las herramientas representan operaciones del proyecto, no clics.</h2><p class="lead">Los agentes buscan, crean, avanzan, completan, relacionan, documentan y planifican mediante argumentos explícitos y resultados validados.</p></div><div class="tool-groups">
+    <article><h3>Backlog</h3><p><code>pulsyr_context</code>, <code>pulsyr_search</code>, <code>pulsyr_list</code>, <code>pulsyr_create</code>, <code>pulsyr_advance</code>, <code>pulsyr_complete</code></p></article><article><h3>Estructura</h3><p><code>pulsyr_link</code>, <code>pulsyr_move_area</code> y herramientas de hilos e incidentes.</p></article><article><h3>Gestión</h3><p>Documentos versionados, pendientes y un plan de proyecto de tres niveles editado mediante MCP.</p></article>
+  </div></section>
+  <CallToAction title="Conecta el agente que ya utilizas." body="Pulsyr es un servidor MCP. Cualquier cliente compatible con HTTP remoto y encabezados Bearer puede conectarse." />
+</PublicLayout>
+<style>.card h2{margin-top:1.7rem;font-size:1.6rem}code{font-size:.88em}.split{display:grid;grid-template-columns:1fr 1fr;gap:clamp(2rem,8vw,7rem)}.tool-groups{display:grid;gap:.75rem}.tool-groups article{padding:1.3rem;border-radius:16px;background:var(--soft);border:1px solid var(--line)}.tool-groups p{color:var(--muted);margin-bottom:0}@media(max-width:800px){.split{grid-template-columns:1fr}}</style>

@@ -16,7 +16,7 @@ no se simula evidencia externa.
 ## Validación posterior al cambio
 
 - [ ] `http` y `www` redirigen una sola vez a la canonical HTTPS, preservando path/query.
-- [ ] Canonical y hreflang (`en`, `x-default`) coinciden con la URL final, sin tracking.
+- [ ] Canonical y hreflang (`en`, `es`, `x-default`) coinciden con la URL final, sin tracking.
 - [ ] `robots.txt` y `sitemap.xml` responden 200; el sitemap sólo contiene las 9 URLs públicas.
 - [ ] Login, setup, app privada, API y staging responden `noindex, nofollow` y no aparecen en sitemap.
 - [ ] Homepage, producto y quickstart pasan Lighthouse móvil/escritorio en la URL pública.

@@ -1,31 +1,35 @@
 ---
 import BrandMark from "./BrandMark.astro";
+import { localeFromPath, localizedPath } from "../lib/i18n";
+const locale = localeFromPath(Astro.url.pathname);
+const isSpanish = locale === "es";
+const local = (path: string) => localizedPath(path, locale);
 ---
 
 <footer class="site-footer">
   <div class="container footer-grid">
     <div class="footer-brand">
-      <a href="/" aria-label="Pulsyr home"><BrandMark size={26} /></a>
-      <p>The backlog your coding agent can actually maintain.</p>
+      <a href={local("/")} aria-label={isSpanish ? "Inicio de Pulsyr" : "Pulsyr home"}><BrandMark size={26} /></a>
+      <p>{isSpanish ? "El backlog que tu agente de código sí puede mantener." : "The backlog your coding agent can actually maintain."}</p>
       <p class="company">Avonlea Systems SpA · Santiago, Chile</p>
     </div>
     <div>
-      <h2>Product</h2>
-      <a href="/producto/">Features</a>
-      <a href="/integraciones/mcp/">MCP integration</a>
-      <a data-analytics-event="cta_docs" href="/docs/primeros-pasos/">Get started</a>
+      <h2>{isSpanish ? "Producto" : "Product"}</h2>
+      <a href={local("/producto/")}>{isSpanish ? "Características" : "Features"}</a>
+      <a href={local("/integraciones/mcp/")}>{isSpanish ? "Integración MCP" : "MCP integration"}</a>
+      <a data-analytics-event="cta_docs" href={local("/docs/primeros-pasos/")}>{isSpanish ? "Primeros pasos" : "Get started"}</a>
     </div>
     <div>
-      <h2>Project</h2>
-      <a href="/open-source/">Open source</a>
-      <a href="/seguridad/">Security</a>
+      <h2>{isSpanish ? "Proyecto" : "Project"}</h2>
+      <a href={local("/open-source/")}>{isSpanish ? "Código abierto" : "Open source"}</a>
+      <a href={local("/seguridad/")}>{isSpanish ? "Seguridad" : "Security"}</a>
       <a data-analytics-event="cta_github" href="https://github.com/rlcuevas14/PULSYR">GitHub</a>
     </div>
     <div>
-      <h2>Company</h2>
-      <a href="/contacto/">Contact</a>
-      <a href="/privacidad/">Privacy</a>
-      <a href="/terminos/">Terms</a>
+      <h2>{isSpanish ? "Compañía" : "Company"}</h2>
+      <a href={local("/contacto/")}>{isSpanish ? "Contacto" : "Contact"}</a>
+      <a href={local("/privacidad/")}>{isSpanish ? "Privacidad" : "Privacy"}</a>
+      <a href={local("/terminos/")}>{isSpanish ? "Términos" : "Terms"}</a>
     </div>
   </div>
 </footer>

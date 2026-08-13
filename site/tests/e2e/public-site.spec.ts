@@ -11,6 +11,15 @@ const routes = [
   "/privacidad/",
   "/terminos/",
   "/contacto/",
+  "/es/",
+  "/es/producto/",
+  "/es/integraciones/mcp/",
+  "/es/open-source/",
+  "/es/docs/primeros-pasos/",
+  "/es/seguridad/",
+  "/es/privacidad/",
+  "/es/terminos/",
+  "/es/contacto/",
 ];
 
 const viewports = [
@@ -75,4 +84,20 @@ test("skip link and mobile navigation work with the keyboard", async ({ page }) 
   await page.getByLabel("Open navigation").focus();
   await page.keyboard.press("Enter");
   await expect(page.locator(".mobile-panel")).toBeVisible();
+});
+
+test("language selector links equivalent English and Spanish pages", async ({ page }) => {
+  await page.goto("/producto/");
+  await page.locator(".language-menu").getByLabel("Select language").click();
+  await expect(page.locator('.language-panel a[lang="es"]')).toHaveAttribute(
+    "href",
+    "/__language/es?next=%2Fproducto%2F",
+  );
+
+  await page.goto("/es/producto/");
+  await page.locator(".language-menu").getByLabel("Seleccionar idioma").click();
+  await expect(page.locator('.language-panel a[lang="en"]')).toHaveAttribute(
+    "href",
+    "/__language/en?next=%2Fes%2Fproducto%2F",
+  );
 });
