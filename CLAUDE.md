@@ -20,6 +20,8 @@ All merged to `main`:
 - **Multi-account**: accounts/users/grants model (`accounts`, `project_members`), `create_account` service + super-admin UI (`/admin/accounts`) + owner member matrix (`/account/members`), per-project `viewer`/`editor`, account isolation across MCP + REST + UI (`projects/access.py` chokepoint). MCP token scope ≤ minter's role.
 - **Backlog redesign + Archive** (spec 2026-07-06, shipped `v2026.07.06-1`): open-only default, FTS search with relevance order, board view, quick-filter chips, close-from-row (lifecycle-aware modal), group-by, `/archive` (ISO-week groups, reason+commit from events, AI weekly summary), SQL ordering. Routes renamed to English slugs 2026-07-16 (`/priority`, `/threads`, `/incidents`, `/archive`) with 301s from the old Spanish paths.
 - **i18n**: full UI in English (default) / Spanish / French: JSON catalogs + `t()`/`tn()`, language selector in navbar/login/setup (see Conventions).
+- **Public site**: Astro SSG in `site/`, deployed separately to Cloudflare Workers at `pulsyr.dev`; English lives at `/`, Spanish at `/es/`, and Cloudflare selects the initial language by IP while an explicit EN/ES choice wins.
+- **Ambient video**: the home hero and its workflow contrast band use local decorative MP4 backgrounds, never standalone players. Keep them muted, looped, `playsinline`, control-free, script-free, poster-backed and compatible with reduced motion; see `docs/decisions/0003-public-site-ambient-video.md`.
 
 ---
 
@@ -127,6 +129,8 @@ python -m mypy app/
 
 ## Deploy
 
+### Private application
+
 ```bash
 git tag -a v2026.MM.DD-N -m "..." && git push origin <tag>
 ```
@@ -135,6 +139,29 @@ Triggers `deploy.yml`: multi-platform build (amd64+arm64) → push to GHCR → S
 **Required secrets** (`.env` on server): `DB_PASSWORD`, `SECRET_KEY`.
 **Optional**: `ANTHROPIC_API_KEY` (AI triage/enrich), `GEMINI_API_KEY` (embeddings), `SENTRY_CLIENT_SECRET`, `SENTRY_API_TOKEN`, `SENTRY_ORG`, `GITHUB_WEBHOOK_SECRET`.
 
+### Public site
+
+The public site is a separate Cloudflare Worker deployment and does not use the private
+application tag workflow:
+
+```bash
+cd site
+npm ci
+npm run check
+npm run build
+npm run check:budget
+npm run check:html
+npm run test:e2e
+npm run deploy:dry-run
+npm run deploy
+```
+
+Deploy only after the `main` CI run is green. `npm run deploy` uses
+`wrangler deploy --keep-vars`. After deployment, verify `/`, `/es/`, the local media
+responses and the Spanish hero at 320 px. Public pages must remain free of unexpected
+executable JavaScript; ambient videos therefore use native autoplay rather than a
+playback controller script.
+
 ---
 
 ## Conventions
@@ -142,6 +169,7 @@ Triggers `deploy.yml`: multi-platform build (amd64+arm64) → push to GHCR → S
 - **English at the API level**: all enum values (thread stages included since v0018), API/MCP error messages, and MCP tool names are English. Display labels are translated via the i18n catalogs (`status.*`, `stage.*`, …).
 - **i18n (UI copy)**: NEVER hardcode user-visible strings in templates or UI routers. Templates use the request-scoped Jinja globals `t("domain.key")` / `tn("domain.key", n)`; Python uses `app.i18n.t(key, resolve_lang(request))`. Catalogs: `app/i18n/locales/{en,es,fr}.json` (flat dot-namespaced keys; English is source of truth and fallback). Enum display labels: `t("status." ~ x)` / `type.*` / `origin.*` / `stage.*`. Language selector lives in the navbar (session-based, `GET /ui/lang/{code}`); default English. `tests/test_i18n.py` enforces catalog completeness, placeholder parity, and template coverage: adding a key to one catalog without the other two fails CI. Careful: a Jinja loop variable named `t` shadows the translation global: never use it.
 - **Every feature brings tests**; CI green before tagging.
+- **Public visual media**: background videos are decorative composition layers, not product demos. Do not add controls or standalone video cards; use them sparingly, keep text/CTA above a tested contrast overlay, and update the explicit media budgets when replacing assets.
 - **UI design system**: all tokens + `.p-*` component classes live in `app/templates/partials/_head.html` (Tailwind CDN + CSS variables; `darkMode:'class'`, light=Clay-cream / dark=warm near-black, per-project `--accent` from session). Never hardcode gray/blue palette classes in templates; never use opacity modifiers on semantic tokens (`bg-canvas/50` silently breaks: allowed only on `brand-*`/`success`/`warning`/`error`). Success feedback via `flash_success` (`app/ui/flash.py`); forms hitting handlers that return `204 + HX-Refresh` MUST be `hx-post` (plain forms dead-end on 204).
 - **LLM always via `app/ai/llm.py`** (isolated and mockable); degrades without API key, never breaks the worker.
 - **Trunk-based**: direct commit to `main` allowed; verify locally (ruff+mypy+pytest for the area) before pushing; deploy only by tag.
