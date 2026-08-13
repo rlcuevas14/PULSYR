@@ -5,6 +5,7 @@ from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.auth.models import ApiToken, User  # noqa: F401
+from app.accounts.models import Account, AccountSubscription  # noqa: F401
 from app.config import settings
 from app.database import Base
 from app.items.models import (  # noqa: F401

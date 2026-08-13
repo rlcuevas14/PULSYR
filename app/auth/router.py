@@ -1,15 +1,29 @@
 import hashlib
+import logging
 import secrets
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import oauth
 from app.auth.deps import current_user_ui
 from app.auth.models import ApiToken, User
-from app.auth.service import authenticate, get_user_by_email, hash_password, verify_password
+from app.auth.rate_limit import oauth_rate_limiter
+from app.auth.service import (
+    authenticate,
+    create_api_token,
+    email_is_registered,
+    get_user_by_email,
+    get_user_by_oauth_identity,
+    hash_password,
+    link_oauth_identity,
+    oauth_identity_is_linked,
+    verify_password,
+)
 from app.config import settings
 from app.database import get_db
 from app.i18n import resolve_lang
@@ -22,6 +36,7 @@ from app.ui.flash import flash_success
 router = APIRouter(tags=["auth"])
 compat_router = APIRouter(prefix="/auth", include_in_schema=False)
 setup_router = APIRouter(tags=["setup"])
+logger = logging.getLogger("pulsyr.auth")
 
 
 async def _no_users(db: AsyncSession) -> bool:
@@ -34,6 +49,7 @@ def _login_context(error: str | None = None) -> dict[str, object]:
         "error": error,
         "providers": oauth.configured(),
         "public_signup": settings.public_signup,
+        "signup_mode": False,
     }
 
 
@@ -92,17 +108,65 @@ async def signup_page(request: Request, db: AsyncSession = Depends(get_db)):
     # offer here, so send them to the form they can actually use.
     if not settings.public_signup or not oauth.configured():
         return RedirectResponse("/login", status_code=303)
-    return templates.TemplateResponse(request, "signup.html", _login_context())
+    context = _login_context()
+    context["signup_mode"] = True
+    return templates.TemplateResponse(request, "signup.html", context)
+
+
+@router.post("/signup", response_class=HTMLResponse)
+async def signup_start(
+    request: Request,
+    provider: str = Form(...),
+    accept_terms: bool = Form(False),
+):
+    if request.session.get("user_id"):
+        return RedirectResponse("/", status_code=303)
+    p = oauth.get(provider)
+    if not settings.public_signup or p is None:
+        return RedirectResponse("/login", status_code=303)
+    if not await oauth_rate_limiter.allow(request, "signup"):
+        logger.warning("oauth_rate_limited action=signup")
+        context = _login_context(_t("login.error_rate_limit", resolve_lang(request)))
+        context["signup_mode"] = True
+        return templates.TemplateResponse(
+            request,
+            "signup.html",
+            context,
+            status_code=429,
+            headers={"Retry-After": str(settings.oauth_rate_limit_window_seconds)},
+        )
+    if not accept_terms:
+        context = _login_context(_t("signup.error_terms", resolve_lang(request)))
+        context["signup_mode"] = True
+        return templates.TemplateResponse(request, "signup.html", context, status_code=422)
+    state = oauth.make_state(
+        provider,
+        intent="signup",
+        terms_version=settings.terms_version,
+    )
+    return RedirectResponse(oauth.authorize_url(p, state), status_code=303)
 
 
 # ---------- OAuth ----------
 
 @router.get("/login/{provider}", include_in_schema=False)
-async def oauth_start(provider: str):
+async def oauth_start(provider: str, request: Request):
     p = oauth.get(provider)
     if p is None:
         return RedirectResponse("/login", status_code=303)
-    return RedirectResponse(oauth.authorize_url(p, oauth.make_state(provider)), status_code=303)
+    if not await oauth_rate_limiter.allow(request, "login"):
+        logger.warning("oauth_rate_limited action=login")
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            _login_context(_t("login.error_rate_limit", resolve_lang(request))),
+            status_code=429,
+            headers={"Retry-After": str(settings.oauth_rate_limit_window_seconds)},
+        )
+    return RedirectResponse(
+        oauth.authorize_url(p, oauth.make_state(provider, intent="login")),
+        status_code=303,
+    )
 
 
 @router.get("/callback/{provider}", include_in_schema=False)
@@ -114,8 +178,18 @@ async def oauth_callback(
     db: AsyncSession = Depends(get_db),
 ):
     lang = resolve_lang(request)
+    if not await oauth_rate_limiter.allow(request, "callback"):
+        logger.warning("oauth_rate_limited action=callback")
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            _login_context(_t("login.error_rate_limit", lang)),
+            status_code=429,
+            headers={"Retry-After": str(settings.oauth_rate_limit_window_seconds)},
+        )
     p = oauth.get(provider)
-    if p is None or not code or not oauth.check_state(state, provider):
+    state_data = oauth.read_state(state, provider)
+    if p is None or not code or state_data is None:
         return templates.TemplateResponse(
             request, "login.html", _login_context(_t("login.error_oauth", lang)), status_code=400
         )
@@ -126,32 +200,190 @@ async def oauth_callback(
             request, "login.html", _login_context(_t("login.error_oauth", lang)), status_code=400
         )
 
-    user = await get_user_by_email(db, identity.email)
+    user = await get_user_by_oauth_identity(db, provider, identity.subject)
+    new_signup = False
     if user is None:
-        if not settings.public_signup:
+        if await oauth_identity_is_linked(db, provider, identity.subject):
             return templates.TemplateResponse(
                 request,
                 "login.html",
-                _login_context(_t("login.error_signup_closed", lang)),
+                _login_context(_t("login.error_account_inactive", lang)),
                 status_code=403,
             )
-        from app.accounts.service import create_account
+        user = await get_user_by_email(db, identity.email)
+        if user is None:
+            if await email_is_registered(db, identity.email):
+                return templates.TemplateResponse(
+                    request,
+                    "login.html",
+                    _login_context(_t("login.error_account_inactive", lang)),
+                    status_code=403,
+                )
+            is_signup = (
+                state_data.get("i") == "signup"
+                and state_data.get("v") == settings.terms_version
+            )
+            if not settings.public_signup or not is_signup:
+                error_key = (
+                    "login.error_signup_required"
+                    if settings.public_signup
+                    else "login.error_signup_closed"
+                )
+                return templates.TemplateResponse(
+                    request,
+                    "login.html",
+                    _login_context(_t(error_key, lang)),
+                    status_code=403,
+                )
+            from app.accounts.plans import FREE
+            from app.accounts.service import create_account
+            from app.projects.service import create_project
 
-        # password=None: the provider holds the credential, we store no secret.
-        _, user = await create_account(
+            # Account + owner + Free subscription + starter project + provider
+            # identity are committed together: no half-created tenant can escape.
+            _, user = await create_account(
+                db,
+                name=identity.name or identity.email,
+                owner_email=identity.email,
+                owner_name=identity.name or identity.email,
+                password=None,
+                plan_code=FREE,
+            )
+            await create_project(db, name="Default", account_id=user.account_id)
+            user.terms_accepted_at = datetime.now(timezone.utc)
+            user.terms_version = settings.terms_version
+            new_signup = True
+        try:
+            await link_oauth_identity(
+                db,
+                user,
+                provider=provider,
+                subject=identity.subject,
+                email=identity.email,
+            )
+            await db.commit()
+        except IntegrityError:
+            # A double callback can race after both requests saw no row. Roll back
+            # the loser and resolve the winner instead of leaking a 500.
+            await db.rollback()
+            user = await get_user_by_oauth_identity(db, provider, identity.subject)
+            if user is None:
+                return templates.TemplateResponse(
+                    request,
+                    "login.html",
+                    _login_context(_t("login.error_oauth", lang)),
+                    status_code=409,
+                )
+    else:
+        await link_oauth_identity(
             db,
-            name=identity.name or identity.email,
-            owner_email=identity.email,
-            owner_name=identity.name or identity.email,
-            password=None,
+            user,
+            provider=provider,
+            subject=identity.subject,
+            email=identity.email,
         )
-        from app.projects.service import create_project
-
-        await create_project(db, name="Default", account_id=user.account_id)
         await db.commit()
 
     await _start_session(request, db, user)
-    return RedirectResponse("/", status_code=303)
+    from app.accounts.plans import FREE, subscription_for
+
+    subscription = await subscription_for(db, user.account_id)
+    needs_onboarding = (
+        subscription is not None
+        and subscription.plan_code == FREE
+        and subscription.onboarding_completed_at is None
+    )
+    logger.info(
+        "oauth_authenticated provider=%s new_signup=%s onboarding=%s",
+        provider,
+        new_signup,
+        needs_onboarding,
+    )
+    return RedirectResponse("/welcome" if needs_onboarding else "/", status_code=303)
+
+
+@router.get("/welcome", response_class=HTMLResponse)
+async def welcome_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_user_ui),
+):
+    from app.accounts.plans import FREE, subscription_for
+    from app.projects.service import list_projects
+
+    subscription = await subscription_for(db, user.account_id)
+    if (
+        subscription is None
+        or subscription.plan_code != FREE
+        or subscription.onboarding_completed_at is not None
+    ):
+        return RedirectResponse("/", status_code=303)
+    projects = await list_projects(db, user.account_id)
+    if not projects:
+        return RedirectResponse("/projects/new", status_code=303)
+    return templates.TemplateResponse(request, "welcome.html", {
+        "user": user,
+        "project": projects[0],
+        "error": None,
+        "raw_token": None,
+    })
+
+
+@router.post("/welcome", response_class=HTMLResponse)
+async def welcome_submit(
+    request: Request,
+    project_name: str = Form(...),
+    token_name: str = Form("my-agent"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_user_ui),
+):
+    from app.accounts.plans import FREE, PlanLimitError, subscription_for
+    from app.projects import service as projects
+
+    subscription = await subscription_for(db, user.account_id)
+    if (
+        subscription is None
+        or subscription.plan_code != FREE
+        or subscription.onboarding_completed_at is not None
+    ):
+        return RedirectResponse("/", status_code=303)
+    available_projects = await projects.list_projects(db, user.account_id)
+    if not available_projects:
+        return RedirectResponse("/projects/new", status_code=303)
+    current = available_projects[0]
+    try:
+        await projects.rename_project(db, current, project_name)
+        _token, raw = await create_api_token(
+            db,
+            token_name.strip() or "my-agent",
+            "write",
+            user.id,
+            project_id=current.id,
+            commit=False,
+        )
+        subscription.onboarding_completed_at = datetime.now(timezone.utc)
+        await db.commit()
+    except (projects.ProjectError, PlanLimitError, ValueError) as exc:
+        await db.rollback()
+        error = (
+            _t(f"plan.limit.{exc.resource}", resolve_lang(request), limit=exc.limit)
+            if isinstance(exc, PlanLimitError)
+            else str(exc)
+        )
+        return templates.TemplateResponse(request, "welcome.html", {
+            "user": user,
+            "project": current,
+            "error": error,
+            "raw_token": None,
+        }, status_code=422)
+    await _start_session(request, db, user)
+    logger.info("free_onboarding_completed")
+    return templates.TemplateResponse(request, "welcome.html", {
+        "user": user,
+        "project": current,
+        "error": None,
+        "raw_token": raw,
+    })
 
 
 # ---------- Password ----------

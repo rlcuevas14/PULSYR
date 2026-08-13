@@ -4,10 +4,11 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from sqlalchemy import or_, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.models import ApiToken, User
+from app.accounts.models import Account, AccountSubscription
+from app.auth.models import ApiToken, OAuthIdentity, User
 
 # ARCH-1/PERF-05: we only refresh last_used_at when this interval has passed since the
 # last use (throttle). Avoids one UPDATE per request — the value means "recent activity",
@@ -28,15 +29,32 @@ def _hash_token(raw: str) -> str:
 
 
 async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
+    email = email.strip().casefold()
     result = await db.execute(
-        select(User).where(User.email == email, User.is_active.is_(True))
+        select(User)
+        .join(Account, Account.id == User.account_id)
+        .outerjoin(AccountSubscription, AccountSubscription.account_id == Account.id)
+        .where(
+            func.lower(User.email) == email,
+            User.is_active.is_(True),
+            Account.is_active.is_(True),
+            or_(AccountSubscription.id.is_(None), AccountSubscription.status == "active"),
+        )
     )
     return result.scalar_one_or_none()
 
 
 async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> User | None:
     result = await db.execute(
-        select(User).where(User.id == user_id, User.is_active.is_(True))
+        select(User)
+        .join(Account, Account.id == User.account_id)
+        .outerjoin(AccountSubscription, AccountSubscription.account_id == Account.id)
+        .where(
+            User.id == user_id,
+            User.is_active.is_(True),
+            Account.is_active.is_(True),
+            or_(AccountSubscription.id.is_(None), AccountSubscription.status == "active"),
+        )
     )
     return result.scalar_one_or_none()
 
@@ -72,6 +90,7 @@ async def create_user(
     account semantics: ``"admin"`` -> owner + superadmin, anything else -> member.
     """
     auto_account = account_id is None
+    email = email.strip().casefold()
     if auto_account:
         from app.accounts.models import Account
         from app.accounts.service import _slugify, _unique_slug
@@ -80,6 +99,9 @@ async def create_user(
         db.add(acc)
         await db.flush()
         account_id = acc.id
+        from app.accounts.plans import SELF_HOSTED, add_subscription
+
+        await add_subscription(db, account_id, SELF_HOSTED)
     if account_role is None:
         account_role = "owner" if role == "admin" else "member"
     if is_superadmin is None:
@@ -104,19 +126,108 @@ async def create_user(
     return user
 
 
+async def get_user_by_oauth_identity(
+    db: AsyncSession, provider: str, subject: str
+) -> User | None:
+    return await db.scalar(
+        select(User)
+        .join(OAuthIdentity, OAuthIdentity.user_id == User.id)
+        .join(Account, Account.id == User.account_id)
+        .outerjoin(AccountSubscription, AccountSubscription.account_id == Account.id)
+        .where(
+            OAuthIdentity.provider == provider,
+            OAuthIdentity.subject == subject,
+            User.is_active.is_(True),
+            Account.is_active.is_(True),
+            or_(AccountSubscription.id.is_(None), AccountSubscription.status == "active"),
+        )
+    )
+
+
+async def oauth_identity_is_linked(
+    db: AsyncSession, provider: str, subject: str
+) -> bool:
+    return bool(
+        await db.scalar(
+            select(OAuthIdentity.id).where(
+                OAuthIdentity.provider == provider,
+                OAuthIdentity.subject == subject,
+            )
+        )
+    )
+
+
+async def email_is_registered(db: AsyncSession, email: str) -> bool:
+    return bool(
+        await db.scalar(
+            select(User.id).where(func.lower(User.email) == email.strip().casefold())
+        )
+    )
+
+
+async def link_oauth_identity(
+    db: AsyncSession,
+    user: User,
+    *,
+    provider: str,
+    subject: str,
+    email: str,
+) -> OAuthIdentity:
+    identity = await db.scalar(
+        select(OAuthIdentity).where(
+            OAuthIdentity.provider == provider,
+            OAuthIdentity.subject == subject,
+        )
+    )
+    now = datetime.now(timezone.utc)
+    if identity is None:
+        identity = OAuthIdentity(
+            user_id=user.id,
+            provider=provider,
+            subject=subject,
+            email_at_link=email.strip().casefold(),
+            last_login_at=now,
+        )
+        db.add(identity)
+    else:
+        identity.email_at_link = email.strip().casefold()
+        identity.last_login_at = now
+    await db.flush()
+    return identity
+
+
 async def create_api_token(
-    db: AsyncSession, name: str, scopes: str, created_by: uuid.UUID
+    db: AsyncSession,
+    name: str,
+    scopes: str,
+    created_by: uuid.UUID,
+    *,
+    project_id: uuid.UUID | None = None,
+    commit: bool = True,
 ) -> tuple[ApiToken, str]:
+    if project_id is not None:
+        from app.accounts.plans import ensure_token_capacity
+        from app.projects.models import Project
+
+        creator = await db.get(User, created_by)
+        project = await db.get(Project, project_id)
+        if creator is None or project is None or project.account_id != creator.account_id:
+            raise ValueError("Project is not available to this user.")
+        await ensure_token_capacity(db, creator.account_id, project_id)
     raw = secrets.token_urlsafe(32)
     token = ApiToken(
         name=name,
         token_hash=_hash_token(raw),
         scopes=scopes,
         created_by=created_by,
+        project_id=project_id,
     )
     db.add(token)
-    await db.commit()
-    await db.refresh(token)
+    if commit:
+        await db.commit()
+        await db.refresh(token)
+    else:
+        await db.flush()
     return token, raw
 
 
@@ -138,10 +249,17 @@ async def verify_api_token(db: AsyncSession, raw: str) -> ApiToken | None:
     now = datetime.now(timezone.utc)
     hashed = _hash_token(raw)
     result = await db.execute(
-        select(ApiToken).where(
+        select(ApiToken)
+        .join(User, User.id == ApiToken.created_by)
+        .join(Account, Account.id == User.account_id)
+        .outerjoin(AccountSubscription, AccountSubscription.account_id == Account.id)
+        .where(
             ApiToken.token_hash == hashed,
             ApiToken.revoked_at.is_(None),
             or_(ApiToken.expires_at.is_(None), ApiToken.expires_at > now),
+            User.is_active.is_(True),
+            Account.is_active.is_(True),
+            or_(AccountSubscription.id.is_(None), AccountSubscription.status == "active"),
         )
     )
     token = result.scalar_one_or_none()

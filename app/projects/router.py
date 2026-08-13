@@ -1,5 +1,3 @@
-import hashlib
-import secrets
 import uuid
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -7,9 +5,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.accounts.plans import PlanLimitError
 from app.auth.deps import current_user_ui, require_owner
 from app.auth.models import ApiToken, User
-from app.auth.service import revoke_api_token
+from app.auth.service import create_api_token, revoke_api_token
 from app.config import settings
 from app.database import get_db
 from app.i18n import resolve_lang
@@ -81,9 +80,14 @@ async def projects_new_submit(
             color=color or None,
         )
         await db.commit()
-    except ps.ProjectError as e:
+    except (ps.ProjectError, PlanLimitError) as e:
+        error = (
+            _t(f"plan.limit.{e.resource}", resolve_lang(request), limit=e.limit)
+            if isinstance(e, PlanLimitError)
+            else str(e)
+        )
         return templates.TemplateResponse(
-            request, "projects_new.html", {"user": user, "error": str(e)}, status_code=422
+            request, "projects_new.html", {"user": user, "error": error}, status_code=422
         )
     return RedirectResponse(f"/projects/{project.slug}/settings", status_code=303)
 
@@ -199,16 +203,30 @@ async def project_token_create(
     # Token scope must not exceed the minter's role on the project.
     if scopes == "write" and role == "viewer":
         return Response(status_code=403, content="Viewer cannot mint a write token")
-    raw = secrets.token_urlsafe(32)
-    token = ApiToken(
-        name=token_name,
-        token_hash=hashlib.sha256(raw.encode()).hexdigest(),
-        scopes=scopes,
-        created_by=user.id,
-        project_id=project.id,
-    )
-    db.add(token)
-    await db.commit()
+    try:
+        _token, raw = await create_api_token(
+            db,
+            token_name,
+            scopes,
+            user.id,
+            project_id=project.id,
+        )
+    except PlanLimitError as e:
+        tokens = list((await db.execute(
+            select(ApiToken).where(
+                ApiToken.project_id == project.id,
+                ApiToken.revoked_at.is_(None),
+            ).order_by(ApiToken.created_at.desc())
+        )).scalars().all())
+        return templates.TemplateResponse(request, "projects_settings.html", {
+            "user": user,
+            "project": project,
+            "tokens": tokens,
+            "can_write": role != "viewer",
+            "snippet": _connect_snippet(project),
+            "new_token": None,
+            "error": _t(f"plan.limit.{e.resource}", resolve_lang(request), limit=e.limit),
+        }, status_code=422)
     # ponytail: show raw token once via session flash, cleared in GET /settings
     request.session["new_token"] = raw
     return RedirectResponse(f"/projects/{slug}/settings", status_code=303)

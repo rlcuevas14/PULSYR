@@ -66,6 +66,7 @@
             <div class="px-3 py-2 border-b border-hairline mb-1">
               <p class="text-sm font-medium text-ink truncate">{{ user.name }}</p>
               <p class="text-xs text-muted truncate">{{ user.email }}</p>
+              {% if user.plan_code == 'free' %}<span class="p-pill bg-success/15 text-success mt-2">{{ t("plan.free.name") }}</span>{% endif %}
             </div>
             {% if user.account_role == 'owner' %}<a href="/account/members" class="p-menu-item">{{ t("nav.members") }}</a>
             <a href="/account/integrations" class="p-menu-item">{{ t("nav.integrations") }}</a>{% endif %}

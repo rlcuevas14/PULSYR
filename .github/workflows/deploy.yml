@@ -81,9 +81,11 @@ jobs:
             curl -fsSL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/docker-compose.yml" -o docker-compose.yml
             echo "VM config: GITHUB_OWNER=$(grep '^GITHUB_OWNER=' .env | cut -d= -f2), compose synced from ${{ github.sha }}"
             echo "$GHCR_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            echo "IMAGE_TAG=${{ github.sha }}" > .env.deploy
+            export IMAGE_TAG="${{ github.sha }}"
             docker compose --env-file .env pull app
-            docker compose --env-file .env up -d
+            docker compose --env-file .env up -d db
             until docker compose --env-file .env exec db pg_isready -U pulso; do sleep 2; done
-            docker compose --env-file .env exec app alembic upgrade head
+            # Migrate with the new image before it receives production traffic.
+            docker compose --env-file .env run --rm --no-deps app alembic upgrade head
+            docker compose --env-file .env up -d app
             echo "Deploy OK: ${{ github.sha }}"

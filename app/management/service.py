@@ -183,6 +183,13 @@ async def put_deliverable(
     )).scalar_one_or_none()
 
     if d is None:
+        from app.accounts.plans import ensure_storage_capacity
+        from app.projects.models import Project
+
+        project = await db.get(Project, project_id)
+        if project is None:
+            raise ManagementError("Project not found.")
+        await ensure_storage_capacity(db, project.account_id, len(content))
         d = Deliverable(
             project_id=project_id, compartment_id=comp.id, name=name[:200], doc_type=doc_type,
             status=status or "draft", owner=owner, summary_md=summary_md, current_version=1,
@@ -220,6 +227,13 @@ async def put_deliverable(
         _event(db, project_id, "deliverable", d.id, actor, "updated", {"dedup": True})
         return d, False
 
+    from app.accounts.plans import ensure_storage_capacity
+    from app.projects.models import Project
+
+    project = await db.get(Project, project_id)
+    if project is None:
+        raise ManagementError("Project not found.")
+    await ensure_storage_capacity(db, project.account_id, len(content))
     new_no = d.current_version + 1
     db.add(DeliverableVersion(
         deliverable_id=d.id, version_no=new_no, content=content, mime=mime,
@@ -236,6 +250,13 @@ async def rollback_deliverable(
     to_version: int, actor: str,
 ) -> Deliverable:
     d, src = await get_version(db, project_id, deliverable_id, to_version)
+    from app.accounts.plans import ensure_storage_capacity
+    from app.projects.models import Project
+
+    project = await db.get(Project, project_id)
+    if project is None:
+        raise ManagementError("Project not found.")
+    await ensure_storage_capacity(db, project.account_id, src.size_bytes)
     new_no = d.current_version + 1
     db.add(DeliverableVersion(
         deliverable_id=d.id, version_no=new_no, content=src.content, mime=src.mime,

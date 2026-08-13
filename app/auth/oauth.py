@@ -44,6 +44,7 @@ class Provider:
 class Identity:
     email: str
     name: str
+    subject: str
 
 
 PROVIDERS: dict[str, Provider] = {
@@ -104,19 +105,34 @@ def _serializer() -> URLSafeTimedSerializer:
     return URLSafeTimedSerializer(settings.secret_key, salt="pulsyr-oauth-state")
 
 
-def make_state(provider: str) -> str:
+def make_state(
+    provider: str,
+    *,
+    intent: str = "login",
+    terms_version: str | None = None,
+) -> str:
     """A signed, short-lived, single-provider state parameter."""
-    return _serializer().dumps({"p": provider, "n": secrets.token_urlsafe(8)})
+    payload = {"p": provider, "i": intent, "n": secrets.token_urlsafe(8)}
+    if terms_version:
+        payload["v"] = terms_version
+    return _serializer().dumps(payload)
+
+
+def read_state(state: str, provider: str) -> dict[str, str] | None:
+    """Return a valid state payload, or None when forged, stale or misbound."""
+    try:
+        data: Any = _serializer().loads(state, max_age=_STATE_MAX_AGE)
+    except BadSignature:
+        return None
+    if not isinstance(data, dict) or data.get("p") != provider:
+        return None
+    return {str(key): str(value) for key, value in data.items()}
 
 
 def check_state(state: str, provider: str) -> bool:
     """Reject anything we did not mint, that expired, or that was issued for
     another provider (so a callback cannot be replayed against a different one)."""
-    try:
-        data: Any = _serializer().loads(state, max_age=_STATE_MAX_AGE)
-    except BadSignature:
-        return False
-    return isinstance(data, dict) and data.get("p") == provider
+    return read_state(state, provider) is not None
 
 
 def authorize_url(provider: Provider, state: str) -> str:
@@ -167,7 +183,14 @@ async def _github_identity(token: str) -> Identity | None:
     if not address:
         return None
     body = profile.json()
-    return Identity(email=address, name=body.get("name") or body.get("login") or address)
+    subject = body.get("id")
+    if subject is None:
+        return None
+    return Identity(
+        email=address.casefold(),
+        name=body.get("name") or body.get("login") or address,
+        subject=str(subject),
+    )
 
 
 async def _google_identity(token: str) -> Identity | None:
@@ -185,9 +208,10 @@ async def _google_identity(token: str) -> Identity | None:
     if verified not in (True, "true"):
         return None
     address = body.get("email")
-    if not address:
+    subject = body.get("sub")
+    if not address or subject is None:
         return None
-    return Identity(email=address, name=body.get("name") or address)
+    return Identity(email=address.casefold(), name=body.get("name") or address, subject=str(subject))
 
 
 async def fetch_identity(provider: Provider, code: str) -> Identity | None:

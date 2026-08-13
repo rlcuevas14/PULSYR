@@ -1,7 +1,7 @@
 """Owner-side team management: collaborators + per-project grants (the matrix)."""
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
@@ -16,12 +16,15 @@ class MemberError(Exception):
 async def create_member(
     db: AsyncSession, account_id: uuid.UUID, email: str, name: str, password: str
 ) -> User:
-    email = email.strip()
+    from app.accounts.plans import ensure_member_capacity
+
+    await ensure_member_capacity(db, account_id)
+    email = email.strip().casefold()
     if not email:
         raise MemberError("Email cannot be empty.")
     if len(password) < 8:
         raise MemberError("Password must be at least 8 characters.")
-    if await db.scalar(select(User.id).where(User.email == email)):
+    if await db.scalar(select(User.id).where(func.lower(User.email) == email)):
         raise MemberError("A user with that email already exists.")
     return await create_user(
         db,

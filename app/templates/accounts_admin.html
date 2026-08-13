@@ -19,6 +19,7 @@
       <tr>
         <th class="p-label text-left pb-2">{{ t("common.name") }}</th>
         <th class="p-label text-left pb-2">{{ t("common.slug") }}</th>
+        <th class="p-label text-left pb-2">{{ t("plan.label") }}</th>
         <th class="p-label text-left pb-2">{{ t("common.active") }}</th>
         <th class="p-label text-left pb-2">{{ t("common.created") }}</th>
         <th class="p-label text-left pb-2"><span class="sr-only">{{ t("common.actions") }}</span></th>
@@ -29,6 +30,22 @@
       <tr>
         <td class="py-2 border-t border-hairline text-sm text-ink font-medium">{{ a.name }}</td>
         <td class="py-2 border-t border-hairline font-mono text-xs text-body">{{ a.slug }}</td>
+        <td class="py-2 border-t border-hairline text-sm">
+          <form method="post" action="/admin/accounts/{{ a.id }}/subscription" class="flex items-center gap-1">
+            {% set current_plan = a.subscription.plan_code if a.subscription else "self_hosted" %}
+            {% set current_status = a.subscription.status if a.subscription else "active" %}
+            <select name="plan_code" class="p-input p-input-sm" aria-label="{{ t('plan.label') }}">
+              <option value="free" {% if current_plan == 'free' %}selected{% endif %}>{{ t("plan.free.name") }}</option>
+              <option value="self_hosted" {% if current_plan == 'self_hosted' %}selected{% endif %}>{{ t("plan.self_hosted.name") }}</option>
+            </select>
+            <select name="status" class="p-input p-input-sm" aria-label="{{ t('plan.status') }}">
+              {% for status in ['active', 'suspended', 'canceled'] %}
+              <option value="{{ status }}" {% if current_status == status %}selected{% endif %}>{{ t("plan.status." ~ status) }}</option>
+              {% endfor %}
+            </select>
+            <button class="p-btn p-btn-sm p-btn-ghost">{{ t("common.save") }}</button>
+          </form>
+        </td>
         <td class="py-2 border-t border-hairline text-sm">{% if a.is_active %}<span class="p-pill bg-success/15 text-success">{{ t("accounts.active") }}</span>{% else %}<span class="p-pill bg-surface-strong text-muted">{{ t("accounts.disabled") }}</span>{% endif %}</td>
         <td class="py-2 border-t border-hairline text-sm text-muted">{{ a.created_at | fecha }}</td>
         <td class="py-2 border-t border-hairline text-sm text-body">
@@ -39,7 +56,7 @@
         </td>
       </tr>
     {% endfor %}
-    {% if not accounts %}<tr><td colspan="5" class="py-3 border-t border-hairline text-muted">{{ t("accounts.empty") }}</td></tr>{% endif %}
+    {% if not accounts %}<tr><td colspan="6" class="py-3 border-t border-hairline text-muted">{{ t("accounts.empty") }}</td></tr>{% endif %}
     </tbody>
   </table>
 </div>

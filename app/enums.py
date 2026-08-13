@@ -50,6 +50,8 @@ USER_ROLES: tuple[str, ...] = ("admin", "viewer")
 TOKEN_SCOPES: tuple[str, ...] = ("read", "write")
 ACCOUNT_ROLES: tuple[str, ...] = ("owner", "member")
 PROJECT_MEMBER_ROLES: tuple[str, ...] = ("viewer", "editor")
+PLAN_CODES: tuple[str, ...] = ("free", "self_hosted")
+SUBSCRIPTION_STATUSES: tuple[str, ...] = ("active", "suspended", "canceled")
 
 # --- management (PMO tab: documentos / plan / pendientes) ---
 DELIVERABLE_TYPES: tuple[str, ...] = ("docx", "pdf", "html", "md", "xlsx", "pptx")

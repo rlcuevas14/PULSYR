@@ -4,7 +4,21 @@
 {% block tagline %}{{ t("signup.subtitle") }}{% endblock %}
 
 {% block card %}
+  <div class="rounded-xl border border-hairline bg-surface-strong p-4 mb-4">
+    <div class="flex items-center justify-between gap-3 mb-1">
+      <strong class="text-ink">{{ t("plan.free.name") }}</strong>
+      <span class="p-pill bg-success/15 text-success">$0</span>
+    </div>
+    <p class="text-xs text-muted">{{ t("plan.free.summary", projects=FREE_LIMITS.projects, members=FREE_LIMITS.members, tokens=FREE_LIMITS.tokens_per_project, storage=FREE_LIMITS.storage_bytes // 1024 // 1024) }}</p>
+  </div>
+
+  <form method="post" action="/signup" class="space-y-4">
+    <label class="flex items-start gap-2 text-xs text-muted">
+      <input name="accept_terms" value="true" type="checkbox" required class="mt-0.5">
+      <span>{{ t("signup.accept_terms_html") | safe }}</span>
+    </label>
     {% include "partials/_oauth_buttons.html" %}
+  </form>
 
     {# No password field on purpose: the provider vouches for the address, which is
        what lets this app hold no credential and send no confirmation mail. #}

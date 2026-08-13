@@ -35,6 +35,15 @@ class Settings(BaseSettings):
     # Open registration. Off by default: being reachable on the internet is not a
     # reason to accept strangers into someone's self-hosted backlog.
     public_signup: bool = False
+    # Hosted Free plan. Self-hosted tenants remain unlimited. These are runtime
+    # policy values so a limit can be tuned without rewriting subscription rows.
+    free_max_projects: int = Field(default=1, ge=1)
+    free_max_members: int = Field(default=1, ge=0)
+    free_max_tokens_per_project: int = Field(default=3, ge=1)
+    free_max_storage_mb: int = Field(default=25, ge=1)
+    oauth_rate_limit_attempts: int = Field(default=20, ge=1)
+    oauth_rate_limit_window_seconds: int = Field(default=600, ge=60)
+    terms_version: str = "2026-08-12"
 
     # Global fallbacks for webhook secrets (move to per-project settings in a future version)
     sentry_client_secret: str = ""

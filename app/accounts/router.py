@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.accounts import members as ms
 from app.accounts import service as acs
+from app.accounts.plans import PlanLimitError
 from app.auth.deps import require_owner, require_superadmin
 from app.auth.models import User
 from app.config import settings
@@ -47,6 +48,7 @@ async def accounts_create(
 ):
     try:
         await acs.create_account(db, name, owner_email, owner_name, password)
+        await db.commit()
     except acs.AccountError as e:
         accounts = await acs.list_accounts(db)
         return templates.TemplateResponse(request, "accounts_admin.html", {
@@ -64,6 +66,23 @@ async def accounts_toggle(
     _user: User = Depends(require_superadmin),
 ):
     await acs.set_account_active(db, account_id, active == "true")
+    return RedirectResponse("/admin/accounts", status_code=303)
+
+
+@router.post("/admin/accounts/{account_id}/subscription")
+async def account_subscription_update(
+    account_id: uuid.UUID,
+    plan_code: str = Form(...),
+    status: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_superadmin),
+):
+    await acs.update_subscription(
+        db,
+        account_id,
+        plan_code=plan_code,
+        status=status,
+    )
     return RedirectResponse("/admin/accounts", status_code=303)
 
 
@@ -95,13 +114,18 @@ async def account_member_create(
 ):
     try:
         await ms.create_member(db, user.account_id, email, name, password)
-    except ms.MemberError as e:
+    except (ms.MemberError, PlanLimitError) as e:
+        error = (
+            _t(f"plan.limit.{e.resource}", resolve_lang(request), limit=e.limit)
+            if isinstance(e, PlanLimitError)
+            else str(e)
+        )
         members = await ms.list_members(db, user.account_id)
         projects = await ps.list_projects(db, user.account_id, include_archived=False)
         matrix = await ms.member_matrix(db, user.account_id)
         return templates.TemplateResponse(request, "account_members.html", {
             "user": user, "members": members, "projects": projects, "matrix": matrix,
-            "error": str(e), "new_member": None,
+            "error": error, "new_member": None,
         }, status_code=422)
     request.session["new_member"] = email
     return RedirectResponse("/account/members", status_code=303)

@@ -3,17 +3,25 @@ import PageHero from "../../components/PageHero.astro";
 import PublicLayout from "../../layouts/PublicLayout.astro";
 ---
 
-<PublicLayout title="Privacy" description="Privacy information for the public Pulsyr website and the separate responsibilities that apply when you self-host the Pulsyr application.">
-  <PageHero compact eyebrow="Legal" breadcrumbLabel="Privacy" title="Privacy" lead="This notice describes the public Pulsyr website. A self-hosted Pulsyr instance is operated by whoever deploys it, and that operator determines its own data practices." />
+<PublicLayout title="Privacy" description="Privacy notice for the Pulsyr public website, hosted Free service, and separately operated self-hosted installations.">
+  <PageHero compact eyebrow="Legal" breadcrumbLabel="Privacy" title="Privacy notice" lead="This notice explains what Pulsyr processes when you visit the public site or create a hosted account. Self-hosted installations remain under their operator's control." />
   <article class="section-tight container prose">
-    <p><strong>Effective date:</strong> 12 August 2026</p>
+    <p><strong>Effective date:</strong> 12 August 2026 · <strong>Notice version:</strong> 2026-08-12</p>
+    <h2>Who is responsible</h2>
+    <p>Avonlea Systems SpA operates pulsyr.dev and the hosted application at app.pulsyr.dev. Privacy requests may be sent to <a data-analytics-event="contact" href="mailto:legal@pulsyr.dev">legal@pulsyr.dev</a>.</p>
+    <h2>Data we process</h2>
+    <p>For hosted accounts we process the name, verified email address and stable account identifier supplied by GitHub or Google; account, subscription and onboarding records; project content and audit history; API-token hashes and integration configuration; and limited security and operational logs. Raw MCP tokens are shown once and are not stored. OAuth rate limiting uses a temporary keyed digest instead of retaining a raw IP address.</p>
+    <h2>Why we process it</h2>
+    <p>We use this data to create and authenticate the account, provide the requested project service, enforce plan limits, secure and troubleshoot the platform, prevent abuse, communicate material service or legal changes, and comply with applicable obligations. We do not sell personal data, run advertising profiles, or use private project content for advertising.</p>
+    <h2>Providers and international processing</h2>
+    <p>GitHub or Google handles the identity step under its own terms. Hosting, monitoring, email and infrastructure providers may process limited data on our behalf and may operate in other jurisdictions. We limit access to what each provider needs and apply contractual and technical safeguards appropriate to the service.</p>
+    <h2>Retention and choices</h2>
+    <p>Account and project data is retained while the hosted account remains active and as reasonably needed for security, backup recovery, dispute handling or legal obligations. You may request access, correction, deletion, opposition or portability where applicable by contacting the address above. We may need to verify that the requester controls the account before acting.</p>
     <h2>Public website</h2>
-    <p>The public website provides product and project information. It does not offer accounts, accept form submissions, set advertising cookies, or profile individual visitors. In production, Pulsyr may use a lightweight Plausible Analytics configuration to count aggregate page views and a small set of product-navigation events. The integration is disabled on staging and does not run inside the private backlog application.</p>
-    <h2>External destinations</h2>
-    <p>Links to GitHub and the separate application host take you to services with their own privacy terms. Pulsyr does not control how an independently operated GitHub account, MCP client, reverse proxy, or self-hosted installation processes data.</p>
-    <h2>Self-hosted application</h2>
-    <p>The Pulsyr software stores account identifiers, project content, audit events, API-token hashes, integration configuration, and other data entered by its operator or users. The operator chooses the infrastructure, integrations, access policy, retention period, backups, and legal basis. Questions about a particular instance should go to that instance's operator.</p>
-    <h2>Contact and changes</h2>
-    <p>Privacy or legal questions about this public website can be sent to <a data-analytics-event="contact" href="mailto:legal@pulsyr.dev">legal@pulsyr.dev</a>. If the website later adds forms, hosted accounts, advertising analytics, or materially different processing, this notice will be updated before or alongside that change.</p>
+    <p>The public website may use a lightweight Plausible Analytics configuration for aggregate page views and a small set of navigation events. It does not use advertising cookies or send private application content to public-site analytics.</p>
+    <h2>Self-hosted installations</h2>
+    <p>A self-hosted Pulsyr installation is operated independently. Its operator chooses infrastructure, integrations, access rules, retention, backups and legal basis, and is responsible for its own privacy notice.</p>
+    <h2>Changes</h2>
+    <p>Material changes will be published here with a new version date. When a change requires renewed acceptance for hosted accounts, Pulsyr will request it before continued use.</p>
   </article>
 </PublicLayout>
