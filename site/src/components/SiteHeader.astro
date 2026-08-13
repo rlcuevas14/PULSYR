@@ -16,8 +16,9 @@ const links = (isSpanish ? [
   ["/open-source/", "Open source"],
   ["/docs/primeros-pasos/", "Docs"],
 ]).map(([href, label]) => [localizedPath(href, locale), label]);
-const englishChoice = languageChoiceUrl("en", path);
-const spanishChoice = languageChoiceUrl("es", path);
+const languageReturnPath = path === "/404/" || path === "/500/" ? "/" : path;
+const englishChoice = languageChoiceUrl("en", languageReturnPath);
+const spanishChoice = languageChoiceUrl("es", languageReturnPath);
 ---
 
 <header class="site-header">
