@@ -1,0 +1,41 @@
+---
+interface Props {
+  src: string;
+  poster: string;
+  label: string;
+  fallback: string;
+  variant?: "hero" | "band";
+}
+
+const { src, poster, label, fallback, variant = "band" } = Astro.props;
+---
+
+<div class:list={["ambient-video", variant]}>
+  <video
+    muted
+    loop
+    playsinline
+    controls
+    controlslist="nodownload noremoteplayback noplaybackrate"
+    disablepictureinpicture
+    preload="none"
+    poster={poster}
+    aria-label={label}
+  >
+    <source src={src} type="video/mp4" />
+    <a href={src}>{fallback}</a>
+  </video>
+</div>
+
+<style>
+  .ambient-video { overflow:hidden; background:var(--canvas); border:1px solid var(--line); }
+  video { display:block; width:100%; height:100%; object-fit:cover; background:var(--canvas); }
+  .hero { position:absolute; inset:0; border-radius:32px; }
+  .hero::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(90deg,var(--canvas) 0%,rgb(255 250 240 / 96%) 40%,rgb(255 250 240 / 58%) 58%,rgb(255 250 240 / 8%) 80%); }
+  .band { width:min(1180px,calc(100% - 2rem)); aspect-ratio:16 / 9; max-height:620px; margin:0 auto clamp(2rem,5vw,4rem); border-radius:28px; box-shadow:var(--shadow); }
+  @media(max-width:760px){
+    .hero::after { background:rgb(255 250 240 / 84%); }
+    .hero video { object-position:70% center; }
+    .band { width:min(100% - 1.25rem,1180px); border-radius:20px; }
+  }
+</style>

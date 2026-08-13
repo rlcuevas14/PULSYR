@@ -34,6 +34,10 @@ for (const [logical, url] of Object.entries(manifest)) {
 }
 
 assertBudget("social image", statSync(resolve(dist, "og/pulsyr-social.png")).size, 700 * 1024);
+assertBudget("hero video", statSync(resolve(dist, "media/pulsyr-hero.mp4")).size, 400 * 1024);
+assertBudget("secondary signal video", statSync(resolve(dist, "media/pulsyr-signal.mp4")).size, 6 * 1024 * 1024);
+assertBudget("hero video poster", statSync(resolve(dist, "media/pulsyr-hero-poster.webp")).size, 20 * 1024);
+assertBudget("secondary video poster", statSync(resolve(dist, "media/pulsyr-signal-poster.webp")).size, 150 * 1024);
 
 if (errors.length) {
   for (const error of errors) process.stderr.write(`${error}\n`);

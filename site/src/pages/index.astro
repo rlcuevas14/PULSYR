@@ -1,11 +1,19 @@
 ---
 import CallToAction from "../components/CallToAction.astro";
+import AmbientVideo from "../components/AmbientVideo.astro";
 import PublicLayout from "../layouts/PublicLayout.astro";
 ---
 
 <PublicLayout title="Pulsyr" description="An open-source, self-hosted backlog that MCP-compatible coding agents can read and maintain while they work.">
   <section class="hero">
-    <div class="container hero-grid">
+    <div class="container hero-shell">
+      <AmbientVideo
+        variant="hero"
+        src="/media/pulsyr-hero.mp4"
+        poster="/media/pulsyr-hero-poster.webp"
+        label="Animated Pulsyr signal over a soft waveform"
+        fallback="Open the Pulsyr signal video"
+      />
       <div class="hero-copy">
         <p class="eyebrow">Agent-native project management</p>
         <h1>Your agent writes code. Pulsyr keeps the work legible.</h1>
@@ -15,31 +23,6 @@ import PublicLayout from "../layouts/PublicLayout.astro";
           <a class="button button-outline" href="/integraciones/mcp/">See the MCP workflow</a>
         </div>
         <p class="hero-note">MIT-licensed code · Postgres-backed · Works with MCP-compatible clients</p>
-      </div>
-      <div class="product-scene" role="img" aria-label="Illustration of a Pulsyr agent session updating a project backlog">
-        <div class="scene-top">
-          <span class="scene-brand">pulsyr / launch</span>
-          <span class="live-dot">Agent connected</span>
-        </div>
-        <div class="agent-message">
-          <span class="agent-icon" aria-hidden="true">›_</span>
-          <div><strong>Context loaded</strong><p>3 priorities · 1 blocker · 2 quick wins</p></div>
-        </div>
-        <div class="board">
-          <div class="column">
-            <span>Backlog</span>
-            <article><b>Document OAuth setup</b><small>docs · P2</small></article>
-          </div>
-          <div class="column active">
-            <span>In progress</span>
-            <article><b>Ship MCP token isolation</b><small>security · P0</small></article>
-          </div>
-          <div class="column">
-            <span>Done</span>
-            <article><b>Map project dependencies</b><small>core · completed</small></article>
-          </div>
-        </div>
-        <div class="pulse-line" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
       </div>
     </div>
   </section>
@@ -84,32 +67,12 @@ import PublicLayout from "../layouts/PublicLayout.astro";
 </PublicLayout>
 
 <style>
-  .hero { padding:clamp(4.5rem,9vw,8rem) 0; overflow:hidden; }
-  .hero-grid { display:grid; grid-template-columns:1.05fr .95fr; align-items:center; gap:clamp(2.5rem,6vw,6rem); }
-  .hero h1 { max-width:12ch; }
+  .hero { padding:clamp(3rem,7vw,6rem) 0; overflow:hidden; }
+  .hero-shell { position:relative; display:flex; align-items:center; min-height:clamp(580px,55vw,680px); overflow:hidden; border-radius:32px; box-shadow:var(--shadow); }
+  .hero-copy { position:relative; z-index:2; width:min(58%,660px); min-width:0; padding:clamp(2rem,5vw,5rem); }
+  .hero h1 { max-width:12ch; overflow-wrap:normal; word-break:normal; hyphens:none; }
   .hero-copy .lead { max-width:690px; }
   .hero-note { margin-top:1.3rem; color:var(--muted); font-size:.78rem; font-weight:650; }
-  .product-scene { position:relative; min-height:520px; padding:1.2rem; overflow:hidden; border-radius:32px; background:var(--teal); box-shadow:var(--shadow); color:#fff; transform:rotate(1deg); }
-  .product-scene::before { content:""; position:absolute; width:310px; height:310px; right:-90px; top:-110px; border-radius:50%; background:var(--pink); opacity:.9; }
-  .scene-top,.agent-message,.board { position:relative; z-index:1; }
-  .scene-top { display:flex; justify-content:space-between; gap:1rem; align-items:center; font-size:.72rem; font-weight:700; }
-  .scene-brand { letter-spacing:.08em; text-transform:uppercase; }
-  .live-dot { display:flex; align-items:center; gap:.4rem; padding:.3rem .6rem; border-radius:999px; background:rgb(255 255 255 / 14%); }
-  .live-dot::before { content:""; width:.45rem; height:.45rem; border-radius:50%; background:#4ade80; box-shadow:0 0 0 4px rgb(74 222 128 / 18%); }
-  .agent-message { margin:4.5rem 0 1rem; display:flex; gap:.8rem; align-items:center; padding:1rem; border-radius:16px; color:var(--ink); background:var(--mint); }
-  .agent-message p { margin:0; font-size:.78rem; }
-  .agent-icon { display:grid; place-items:center; width:42px; height:42px; border-radius:12px; background:var(--ink); color:#fff; font:700 .9rem monospace; }
-  .board { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; }
-  .column { min-height:220px; padding:.7rem; border:1px solid rgb(255 255 255 / 15%); border-radius:15px; background:rgb(255 255 255 / 7%); }
-  .column > span { font-size:.65rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
-  .column article { margin-top:.7rem; padding:.75rem; border-radius:11px; background:var(--canvas); color:var(--ink); }
-  .column article b { display:block; font-size:.72rem; line-height:1.35; }
-  .column article small { color:var(--muted); font-size:.58rem; }
-  .column.active article { background:var(--peach); }
-  .pulse-line { position:absolute; left:1.4rem; right:1.4rem; bottom:1.7rem; height:34px; display:flex; align-items:center; gap:8px; opacity:.85; }
-  .pulse-line::before,.pulse-line::after { content:""; height:3px; flex:1; background:var(--pink); border-radius:3px; }
-  .pulse-line i { display:block; width:3px; height:12px; transform:skew(-18deg); background:var(--pink); }
-  .pulse-line i:nth-child(2) { height:32px; }.pulse-line i:nth-child(3) { height:18px; }.pulse-line i:nth-child(4) { height:28px; }
   .section-heading { display:grid; grid-template-columns:1.1fr .7fr; align-items:end; gap:3rem; margin-bottom:2.5rem; }
   .section-heading p:last-child { color:var(--muted); }
   .workflow-band { background:var(--soft); border-block:1px solid var(--line); }
@@ -124,6 +87,6 @@ import PublicLayout from "../layouts/PublicLayout.astro";
   .feature-stack article { display:grid; grid-template-columns:84px 1fr; gap:1rem; align-items:start; padding:1.25rem 0; border-bottom:1px solid var(--line); }
   .feature-number { color:#9b1c52; font-size:1.45rem; font-weight:800; letter-spacing:-.05em; }
   .feature-stack p { color:var(--muted); margin:0; }
-  @media (max-width:950px) { .hero-grid { grid-template-columns:1fr; } .product-scene { min-height:480px; transform:none; } .workflow-grid { grid-template-columns:1fr 1fr; } }
-  @media (max-width:650px) { .section-heading { grid-template-columns:1fr; gap:.5rem; } .workflow-grid { grid-template-columns:1fr; } .product-scene { min-height:450px; } .board { grid-template-columns:1fr; } .column { min-height:auto; } .column:nth-child(n+2) { display:none; } }
+  @media (max-width:950px) { .hero-copy { width:min(76%,660px); } .workflow-grid { grid-template-columns:1fr 1fr; } }
+  @media (max-width:650px) { .hero-shell { min-height:650px; border-radius:22px; } .hero-copy { width:100%; padding:1.5rem; } .hero h1 { font-size:clamp(2.45rem,12vw,3.5rem); } .section-heading { grid-template-columns:1fr; gap:.5rem; } .workflow-grid { grid-template-columns:1fr; } }
 </style>

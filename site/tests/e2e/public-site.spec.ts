@@ -101,3 +101,41 @@ test("language selector links equivalent English and Spanish pages", async ({ pa
     "/__language/en?next=%2Fes%2Fproducto%2F",
   );
 });
+
+test("ambient videos use local optimized sources, posters, and playback controls", async ({ page }) => {
+  await page.goto("/");
+  const heroVideo = page.locator(".hero video");
+  await expect(heroVideo).toHaveAttribute("poster", "/media/pulsyr-hero-poster.webp");
+  await expect(heroVideo).toHaveAttribute("controls", "");
+  await expect(heroVideo.locator("source")).toHaveAttribute("src", "/media/pulsyr-hero.mp4");
+
+  await page.goto("/producto/");
+  const signalVideo = page.locator(".ambient-video.band video");
+  await expect(signalVideo).toHaveAttribute("poster", "/media/pulsyr-signal-poster.webp");
+  await expect(signalVideo.locator("source")).toHaveAttribute("src", "/media/pulsyr-signal.mp4");
+});
+
+for (const width of [320, 1024, 1440]) {
+  test(`Spanish hero renders its final character inside the frame at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/es/");
+    const geometry = await page.locator(".hero h1").evaluate((heading) => {
+      const textNode = heading.firstChild;
+      if (!textNode?.textContent) throw new Error("Spanish hero heading has no text node");
+      const range = document.createRange();
+      range.setStart(textNode, textNode.textContent.length - 1);
+      range.setEnd(textNode, textNode.textContent.length);
+      const character = range.getBoundingClientRect();
+      const frame = heading.closest(".hero-shell")?.getBoundingClientRect();
+      return {
+        character: { right: character.right, bottom: character.bottom },
+        frame: frame ? { right: frame.right, bottom: frame.bottom } : null,
+        text: textNode.textContent,
+      };
+    });
+    expect(geometry.text).toBe("Tu agente escribe código. Pulsyr mantiene el trabajo comprensible.");
+    expect(geometry.frame).not.toBeNull();
+    expect(geometry.character.right).toBeLessThanOrEqual(geometry.frame!.right + 1);
+    expect(geometry.character.bottom).toBeLessThanOrEqual(geometry.frame!.bottom + 1);
+  });
+}

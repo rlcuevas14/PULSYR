@@ -1,11 +1,19 @@
 ---
 import CallToAction from "../../components/CallToAction.astro";
+import AmbientVideo from "../../components/AmbientVideo.astro";
 import PublicLayout from "../../layouts/PublicLayout.astro";
 ---
 
 <PublicLayout title="Pulsyr" description="Un backlog de código abierto y autohospedado que los agentes compatibles con MCP pueden leer y mantener mientras trabajan.">
   <section class="hero">
-    <div class="container hero-grid">
+    <div class="container hero-shell">
+      <AmbientVideo
+        variant="hero"
+        src="/media/pulsyr-hero.mp4"
+        poster="/media/pulsyr-hero-poster.webp"
+        label="Señal animada de Pulsyr sobre una onda suave"
+        fallback="Abrir el video de la señal de Pulsyr"
+      />
       <div class="hero-copy">
         <p class="eyebrow">Gestión de proyectos nativa para agentes</p>
         <h1>Tu agente escribe código. Pulsyr mantiene el trabajo comprensible.</h1>
@@ -15,16 +23,6 @@ import PublicLayout from "../../layouts/PublicLayout.astro";
           <a class="button button-outline" href="/es/integraciones/mcp/">Conoce el flujo MCP</a>
         </div>
         <p class="hero-note">Código con licencia MIT · Respaldado por Postgres · Compatible con clientes MCP</p>
-      </div>
-      <div class="product-scene" role="img" aria-label="Ilustración de una sesión de agente en Pulsyr actualizando el backlog de un proyecto">
-        <div class="scene-top"><span class="scene-brand">pulsyr / lanzamiento</span><span class="live-dot">Agente conectado</span></div>
-        <div class="agent-message"><span class="agent-icon" aria-hidden="true">›_</span><div><strong>Contexto cargado</strong><p>3 prioridades · 1 bloqueo · 2 tareas rápidas</p></div></div>
-        <div class="board">
-          <div class="column"><span>Backlog</span><article><b>Documentar configuración OAuth</b><small>docs · P2</small></article></div>
-          <div class="column active"><span>En curso</span><article><b>Publicar aislamiento de tokens MCP</b><small>seguridad · P0</small></article></div>
-          <div class="column"><span>Terminado</span><article><b>Mapear dependencias del proyecto</b><small>núcleo · completado</small></article></div>
-        </div>
-        <div class="pulse-line" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
       </div>
     </div>
   </section>
@@ -60,5 +58,32 @@ import PublicLayout from "../../layouts/PublicLayout.astro";
 </PublicLayout>
 
 <style>
-  .hero{padding:clamp(4.5rem,9vw,8rem) 0;overflow:hidden}.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;align-items:center;gap:clamp(2.5rem,6vw,6rem)}.hero h1{max-width:12ch}.hero-copy .lead{max-width:690px}.hero-note{margin-top:1.3rem;color:var(--muted);font-size:.78rem;font-weight:650}.product-scene{position:relative;min-height:520px;padding:1.2rem;overflow:hidden;border-radius:32px;background:var(--teal);box-shadow:var(--shadow);color:#fff;transform:rotate(1deg)}.product-scene::before{content:"";position:absolute;width:310px;height:310px;right:-90px;top:-110px;border-radius:50%;background:var(--pink);opacity:.9}.scene-top,.agent-message,.board{position:relative;z-index:1}.scene-top{display:flex;justify-content:space-between;gap:1rem;align-items:center;font-size:.72rem;font-weight:700}.scene-brand{letter-spacing:.08em;text-transform:uppercase}.live-dot{display:flex;align-items:center;gap:.4rem;padding:.3rem .6rem;border-radius:999px;background:rgb(255 255 255 / 14%)}.live-dot::before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:#4ade80;box-shadow:0 0 0 4px rgb(74 222 128 / 18%)}.agent-message{margin:4.5rem 0 1rem;display:flex;gap:.8rem;align-items:center;padding:1rem;border-radius:16px;color:var(--ink);background:var(--mint)}.agent-message p{margin:0;font-size:.78rem}.agent-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--ink);color:#fff;font:700 .9rem monospace}.board{display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem}.column{min-height:220px;padding:.7rem;border:1px solid rgb(255 255 255 / 15%);border-radius:15px;background:rgb(255 255 255 / 7%)}.column>span{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.column article{margin-top:.7rem;padding:.75rem;border-radius:11px;background:var(--canvas);color:var(--ink)}.column article b{display:block;font-size:.72rem;line-height:1.35}.column article small{color:var(--muted);font-size:.58rem}.column.active article{background:var(--peach)}.pulse-line{position:absolute;left:1.4rem;right:1.4rem;bottom:1.7rem;height:34px;display:flex;align-items:center;gap:8px;opacity:.85}.pulse-line::before,.pulse-line::after{content:"";height:3px;flex:1;background:var(--pink);border-radius:3px}.pulse-line i{display:block;width:3px;height:12px;transform:skew(-18deg);background:var(--pink)}.pulse-line i:nth-child(2){height:32px}.pulse-line i:nth-child(3){height:18px}.pulse-line i:nth-child(4){height:28px}.section-heading{display:grid;grid-template-columns:1.1fr .7fr;align-items:end;gap:3rem;margin-bottom:2.5rem}.section-heading p:last-child{color:var(--muted)}.workflow-band{background:var(--soft);border-block:1px solid var(--line)}.workflow-band h2{max-width:17ch}.workflow-grid{margin-top:3rem;display:grid;grid-template-columns:repeat(4,1fr);gap:1px;border:1px solid var(--line);border-radius:24px;overflow:hidden;background:var(--line)}.flow-step{padding:2rem 1.4rem;background:var(--canvas)}.flow-step b{color:#9b1c52;font-size:.75rem;letter-spacing:.08em}.flow-step h3{margin-top:2.5rem}.flow-step p{color:var(--muted);font-size:.9rem}.fit-grid{align-items:start;gap:clamp(2rem,8vw,7rem)}.feature-stack{display:grid;gap:.75rem}.feature-stack article{display:grid;grid-template-columns:84px 1fr;gap:1rem;align-items:start;padding:1.25rem 0;border-bottom:1px solid var(--line)}.feature-number{color:#9b1c52;font-size:1.45rem;font-weight:800;letter-spacing:-.05em}.feature-stack p{color:var(--muted);margin:0}@media(max-width:950px){.hero-grid{grid-template-columns:1fr}.product-scene{min-height:480px;transform:none}.workflow-grid{grid-template-columns:1fr 1fr}}@media(max-width:650px){.section-heading{grid-template-columns:1fr;gap:.5rem}.workflow-grid{grid-template-columns:1fr}.product-scene{min-height:450px}.board{grid-template-columns:1fr}.column{min-height:auto}.column:nth-child(n+2){display:none}}
+  .hero { padding:clamp(3rem,7vw,6rem) 0; overflow:hidden; }
+  .hero-shell { position:relative; display:flex; align-items:center; min-height:clamp(580px,55vw,680px); overflow:hidden; border-radius:32px; box-shadow:var(--shadow); }
+  .hero-copy { position:relative; z-index:2; width:min(61%,700px); min-width:0; padding:clamp(2rem,5vw,5rem); }
+  .hero h1 { max-width:14ch; font-size:clamp(2.65rem,6.4vw,5.35rem); overflow-wrap:normal; word-break:normal; hyphens:none; }
+  .hero-copy .lead { max-width:690px; }
+  .hero-note { margin-top:1.3rem; color:var(--muted); font-size:.78rem; font-weight:650; }
+  .section-heading { display:grid; grid-template-columns:1.1fr .7fr; align-items:end; gap:3rem; margin-bottom:2.5rem; }
+  .section-heading p:last-child { color:var(--muted); }
+  .workflow-band { background:var(--soft); border-block:1px solid var(--line); }
+  .workflow-band h2 { max-width:17ch; }
+  .workflow-grid { margin-top:3rem; display:grid; grid-template-columns:repeat(4,1fr); gap:1px; border:1px solid var(--line); border-radius:24px; overflow:hidden; background:var(--line); }
+  .flow-step { padding:2rem 1.4rem; background:var(--canvas); }
+  .flow-step b { color:#9b1c52; font-size:.75rem; letter-spacing:.08em; }
+  .flow-step h3 { margin-top:2.5rem; }
+  .flow-step p { color:var(--muted); font-size:.9rem; }
+  .fit-grid { align-items:start; gap:clamp(2rem,8vw,7rem); }
+  .feature-stack { display:grid; gap:.75rem; }
+  .feature-stack article { display:grid; grid-template-columns:84px 1fr; gap:1rem; align-items:start; padding:1.25rem 0; border-bottom:1px solid var(--line); }
+  .feature-number { color:#9b1c52; font-size:1.45rem; font-weight:800; letter-spacing:-.05em; }
+  .feature-stack p { color:var(--muted); margin:0; }
+  @media(max-width:950px){ .hero-copy { width:min(82%,700px); } .workflow-grid { grid-template-columns:1fr 1fr; } }
+  @media(max-width:650px){
+    .hero-shell { min-height:690px; border-radius:22px; }
+    .hero-copy { width:100%; padding:1.5rem; }
+    .hero h1 { max-width:none; font-size:clamp(2.35rem,11.5vw,3.4rem); }
+    .section-heading { grid-template-columns:1fr; gap:.5rem; }
+    .workflow-grid { grid-template-columns:1fr; }
+  }
 </style>

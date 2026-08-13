@@ -1,5 +1,6 @@
 ---
 import CallToAction from "../../../components/CallToAction.astro";
+import AmbientVideo from "../../../components/AmbientVideo.astro";
 import PageHero from "../../../components/PageHero.astro";
 import PublicLayout from "../../../layouts/PublicLayout.astro";
 ---
@@ -8,6 +9,12 @@ import PublicLayout from "../../../layouts/PublicLayout.astro";
   <PageHero eyebrow="MCP integration" title="One project context your agent can read and maintain." lead="Pulsyr exposes a remote MCP endpoint over HTTP. Create a scoped project token, add the endpoint to your client, and let the agent work through structured tools instead of scraping a dashboard.">
     <div class="actions"><a class="button button-dark" data-analytics-event="cta_docs" href="/docs/primeros-pasos/#connect">Connect a client</a><a class="button button-outline" data-analytics-event="cta_github" href="https://github.com/rlcuevas14/PULSYR/blob/main/docs/MCP.md">Read the protocol guide</a></div>
   </PageHero>
+  <AmbientVideo
+    src="/media/pulsyr-signal.mp4"
+    poster="/media/pulsyr-signal-poster.webp"
+    label="Animated Pulsyr signal representing agent and project context"
+    fallback="Open the Pulsyr MCP signal video"
+  />
   <section class="section container">
     <div class="grid-3">
       <article class="card lavender"><span class="kicker">1 · Scope</span><h2>Create a project token</h2><p>The raw token appears once. Pulsyr stores its hash and binds the credential to a single project with read or write scope.</p></article>
