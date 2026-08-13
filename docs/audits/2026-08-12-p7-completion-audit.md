@@ -45,3 +45,10 @@
 - `Web baseline` sólo leyó DNS/TLS/HTTP y no contiene pasos de publicación.
 - Resolver el hallazgo TLS requiere una ventana de infraestructura autorizada y queda
   fuera de este trabajo por la restricción explícita de no desplegar.
+
+## Estabilidad del gate Lighthouse
+
+Tres ejecuciones sobre artefactos idénticos excedieron TBT sólo en una medición aislada
+y sus reejecuciones aprobaron. Para eliminar esa dependencia de una única muestra sin
+relajar ningún umbral, CI toma tres muestras por ruta y evalúa la mediana de cada score
+y métrica. El artefacto conserva las nueve observaciones y el resumen agregado.

@@ -295,12 +295,14 @@ jobs:
           for item in "home:/" "product:/producto/" "docs:/docs/primeros-pasos/"; do
             name="${item%%:*}"
             route="${item#*:}"
-            npx lighthouse "http://127.0.0.1:4321${route}" \
-              --output=json \
-              --output-path="artifacts/lighthouse/${name}.json" \
-              --only-categories=performance,accessibility,best-practices,seo \
-              --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
-              --quiet
+            for sample in 1 2 3; do
+              npx lighthouse "http://127.0.0.1:4321${route}" \
+                --output=json \
+                --output-path="artifacts/lighthouse/${name}-${sample}.json" \
+                --only-categories=performance,accessibility,best-practices,seo \
+                --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+                --quiet
+            done
           done
           npm run check:lighthouse
       - name: Upload Lighthouse evidence
