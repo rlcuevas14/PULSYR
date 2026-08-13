@@ -75,6 +75,16 @@ jobs:
             echo "Keys present in .env:"
             sed 's/=.*//' .env | sed 's/^/  /'
 
+            # Preserve the exact image already serving production. Without an
+            # explicit IMAGE_TAG, Compose falls back to a potentially stale local
+            # `latest` tag and an env-only restart can silently roll code back.
+            CURRENT_IMAGE=$(docker inspect pulso-app-1 --format '{{.Config.Image}}')
+            case "$CURRENT_IMAGE" in
+              ghcr.io/*/pulsyr:*) export IMAGE_TAG="${CURRENT_IMAGE##*:}" ;;
+              *) echo "FAILED: unexpected running image $CURRENT_IMAGE"; exit 1 ;;
+            esac
+            echo "Recreating app with current image tag $IMAGE_TAG"
+
             # --force-recreate because env_file values are baked in at container
             # creation: without it compose can decide nothing changed and the new
             # settings would silently not apply.
