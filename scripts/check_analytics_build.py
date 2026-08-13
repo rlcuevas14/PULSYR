@@ -5,7 +5,7 @@ from pathlib import Path
 
 SNIPPET = "https://plausible.io/js/script.js"
 BOOTSTRAP = 'src="/analytics.js"'
-REQUIRED_EVENTS = {"cta_app", "cta_github", "cta_docs", "quick_start_complete", "contact"}
+REQUIRED_EVENTS = {"cta_signup", "cta_github", "cta_docs", "quick_start_complete", "contact"}
 
 
 def validate(root: Path, enabled: bool) -> None:
