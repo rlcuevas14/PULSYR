@@ -38,6 +38,16 @@ test("modal traps focus, closes with Escape, and restores the trigger", async ({
   await expect(page.locator("#open")).toBeFocused();
 });
 
+test("typing an incomplete value keeps focus in the field", async ({ page }) => {
+  await loadFixture(page);
+  await page.locator("#email").click();
+  await page.keyboard.type("person");
+
+  await expect(page.locator("#email")).toHaveValue("person");
+  await expect(page.locator("#email")).toBeFocused();
+  await expect(page.locator("[data-form-error-summary]")).toHaveCount(0);
+});
+
 test("forms expose field errors, accessible confirmation, pending state, and double-submit protection", async ({ page }) => {
   await loadFixture(page);
   await page.locator("#sample").evaluate((form: HTMLFormElement) => { form.removeAttribute("data-confirm"); });

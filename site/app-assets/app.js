@@ -84,7 +84,11 @@
       }, true);
       form.addEventListener("input", function (event) {
         var field = event.target;
-        if (!field || !field.checkValidity || !field.checkValidity()) return;
+        // `checkValidity()` emits another `invalid` event when the partially
+        // typed value is invalid. The handler above then focuses the summary,
+        // stealing focus from the field after every keystroke. Read the
+        // ValidityState instead; it reports the same state without side effects.
+        if (!field || !field.validity || !field.validity.valid) return;
         field.removeAttribute("aria-invalid");
         var error = field.id && document.getElementById(field.id + "-error");
         if (error) error.remove();
