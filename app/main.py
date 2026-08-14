@@ -18,6 +18,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from app.config import settings
 from app.logging_config import configure_logging
 from app.observability import capture_exception, init_observability
+from app.request_boundary import RequestBoundaryMiddleware
 from app.request_context import RequestContextMiddleware, request_id_from_scope
 from app.templates_config import templates  # noqa: F401 — re-exported for legacy imports
 from app.web_security import CsrfMiddleware, ResponsePolicyMiddleware
@@ -180,6 +181,7 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> Resp
 def create_app() -> FastAPI:
     from app.accounts import models as _accounts_models  # noqa: F401 — register ORM in Base.metadata
     from app.accounts.router import router as accounts_router
+    from app.auth import models as _auth_models  # noqa: F401 — register ORM in Base.metadata
     from app.auth.router import compat_router as auth_compat_router
     from app.auth.router import router as auth_router
     from app.auth.router import setup_router
@@ -229,7 +231,8 @@ def create_app() -> FastAPI:
         TrustedHostMiddleware,
         allowed_hosts=trusted_hosts,
     )
-    # Added last so request context wraps every other application middleware.
+    app.add_middleware(RequestBoundaryMiddleware)
+    # Added last so correlation wraps every rejection and application middleware.
     app.add_middleware(RequestContextMiddleware)
 
     @app.get("/health/live", include_in_schema=False)

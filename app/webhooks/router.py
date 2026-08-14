@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.rate_limit import limit_client
 from app.config import settings
 from app.database import get_db
 from app.webhooks import connection, service
@@ -16,6 +17,22 @@ logger = logging.getLogger("pulsyr.webhooks")
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 
+async def _limited(request: Request) -> JSONResponse | None:
+    decision = await limit_client(
+        request,
+        action="webhook",
+        limit=settings.webhook_rate_limit_attempts,
+        window_seconds=settings.machine_rate_limit_window_seconds,
+    )
+    if decision.allowed:
+        return None
+    return JSONResponse(
+        {"error": "rate limit exceeded"},
+        status_code=429,
+        headers={"Retry-After": str(decision.retry_after)},
+    )
+
+
 @router.post("/sentry/{token}")
 async def sentry_webhook_tokened(
     token: str, request: Request, db: AsyncSession = Depends(get_db)
@@ -23,6 +40,8 @@ async def sentry_webhook_tokened(
     """Webhook de entrada por cuenta (spec 2026-07-10). El token enruta a la cuenta;
     HMAC solo si la cuenta guardó client_secret (modo firmado). Siempre fast-ack:
     cero llamadas salientes aquí (Sentry desactiva webhooks que hacen timeout)."""
+    if limited := await _limited(request):
+        return limited
     conn = await connection.get_by_token(db, token)
     if conn is None:
         return JSONResponse({"error": "unknown webhook token"}, status_code=404)
@@ -50,6 +69,8 @@ async def sentry_webhook_tokened(
 
 @router.post("/sentry")
 async def sentry_webhook(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+    if limited := await _limited(request):
+        return limited
     if not settings.sentry_client_secret:
         return JSONResponse({"error": "Sentry webhook not configured"}, status_code=503)
     body = await request.body()
@@ -67,6 +88,8 @@ async def sentry_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
 
 @router.post("/github")
 async def github_webhook(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+    if limited := await _limited(request):
+        return limited
     if not settings.github_webhook_secret:
         return JSONResponse({"error": "GitHub webhook not configured"}, status_code=503)
     body = await request.body()

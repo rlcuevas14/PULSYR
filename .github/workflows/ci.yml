@@ -65,6 +65,9 @@ jobs:
       - name: Type check (mypy)
         run: mypy app/ --ignore-missing-imports
 
+      - name: API trust-boundary inventory
+        run: python scripts/export_route_inventory.py --check docs/security/api-route-inventory.json
+
       # CI-2 / DM-06: validates that migrations apply AND revert (round-trip).
       # env.py reads DATABASE_URL (async URL); Alembic's async engine uses it directly.
       # upgrade head → downgrade base → upgrade head: catches broken or non-idempotent

@@ -1,0 +1,1021 @@
+[
+  {
+    "method": "GET",
+    "path": "/",
+    "name": "dashboard",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/account/integrations",
+    "name": "account_integrations",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/account/integrations",
+    "name": "account_integrations_save",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/account/integrations/reattach",
+    "name": "account_integrations_reattach",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/account/integrations/regenerate",
+    "name": "account_integrations_regenerate",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/account/members",
+    "name": "account_members",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/account/members",
+    "name": "account_member_create",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/account/members/grant",
+    "name": "account_member_grant",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/admin",
+    "name": "admin_page",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/admin/accounts",
+    "name": "accounts_admin",
+    "trust_class": "superadmin_session",
+    "dependencies": [
+      "current_user",
+      "require_superadmin"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/admin/accounts",
+    "name": "accounts_create",
+    "trust_class": "superadmin_session",
+    "dependencies": [
+      "current_user",
+      "require_superadmin"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/admin/accounts/{account_id}/active",
+    "name": "accounts_toggle",
+    "trust_class": "superadmin_session",
+    "dependencies": [
+      "current_user",
+      "require_superadmin"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/admin/accounts/{account_id}/subscription",
+    "name": "account_subscription_update",
+    "trust_class": "superadmin_session",
+    "dependencies": [
+      "current_user",
+      "require_superadmin"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/items",
+    "name": "list_items",
+    "trust_class": "session_or_token",
+    "dependencies": [
+      "api_or_session_user"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/items",
+    "name": "create_item",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/items/enrich-pending",
+    "name": "enqueue_pending_enrich",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/items/import/digest",
+    "name": "import_digest",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/items/relationships",
+    "name": "create_relationship_endpoint",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/items/relationships/{source_id}/{target_id}/{relation}",
+    "name": "delete_relationship_endpoint",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/items/search",
+    "name": "search_items",
+    "trust_class": "session_or_token",
+    "dependencies": [
+      "api_or_session_user"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/items/{item_id}",
+    "name": "get_item",
+    "trust_class": "session_or_token",
+    "dependencies": [
+      "api_or_session_user"
+    ]
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/items/{item_id}",
+    "name": "patch_item",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/items/{item_id}/close",
+    "name": "close_item",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/items/{item_id}/comments",
+    "name": "add_comment",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/items/{item_id}/comments/{comment_id}",
+    "name": "get_comment",
+    "trust_class": "session_or_token",
+    "dependencies": [
+      "api_or_session_user"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/items/{item_id}/enrich",
+    "name": "enqueue_enrich",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/items/{item_id}/graph",
+    "name": "item_graph",
+    "trust_class": "session_or_token",
+    "dependencies": [
+      "api_or_session_user"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/items/{item_id}/reopen",
+    "name": "reopen_item_endpoint",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/scopes",
+    "name": "list_scopes",
+    "trust_class": "session_or_token",
+    "dependencies": [
+      "api_or_session_user"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/scopes",
+    "name": "create_scope",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/scopes/{scope_id}",
+    "name": "patch_scope",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/threads",
+    "name": "list_threads",
+    "trust_class": "session_or_token",
+    "dependencies": [
+      "api_or_session_user"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/threads",
+    "name": "create_thread",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/threads/{thread_id}",
+    "name": "get_thread",
+    "trust_class": "session_or_token",
+    "dependencies": [
+      "api_or_session_user"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/threads/{thread_id}/advance",
+    "name": "advance",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/threads/{thread_id}/artifacts",
+    "name": "add_artifact",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/threads/{thread_id}/elaborate-stage",
+    "name": "elaborate_stage",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/threads/{thread_id}/stage",
+    "name": "set_stage",
+    "trust_class": "session_or_write_token",
+    "dependencies": [
+      "api_or_session_user",
+      "require_write"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/archive",
+    "name": "registro_page",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/auth/login",
+    "name": "compat_login_page",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "POST",
+    "path": "/auth/login",
+    "name": "compat_login_submit",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "POST",
+    "path": "/auth/logout",
+    "name": "compat_logout",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/auth/password",
+    "name": "compat_password_page",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "POST",
+    "path": "/auth/password",
+    "name": "compat_password_submit",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/backlog",
+    "name": "backlog",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/callback/{provider}",
+    "name": "oauth_callback",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/health/live",
+    "name": "health_live",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/health/ready",
+    "name": "health_ready",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/hilos",
+    "name": "_redirect",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/hilos/{thread_id}",
+    "name": "_legacy_thread_detail",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/incidentes",
+    "name": "_redirect",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/incidents",
+    "name": "incidentes_page",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/items/{item_id}",
+    "name": "item_detail",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/login",
+    "name": "login_page",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "POST",
+    "path": "/login",
+    "name": "login_submit",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/login/{provider}",
+    "name": "oauth_start",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "POST",
+    "path": "/logout",
+    "name": "logout",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/management",
+    "name": "management_home",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/management/documentos",
+    "name": "documentos_screen",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/management/documentos/{deliverable_id}",
+    "name": "deliverable_detail",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/management/documentos/{deliverable_id}/download",
+    "name": "download_deliverable",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/management/pendientes",
+    "name": "pendientes_screen",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/management/plan",
+    "name": "plan_screen",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/mcp",
+    "name": "mcp_get",
+    "trust_class": "manual_api_token",
+    "dependencies": []
+  },
+  {
+    "method": "POST",
+    "path": "/mcp",
+    "name": "mcp_post",
+    "trust_class": "manual_api_token",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/password",
+    "name": "password_page",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/password",
+    "name": "password_submit",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/prioridad",
+    "name": "_redirect",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/priority",
+    "name": "prioridad_page",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/projects",
+    "name": "projects_list",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/projects/new",
+    "name": "projects_new_page",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/projects/new",
+    "name": "projects_new_submit",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/projects/{slug}/settings",
+    "name": "project_settings",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/projects/{slug}/settings",
+    "name": "project_settings_update",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/projects/{slug}/tokens",
+    "name": "project_token_create",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/projects/{slug}/tokens/{token_id}/revoke",
+    "name": "project_token_revoke",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/registro",
+    "name": "_redirect",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/setup",
+    "name": "setup_page",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "POST",
+    "path": "/setup",
+    "name": "setup_submit",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/signup",
+    "name": "signup_page",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "POST",
+    "path": "/signup",
+    "name": "signup_start",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/threads",
+    "name": "hilos_page",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/threads/{thread_id}",
+    "name": "hilo_detail",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/admin/tokens",
+    "name": "ui_create_token",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/ui/archive/summary",
+    "name": "ui_registro_summary",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/incidents/backfill",
+    "name": "ui_backfill_sentry",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/incidents/{issue_id}/ignore",
+    "name": "ui_ignore_issue",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/incidents/{issue_id}/promote",
+    "name": "ui_promote_issue",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/incidents/{issue_id}/unignore",
+    "name": "ui_unignore_issue",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/items/create",
+    "name": "ui_create_item",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/items/{item_id}/board-move",
+    "name": "ui_board_move",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/items/{item_id}/close",
+    "name": "ui_close",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/ui/items/{item_id}/close-modal",
+    "name": "ui_close_modal",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/items/{item_id}/comments",
+    "name": "ui_add_comment",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/items/{item_id}/field",
+    "name": "ui_set_field",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "DELETE",
+    "path": "/ui/items/{item_id}/relationships",
+    "name": "ui_delete_relationship",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/items/{item_id}/relationships",
+    "name": "ui_create_relationship",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/items/{item_id}/reopen",
+    "name": "ui_reopen",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/items/{item_id}/transition",
+    "name": "ui_transition",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/ui/lang/{code}",
+    "name": "ui_set_lang",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "POST",
+    "path": "/ui/management/compartments",
+    "name": "ui_create_compartment",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/management/documentos/upload",
+    "name": "ui_upload_deliverable",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/management/documentos/{deliverable_id}/rollback",
+    "name": "ui_rollback_deliverable",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/management/pendientes",
+    "name": "ui_upsert_pending",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/management/pendientes/{pending_id}/complete",
+    "name": "ui_complete_pending",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/management/pendientes/{pending_id}/delete",
+    "name": "ui_delete_pending",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/project/switch",
+    "name": "switch_project",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/threads/create",
+    "name": "ui_create_hilo",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/threads/{thread_id}/advance",
+    "name": "ui_advance_hilo",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/threads/{thread_id}/elaborate",
+    "name": "ui_elaborate_hilo",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/threads/{thread_id}/stage",
+    "name": "ui_set_hilo_stage",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/webhooks/github",
+    "name": "github_webhook",
+    "trust_class": "webhook_signature",
+    "dependencies": []
+  },
+  {
+    "method": "POST",
+    "path": "/webhooks/sentry",
+    "name": "sentry_webhook",
+    "trust_class": "webhook_signature",
+    "dependencies": []
+  },
+  {
+    "method": "POST",
+    "path": "/webhooks/sentry/{token}",
+    "name": "sentry_webhook_tokened",
+    "trust_class": "webhook_signature",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
+    "path": "/welcome",
+    "name": "welcome_page",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/welcome",
+    "name": "welcome_submit",
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
+  }
+]

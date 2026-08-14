@@ -1,4 +1,6 @@
-from pydantic import Field, model_validator
+import ipaddress
+
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _INSECURE_SECRET = "dev-secret-change-in-production"
@@ -48,6 +50,19 @@ class Settings(BaseSettings):
     free_max_storage_mb: int = Field(default=25, ge=1)
     oauth_rate_limit_attempts: int = Field(default=20, ge=1)
     oauth_rate_limit_window_seconds: int = Field(default=600, ge=60)
+    password_rate_limit_attempts: int = Field(default=10, ge=1, le=100)
+    password_ip_rate_limit_attempts: int = Field(default=100, ge=1, le=1000)
+    webhook_rate_limit_attempts: int = Field(default=600, ge=1, le=10000)
+    mcp_rate_limit_attempts: int = Field(default=600, ge=1, le=10000)
+    machine_rate_limit_window_seconds: int = Field(default=60, ge=10, le=3600)
+    rate_limit_retention_seconds: int = Field(default=86400, ge=3600, le=604800)
+    # Comma-separated CIDRs for reverse proxies directly connected to Uvicorn.
+    # Forwarded address headers are ignored unless the ASGI peer is in this list.
+    trusted_proxy_cidrs: str = ""
+    request_max_body_bytes: int = Field(default=2 * 1024 * 1024, ge=1024, le=20 * 1024 * 1024)
+    webhook_max_body_bytes: int = Field(default=1024 * 1024, ge=1024, le=10 * 1024 * 1024)
+    mcp_max_body_bytes: int = Field(default=1024 * 1024, ge=1024, le=10 * 1024 * 1024)
+    upload_max_body_bytes: int = Field(default=11 * 1024 * 1024, ge=1024, le=20 * 1024 * 1024)
     terms_version: str = "2026-08-12"
 
     # Global fallbacks for webhook secrets (move to per-project settings in a future version)
@@ -64,6 +79,15 @@ class Settings(BaseSettings):
 
     job_poll_interval_seconds: int = 10
     job_lease_seconds: int = 300
+
+    @field_validator("trusted_proxy_cidrs")
+    @classmethod
+    def _validate_trusted_proxy_cidrs(cls, value: str) -> str:
+        for raw_cidr in value.split(","):
+            cidr = raw_cidr.strip()
+            if cidr:
+                ipaddress.ip_network(cidr, strict=False)
+        return value
 
     @model_validator(mode="after")
     def _fail_fast_on_insecure_secret(self) -> "Settings":

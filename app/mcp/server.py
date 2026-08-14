@@ -18,7 +18,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import ApiToken
+from app.auth.rate_limit import limit_client
 from app.auth.service import verify_api_token
+from app.config import settings
 from app.database import get_db
 from app.enums import (
     DELIVERABLE_STATUSES,
@@ -520,6 +522,18 @@ async def _resource_read(rpc_id: Any, params: dict, token: ApiToken, db: AsyncSe
 def mount_mcp(app: FastAPI) -> None:
     @app.post("/mcp")
     async def mcp_post(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+        decision = await limit_client(
+            request,
+            action="mcp",
+            limit=settings.mcp_rate_limit_attempts,
+            window_seconds=settings.machine_rate_limit_window_seconds,
+        )
+        if not decision.allowed:
+            return JSONResponse(
+                {"error": "rate limit exceeded"},
+                status_code=429,
+                headers={"Retry-After": str(decision.retry_after)},
+            )
         auth = request.headers.get("authorization", "")
         if not auth.lower().startswith("bearer "):
             return JSONResponse({"error": "Bearer token required"}, status_code=401)

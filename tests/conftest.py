@@ -8,6 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
+from app import database
 from app.database import Base, get_db
 from app.main import create_app
 from app.web_security import CSRF_COOKIE
@@ -96,6 +97,8 @@ async def db(test_engine) -> AsyncGenerator[AsyncSession, None]:
 @pytest_asyncio.fixture
 async def client(test_engine) -> AsyncGenerator[AsyncClient, None]:
     TestSession = async_sessionmaker(test_engine, expire_on_commit=False)
+    original_session_factory = database.SessionFactory
+    database.SessionFactory = TestSession
 
     async def override_get_db():
         async with TestSession() as session:
@@ -104,7 +107,13 @@ async def client(test_engine) -> AsyncGenerator[AsyncClient, None]:
     app = create_app()
     app.dependency_overrides[get_db] = override_get_db
 
-    transport = ASGITransport(app=app)
-    async with CsrfAsyncClient(transport=transport, base_url="http://test") as ac:
-        ac.app = app  # expose app for test introspection
-        yield ac
+    try:
+        async with TestSession() as limiter_db:
+            await limiter_db.execute(text("TRUNCATE rate_limit_buckets"))
+            await limiter_db.commit()
+        transport = ASGITransport(app=app)
+        async with CsrfAsyncClient(transport=transport, base_url="http://test") as ac:
+            ac.app = app  # expose app for test introspection
+            yield ac
+    finally:
+        database.SessionFactory = original_session_factory
