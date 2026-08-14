@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     # DATABASE_URL is the authoritative variable. docker-compose builds it from DB_PASSWORD;
     # if both are set, DATABASE_URL wins.
     database_url: str = "postgresql+asyncpg://pulso:pulso@db/pulso"
+    db_pool_size: int = Field(default=10, ge=1, le=100)
+    db_max_overflow: int = Field(default=10, ge=0, le=100)
+    db_pool_timeout_seconds: float = Field(default=10.0, gt=0.0, le=60.0)
+    db_pool_recycle_seconds: int = Field(default=1800, ge=60, le=86400)
+    db_statement_timeout_seconds: float = Field(default=30.0, gt=0.0, le=300.0)
     secret_key: str = _INSECURE_SECRET
     debug: bool = False
     deployment_environment: str = "development"

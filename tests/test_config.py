@@ -4,6 +4,7 @@
 production if the key is left at a placeholder — these tests hold that promise.
 """
 import pytest
+from pydantic import ValidationError
 
 from app.config import Settings
 
@@ -31,3 +32,18 @@ def test_production_accepts_strong_secret():
 def test_debug_allows_placeholder_secret():
     s = Settings(secret_key="change-me", debug=True)
     assert s.debug is True
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"db_pool_size": 0},
+        {"db_max_overflow": -1},
+        {"db_pool_timeout_seconds": 0},
+        {"db_pool_recycle_seconds": 59},
+        {"db_statement_timeout_seconds": 301},
+    ],
+)
+def test_database_resource_settings_are_bounded(overrides):
+    with pytest.raises(ValidationError):
+        Settings(debug=True, secret_key="test-secret", **overrides)
