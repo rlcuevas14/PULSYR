@@ -7,6 +7,7 @@ from starlette.datastructures import MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.logging_config import request_id_context
+from app.metrics import request_finished, request_started
 
 logger = logging.getLogger("pulsyr.http")
 
@@ -49,6 +50,7 @@ class RequestContextMiddleware:
         context_token = request_id_context.set(request_id)
         started = time.perf_counter()
         status_code = 500
+        request_started()
 
         async def send_with_request_id(message: Message) -> None:
             nonlocal status_code
@@ -62,6 +64,7 @@ class RequestContextMiddleware:
         finally:
             duration_ms = round((time.perf_counter() - started) * 1000, 2)
             route = getattr(scope.get("route"), "path", "unmatched")
+            request_finished(scope["method"], route, status_code, duration_ms / 1000)
             level = (
                 logging.ERROR
                 if status_code >= 500

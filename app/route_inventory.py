@@ -30,6 +30,8 @@ def _dependency_names(dependant: Any) -> set[str]:
 
 
 def classify_route(path: str, dependencies: set[str]) -> str:
+    if path == "/metrics":
+        return "metrics_token"
     if path.startswith("/webhooks/"):
         return "webhook_signature"
     if path == "/mcp":

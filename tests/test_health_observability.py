@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -113,9 +114,45 @@ def test_capture_exception_adds_only_explicit_tags(monkeypatch):
     capture.assert_called_once_with(error)
 
 
+@pytest.mark.asyncio
+async def test_lifespan_owns_worker_maintenance_and_graceful_cleanup(monkeypatch):
+    from app import maintenance
+    from app.jobs import worker
+
+    started: set[str] = set()
+    stopped: set[str] = set()
+    wait_forever = asyncio.Event()
+
+    async def service(name: str):
+        started.add(name)
+        try:
+            await wait_forever.wait()
+        finally:
+            stopped.add(name)
+
+    fake_engine = Mock()
+    fake_engine.dispose = AsyncMock()
+    monkeypatch.setattr(database, "engine", fake_engine)
+    monkeypatch.setattr(worker, "worker_loop", lambda: service("worker"))
+    monkeypatch.setattr(maintenance, "maintenance_loop", lambda: service("maintenance"))
+
+    async with main.lifespan(Mock()):
+        await asyncio.sleep(0)
+        assert started == {"worker", "maintenance"}
+
+    assert stopped == {"worker", "maintenance"}
+    fake_engine.dispose.assert_awaited_once()
+
+
 @pytest.mark.parametrize(
     "overrides",
-    [{"sentry_traces_sample_rate": 1.1}, {"readiness_timeout_seconds": 0}],
+    [
+        {"sentry_traces_sample_rate": 1.1},
+        {"readiness_timeout_seconds": 0},
+        {"metrics_bearer_token": "short"},
+        {"metrics_bearer_token": f" {'m' * 32}"},
+        {"rate_limit_prune_interval_seconds": 59},
+    ],
 )
 def test_observability_numeric_settings_are_bounded(overrides):
     with pytest.raises(ValidationError):

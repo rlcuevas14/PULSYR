@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     mcp_rate_limit_attempts: int = Field(default=600, ge=1, le=10000)
     machine_rate_limit_window_seconds: int = Field(default=60, ge=10, le=3600)
     rate_limit_retention_seconds: int = Field(default=86400, ge=3600, le=604800)
+    rate_limit_prune_interval_seconds: int = Field(default=3600, ge=60, le=86400)
     # Comma-separated CIDRs for reverse proxies directly connected to Uvicorn.
     # Forwarded address headers are ignored unless the ASGI peer is in this list.
     trusted_proxy_cidrs: str = ""
@@ -76,6 +77,8 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
     sentry_traces_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     readiness_timeout_seconds: float = Field(default=2.0, gt=0.0, le=30.0)
+    # /metrics is disabled unless this independent bearer token is configured.
+    metrics_bearer_token: str = ""
 
     job_poll_interval_seconds: int = Field(default=10, ge=1, le=300)
     job_lease_seconds: int = Field(default=300, ge=30, le=3600)
@@ -91,6 +94,15 @@ class Settings(BaseSettings):
             cidr = raw_cidr.strip()
             if cidr:
                 ipaddress.ip_network(cidr, strict=False)
+        return value
+
+    @field_validator("metrics_bearer_token")
+    @classmethod
+    def _validate_metrics_token(cls, value: str) -> str:
+        if value != value.strip():
+            raise ValueError("METRICS_BEARER_TOKEN must not have surrounding whitespace")
+        if value and len(value) < _MIN_SECRET_LENGTH:
+            raise ValueError("METRICS_BEARER_TOKEN must be at least 32 characters")
         return value
 
     @model_validator(mode="after")

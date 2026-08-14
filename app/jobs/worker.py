@@ -9,6 +9,7 @@ from app.config import settings
 from app.database import SessionFactory
 from app.jobs.handlers import HANDLERS
 from app.jobs.models import AgentRun
+from app.metrics import job_finished
 from app.observability import capture_exception
 
 
@@ -179,6 +180,7 @@ async def process_one(db: AsyncSession) -> bool:
             cancelled_run.status = "pending"
             cancelled_run.leased_until = None
             await db.commit()
+        job_finished(run_kind, "requeued")
         raise
     except Exception as exc:
         # A database exception may have invalidated the handler transaction. Roll
@@ -192,6 +194,7 @@ async def process_one(db: AsyncSession) -> bool:
             failed_run.leased_until = None
             await db.commit()
         capture_exception(exc, component="job-worker", job_kind=run_kind, job_id=str(run_id))
+        job_finished(run_kind, "error")
         return True
 
     run.status = "ok"
@@ -199,6 +202,7 @@ async def process_one(db: AsyncSession) -> bool:
     run.finished_at = datetime.now(timezone.utc)
     run.leased_until = None
     await db.commit()
+    job_finished(run_kind, "ok")
 
     return True
 

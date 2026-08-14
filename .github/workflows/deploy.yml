@@ -57,6 +57,9 @@ jobs:
     if: vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Deploy to VM
         uses: appleboy/ssh-action@v1
@@ -68,7 +71,7 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           envs: GHCR_TOKEN
           script: |
-            set -e
+            set -Eeuo pipefail
             cd /opt/pulso
             # Self-healing VM state: force GITHUB_OWNER to the deploying repo's owner
             # (the image is pushed to that namespace) and sync the compose file from
@@ -81,11 +84,54 @@ jobs:
             curl -fsSL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/docker-compose.yml" -o docker-compose.yml
             echo "VM config: GITHUB_OWNER=$(grep '^GITHUB_OWNER=' .env | cut -d= -f2), compose synced from ${{ github.sha }}"
             echo "$GHCR_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            export IMAGE_TAG="${{ github.sha }}"
+            candidate_image="ghcr.io/${{ github.repository }}:${{ github.sha }}"
+            candidate_image="${candidate_image,,}"
+            previous_container="$(docker compose --env-file .env ps -q app || true)"
+            previous_image=""
+            if [ -n "$previous_container" ]; then
+              previous_image="$(docker inspect --format '{{.Config.Image}}' "$previous_container")"
+            elif [ -f .last-successful-image ]; then
+              previous_image="$(tr -d '\r\n' < .last-successful-image)"
+            fi
+            export PULSYR_IMAGE="$candidate_image"
             docker compose --env-file .env pull app
             docker compose --env-file .env up -d db
-            until docker compose --env-file .env exec db pg_isready -U pulso; do sleep 2; done
+            for attempt in $(seq 1 30); do
+              docker compose --env-file .env exec -T db pg_isready -U pulso && break
+              [ "$attempt" -eq 30 ] && exit 1
+              sleep 2
+            done
             # Migrate with the new image before it receives production traffic.
             docker compose --env-file .env run --rm --no-deps app alembic upgrade head
-            docker compose --env-file .env up -d app
+            docker compose --env-file .env up -d --no-deps app
+            healthy=false
+            for attempt in $(seq 1 30); do
+              if docker compose --env-file .env exec -T app python -c \
+                "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"; then
+                healthy=true
+                break
+              fi
+              sleep 2
+            done
+            if [ "$healthy" != true ]; then
+              echo "Candidate failed readiness; restoring previous application image"
+              if [ -z "$previous_image" ]; then
+                echo "No previous image is available for automatic rollback"
+                exit 1
+              fi
+              export PULSYR_IMAGE="$previous_image"
+              docker compose --env-file .env up -d --no-deps app
+              rollback_healthy=false
+              for attempt in $(seq 1 30); do
+                if docker compose --env-file .env exec -T app python -c \
+                  "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"; then
+                  rollback_healthy=true
+                  break
+                fi
+                sleep 2
+              done
+              [ "$rollback_healthy" = true ] || echo "CRITICAL: rollback image also failed readiness"
+              exit 1
+            fi
+            printf '%s\n' "$candidate_image" > .last-successful-image
             echo "Deploy OK: ${{ github.sha }}"
