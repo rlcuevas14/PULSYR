@@ -30,8 +30,8 @@ changed by this repository-only work.
 3. Data efficiency and scale: PR #33, merged as `0d425f8`; PostgreSQL benchmark
    reduced the representative impact query from 33.55 ms / 20,001 rows to
    0.33 ms / 50 rows.
-4. Resilience and operations: this change; final PR/check evidence is recorded after
-   CI completion.
+4. Resilience and operations: PR #34; its GitHub checks are the final repository gate
+   before merge.
 
 ## Automated failure evidence
 
