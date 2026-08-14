@@ -2,6 +2,7 @@
 import uuid
 
 import pytest
+from sqlalchemy import select
 
 from app.items import service as isvc
 from app.items.models import Item
@@ -171,6 +172,26 @@ async def test_list_items_orders_and_filters(db):
     filt = await isvc.list_items(db, project_id=proj.id, statuses=["backlog"], type="feature",
                                  stale_risk=False, limit=5, offset=0)
     assert isinstance(filt, list)
+
+
+@pytest.mark.asyncio
+async def test_list_items_orders_before_pagination(db):
+    """The first page contains the global winner, not the first inserted row."""
+    from app.items.models import Item
+
+    proj, _ = await _project(db)
+    scope = (await db.execute(
+        select(Scope).where(Scope.project_id == proj.id)
+    )).scalars().first()
+    assert scope is not None
+    db.add_all([
+        Item(project_id=proj.id, scope_id=scope.id, title="low", type="feature", impact_ai=1),
+        Item(project_id=proj.id, scope_id=scope.id, title="high", type="feature", impact_ai=5),
+    ])
+    await db.flush()
+
+    first = await isvc.list_items(db, project_id=proj.id, order="impact", limit=1)
+    assert [item.title for item in first] == ["high"]
 
 
 # ---------- job handlers ----------

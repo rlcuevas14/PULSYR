@@ -16,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.items import service
 from app.items.models import Item, ItemEvent
-from app.jobs.models import AgentRun
 from app.scopes.service import resolve_scope
 from app.webhooks.connection import DEFAULT_BASE_URL, effective_base_url, outbound
 from app.webhooks.models import SentryIssue
@@ -133,8 +132,22 @@ async def ingest_sentry(
         created = True
         await db.flush()
         # Enqueue AI triage (pre-classifies noise; runs when ANTHROPIC_API_KEY is set).
-        db.add(AgentRun(kind="triage-sentry", ref_type="sentry_issue",
-                        ref_id=issue.id, status="pending", project_id=issue.project_id))
+        from app.jobs.worker import JobQueueFull, enqueue_job
+
+        try:
+            await enqueue_job(
+                db,
+                kind="triage-sentry",
+                ref_type="sentry_issue",
+                ref_id=issue.id,
+                project_id=issue.project_id,
+                commit=False,
+            )
+            triage_queued = True
+        except JobQueueFull:
+            # The webhook remains fast and durable under pressure. The incident is
+            # preserved for manual triage instead of growing the async queue.
+            triage_queued = False
     else:
         issue.events_count += 1
         issue.last_seen = last_seen
@@ -144,10 +157,12 @@ async def ingest_sentry(
         if issue.account_id is None and account_id is not None:
             issue.account_id = account_id
         created = False
+        triage_queued = False
     await db.flush()
 
     return {"sentry_issue_id": sentry_id, "created": created,
-            "events_count": issue.events_count, "triage": issue.triage, "status": issue.status}
+            "events_count": issue.events_count, "triage": issue.triage,
+            "triage_queued": triage_queued, "status": issue.status}
 
 
 async def promote_issue(

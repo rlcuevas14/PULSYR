@@ -77,8 +77,12 @@ class Settings(BaseSettings):
     sentry_traces_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     readiness_timeout_seconds: float = Field(default=2.0, gt=0.0, le=30.0)
 
-    job_poll_interval_seconds: int = 10
-    job_lease_seconds: int = 300
+    job_poll_interval_seconds: int = Field(default=10, ge=1, le=300)
+    job_lease_seconds: int = Field(default=300, ge=30, le=3600)
+    # Each active job owns one database session. Keep this inside the aggregate
+    # connection budget across every web replica and worker process.
+    job_concurrency: int = Field(default=2, ge=1, le=16)
+    job_queue_max_active: int = Field(default=1000, ge=1, le=100000)
 
     @field_validator("trusted_proxy_cidrs")
     @classmethod

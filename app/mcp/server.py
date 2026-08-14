@@ -217,7 +217,7 @@ TOOLS: dict[str, Tool] = {
     "pulsyr_thread_list": Tool(
         "pulsyr_thread_list", "List Threads (optional filter by stage and area).",
         _scope_obj({"stage": _enum(THREAD_STAGES, "filter by thread stage"),
-                    "area": _STR}, []),
+                    "area": _STR, "limit": _INT}, []),
         tools.pulsyr_thread_list, write=False,
     ),
     "pulsyr_thread": Tool(

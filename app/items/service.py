@@ -19,6 +19,7 @@ from app.scopes.models import Scope
 
 # Human priority rank for the "priority" ordering (p0 first, no priority last).
 _PRIORITY_RANK: dict[str | None, int] = {"p0": 0, "p1": 1, "p2": 2, "p3": 3, None: 9}
+_TOPOLOGICAL_CANDIDATE_LIMIT = 1000
 
 
 class TransitionError(ValueError):
@@ -233,10 +234,12 @@ async def list_items(
         order: "impact" | "priority" | "topological" | "recent".
         quickwins: if True, only high-impact (>=4), low-effort (XS/S) items.
         stale_risk: filter by the staleness-risk flag.
-        limit / offset: pagination. limit=None fetches the whole filtered set.
+        limit / offset: pagination. limit=None fetches the whole filtered set,
+            except topological ordering, which always uses the candidate ceiling.
 
-    Ordering is applied in memory over the fetched set (including topological,
-    which needs the graph). Returns the ordered list of Items.
+    Common orderings execute in PostgreSQL before pagination. Topological order
+    needs the relationship graph, so it is computed over a bounded candidate set
+    and pagination is applied only after that ordering.
     """
     scope_id = await _resolve_scope_id(db, scope)
     # If a nonexistent scope was requested by name, the result is empty (not "all").
@@ -248,11 +251,33 @@ async def list_items(
         project_id=project_id, scope_id=scope_id, statuses=statuses, type=type,
         stale_risk=stale_risk, quickwins=quickwins,
     )
+    canonical_order = {
+        "impacto": "impact",
+        "prioridad": "priority",
+        "topologico": "topological",
+        "reciente": "recent",
+    }.get(order, order)
+
+    if canonical_order == "topological":
+        q = q.order_by(Item.created_at.desc(), Item.id).limit(_TOPOLOGICAL_CANDIDATE_LIMIT)
+        items = list((await db.execute(q)).scalars().all())
+        ordered = _order_items(items, canonical_order, await _topo_order_ids(db, items))
+        end = None if limit is None else offset + limit
+        return ordered[offset:end]
+
+    if canonical_order == "priority":
+        q = q.order_by(
+            Item.priority.asc().nullslast(), Item.impact_ai.desc().nullslast(), Item.id
+        )
+    elif canonical_order == "impact":
+        q = q.order_by(
+            Item.impact_ai.desc().nullslast(), Item.effort_ai.asc().nullslast(), Item.id
+        )
+    else:
+        q = q.order_by(Item.created_at.desc(), Item.id)
+
     if offset:
         q = q.offset(offset)
     if limit is not None:
         q = q.limit(limit)
-
-    items = list((await db.execute(q)).scalars().all())
-    topo_rank = await _topo_order_ids(db, items) if order == "topological" else None
-    return _order_items(items, order, topo_rank)
+    return list((await db.execute(q)).scalars().all())

@@ -230,17 +230,14 @@ async def pulsyr_context(db: AsyncSession, token: ApiToken, args: dict) -> dict:
 async def pulsyr_search(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
     pid = _pid(token)
     q = args["q"]
-    limit = int(args.get("limit", 10))
+    limit = min(max(int(args.get("limit", 10)), 1), 100)
     area_name = (args.get("area") or "").strip() or None
     tipo = (args.get("type") or "").strip() or None
 
     fetch = limit * 4 if (area_name or tipo) else limit
-    rows = await search_items(db, q, limit=max(fetch, limit), with_scope=True)
-
-    # Project filter: only rows whose scope belongs to this project
-    if pid:
-        scope_ids = set((await _scope_map(db, pid)).keys())
-        rows = [r for r in rows if r.get("scope_id") in scope_ids]
+    rows = await search_items(
+        db, q, limit=max(fetch, limit), with_scope=True, project_id=pid
+    )
     if area_name:
         rows = [r for r in rows if (r.get("scope") or "").lower() == area_name.lower()]
     if tipo:
@@ -266,7 +263,7 @@ async def pulsyr_list(db: AsyncSession, token: ApiToken, args: dict) -> list[dic
         type=(args.get("type") or None),
         order=args.get("order", "impact"),
         quickwins=bool(args.get("quickwins")),
-        limit=int(args.get("limit", 20)),
+        limit=min(max(int(args.get("limit", 20)), 1), 200),
     )
     smap = await _scope_map(db, pid)
     return [_item_brief(i, smap) for i in items]
@@ -284,6 +281,7 @@ async def pulsyr_areas(db: AsyncSession, token: ApiToken, args: dict) -> list[di
         WHERE s.project_id = :pid AND s.archived = false
         GROUP BY s.id, s.name, s.description
         ORDER BY open_count DESC, s.name
+        LIMIT 200
     """), {"pid": pid})).mappings().all()
     return [
         {"name": r["name"], "description": r["description"],
@@ -476,7 +474,10 @@ async def pulsyr_thread_advance(db: AsyncSession, token: ApiToken, args: dict) -
 async def pulsyr_thread_list(db: AsyncSession, token: ApiToken, args: dict) -> list[dict]:
     from app.threads import service as tservice
     pid = _pid(token)
-    threads = await tservice.list_threads(db, args.get("stage"), args.get("area"), pid)
+    limit = min(max(int(args.get("limit", 50)), 1), 200)
+    threads = await tservice.list_threads(
+        db, args.get("stage"), args.get("area"), pid, limit=limit
+    )
     return [_thread_brief(t) for t in threads]
 
 

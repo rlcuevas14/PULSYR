@@ -129,9 +129,12 @@ async def list_items(
     status: str | None = Query(None),
     type: str | None = Query(None),
     stale_risk: bool | None = Query(None),
-    order: str = Query("reciente"),
+    order: Literal[
+        "impact", "priority", "topological", "recent",
+        "impacto", "prioridad", "topologico", "reciente",
+    ] = Query("recent"),
     limit: int = Query(_LIST_DEFAULT_LIMIT, ge=1, le=_LIST_MAX_LIMIT),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=10_000),
     db: AsyncSession = Depends(get_db),
     _auth=Depends(api_or_session_user),
     pid: uuid.UUID = Depends(current_project_id),
@@ -213,7 +216,7 @@ _SEARCH_MAX_LIMIT = 200
 
 @router.get("/search")
 async def search_items(
-    q: str = Query(..., min_length=1),
+    q: str = Query(..., min_length=1, max_length=500),
     limit: int = Query(50, ge=1, le=_SEARCH_MAX_LIMIT),
     db: AsyncSession = Depends(get_db),
     _auth=Depends(api_or_session_user),
@@ -490,23 +493,26 @@ async def enqueue_enrich(
     _=Depends(require_write),
     pid: uuid.UUID = Depends(current_project_id),
 ):
-    from app.jobs.worker import enqueue_job
+    from app.jobs.worker import JobQueueFull, enqueue_job
 
     _require_item(await db.get(Item, item_id), pid)
 
-    run = await enqueue_job(db, kind="enrich", ref_type="item", ref_id=item_id, project_id=pid)
+    try:
+        run = await enqueue_job(db, kind="enrich", ref_type="item", ref_id=item_id, project_id=pid)
+    except JobQueueFull as exc:
+        raise HTTPException(status_code=503, detail=str(exc), headers={"Retry-After": "30"}) from exc
     return {"run_id": str(run.id), "status": "queued"}
 
 
 @router.post("/enrich-pending", status_code=202)
 async def enqueue_pending_enrich(
-    limit: int = Query(200),
+    limit: int = Query(200, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(require_owner),
     pid: uuid.UUID = Depends(current_project_id),
 ):
     """Encola enriquecimiento para todos los ítems abiertos sin impacto estimado (owner)."""
-    from app.jobs.worker import enqueue_job
+    from app.jobs.worker import enqueue_jobs
 
     rows = await db.execute(
         select(Item.id).where(
@@ -516,6 +522,11 @@ async def enqueue_pending_enrich(
         ).limit(limit)
     )
     ids = [r[0] for r in rows]
-    for item_id in ids:
-        await enqueue_job(db, kind="enrich", ref_type="item", ref_id=item_id, project_id=pid)
-    return {"queued": len(ids)}
+    queued, already_active, capacity_reached = await enqueue_jobs(
+        db, kind="enrich", ref_type="item", ref_ids=ids, project_id=pid
+    )
+    return {
+        "queued": queued,
+        "already_active": already_active,
+        "capacity_reached": capacity_reached,
+    }
