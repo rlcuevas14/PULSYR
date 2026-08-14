@@ -814,17 +814,20 @@ async def hilos_page(
     from app.threads.service import list_threads
 
     pid = await _project_id(db, user, request)
-    threads = await list_threads(db, scope_name=scope, project_id=pid)
+    threads = await list_threads(db, scope_name=scope, project_id=pid, limit=500)
     by_stage: dict[str, list] = {s: [] for s in THREAD_STAGES}
     for t in threads:
         by_stage.setdefault(t.stage, []).append(t)
     # count artifacts and items per thread (two grouped queries, no N+1)
     art_rows = (await db.execute(text(
-        "SELECT thread_id, count(*) AS n FROM thread_artifacts GROUP BY thread_id"
-    ))).mappings().all()
+        "SELECT ta.thread_id, count(*) AS n FROM thread_artifacts ta "
+        "JOIN threads t ON t.id = ta.thread_id "
+        "WHERE t.project_id = :pid GROUP BY ta.thread_id"
+    ), {"pid": pid})).mappings().all()
     item_rows = (await db.execute(text(
-        "SELECT thread_id, count(*) AS n FROM items WHERE thread_id IS NOT NULL GROUP BY thread_id"
-    ))).mappings().all()
+        "SELECT thread_id, count(*) AS n FROM items "
+        "WHERE project_id = :pid AND thread_id IS NOT NULL GROUP BY thread_id"
+    ), {"pid": pid})).mappings().all()
     art_map = {str(r["thread_id"]): r["n"] for r in art_rows}
     item_map = {str(r["thread_id"]): r["n"] for r in item_rows}
     counts = {

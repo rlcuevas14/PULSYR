@@ -15,6 +15,8 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+_MAX_SEARCH_RESULTS = 200
+
 
 async def search_items(
     db: AsyncSession,
@@ -55,7 +57,7 @@ async def search_items(
             ORDER BY rank DESC, id
             LIMIT :limit
         """
-    params: dict[str, Any] = {"q": q, "limit": int(limit)}
+    params: dict[str, Any] = {"q": q, "limit": min(max(int(limit), 1), _MAX_SEARCH_RESULTS)}
     if project_id is not None:
         params["pid"] = project_id
     rows = (await db.execute(text(sql), params)).mappings().all()

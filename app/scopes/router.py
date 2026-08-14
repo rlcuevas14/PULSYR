@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -43,12 +43,16 @@ class ScopeOut(BaseModel):
 
 @router.get("", response_model=list[ScopeOut])
 async def list_scopes(
+    limit: int = Query(100, ge=1, le=200),
+    offset: int = Query(0, ge=0, le=10_000),
     db: AsyncSession = Depends(get_db),
     _auth=Depends(api_or_session_user),
     pid: uuid.UUID = Depends(current_project_id),
 ):
     result = await db.execute(
-        select(Scope).where(Scope.project_id == pid).order_by(Scope.display_order, Scope.name)
+        select(Scope).where(Scope.project_id == pid)
+        .order_by(Scope.display_order, Scope.name, Scope.id)
+        .offset(offset).limit(limit)
     )
     return result.scalars().all()
 

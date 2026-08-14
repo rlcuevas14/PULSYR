@@ -65,11 +65,15 @@ async def create_thread(
 async def list_threads(
     stage: str | None = Query(None),
     scope: str | None = Query(None),
+    limit: int = Query(100, ge=1, le=200),
+    offset: int = Query(0, ge=0, le=10_000),
     db: AsyncSession = Depends(get_db),
     _auth=Depends(api_or_session_user),
     pid: uuid.UUID = Depends(current_project_id),
 ):
-    threads = await service.list_threads(db, stage, scope, project_id=pid)
+    threads = await service.list_threads(
+        db, stage, scope, project_id=pid, limit=limit, offset=offset
+    )
     return [_thread_out(t) for t in threads]
 
 

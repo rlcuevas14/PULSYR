@@ -106,6 +106,8 @@ async def list_threads(
     stage: str | None = None,
     scope_name: str | None = None,
     project_id: uuid.UUID | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ) -> list[Thread]:
     q = select(Thread)
     if project_id is not None:
@@ -113,12 +115,14 @@ async def list_threads(
     if stage:
         q = q.where(Thread.stage == stage)
     if scope_name:
-        scope = (await db.execute(
-            select(Scope).where(func.lower(Scope.name) == scope_name.lower())
-        )).scalar_one_or_none()
+        scope_query = select(Scope).where(func.lower(Scope.name) == scope_name.lower())
+        if project_id is not None:
+            scope_query = scope_query.where(Scope.project_id == project_id)
+        scope = (await db.execute(scope_query)).scalar_one_or_none()
         if scope:
             q = q.where(Thread.scope_id == scope.id)
-    return list((await db.execute(q.order_by(Thread.updated_at.desc()))).scalars().all())
+    q = q.order_by(Thread.updated_at.desc(), Thread.id).offset(offset).limit(limit)
+    return list((await db.execute(q)).scalars().all())
 
 
 async def elaborate_next_stage(db: AsyncSession, thread: Thread) -> dict:

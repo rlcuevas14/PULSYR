@@ -1,7 +1,9 @@
 import asyncio
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 
@@ -71,3 +73,117 @@ async def test_process_one_returns_false_when_queue_empty(db: AsyncSession):
 
     processed = await process_one(db)
     assert processed is False
+
+
+@pytest.mark.asyncio
+async def test_enqueue_is_idempotent_for_active_reference(db: AsyncSession):
+    from app.jobs.models import AgentRun
+    from app.jobs.worker import enqueue_job
+
+    ref_id = uuid.uuid4()
+    first = await enqueue_job(db, "enrich", "item", ref_id)
+    second = await enqueue_job(db, "enrich", "item", ref_id)
+
+    assert second.id == first.id
+    count = await db.scalar(
+        select(func.count()).select_from(AgentRun).where(
+            AgentRun.kind == "enrich", AgentRun.ref_id == ref_id
+        )
+    )
+    assert count == 1
+
+
+@pytest.mark.asyncio
+async def test_enqueue_applies_queue_capacity(db: AsyncSession, monkeypatch):
+    from sqlalchemy import text
+
+    from app.config import settings
+    from app.jobs.worker import JobQueueFull, enqueue_job
+
+    await db.execute(text("DELETE FROM agent_runs WHERE status IN ('pending','running')"))
+    await db.commit()
+    monkeypatch.setattr(settings, "job_queue_max_active", 1)
+    await enqueue_job(db, "enrich")
+    with pytest.raises(JobQueueFull):
+        await enqueue_job(db, "enrich")
+
+
+@pytest.mark.asyncio
+async def test_bulk_enqueue_deduplicates_and_commits_once(db: AsyncSession):
+    from sqlalchemy import text
+
+    from app.jobs.worker import enqueue_jobs
+
+    await db.execute(text("DELETE FROM agent_runs WHERE status IN ('pending','running')"))
+    await db.commit()
+    refs = [uuid.uuid4(), uuid.uuid4()]
+
+    assert await enqueue_jobs(db, "enrich", "item", refs, None) == (2, 0, False)
+    assert await enqueue_jobs(db, "enrich", "item", refs, None) == (0, 2, False)
+
+
+@pytest.mark.asyncio
+async def test_two_worker_sessions_process_jobs_concurrently(db, test_engine, monkeypatch):
+    from sqlalchemy import text
+
+    from app.jobs.handlers import HANDLERS
+    from app.jobs.worker import enqueue_job, process_one
+
+    await db.execute(text("DELETE FROM agent_runs WHERE status IN ('pending','running')"))
+    await db.commit()
+    await enqueue_job(db, "enrich")
+    await enqueue_job(db, "enrich")
+
+    active = 0
+    maximum = 0
+    both_started = asyncio.Event()
+
+    async def concurrent_handler(_db, _ref_id):
+        nonlocal active, maximum
+        active += 1
+        maximum = max(maximum, active)
+        if active == 2:
+            both_started.set()
+        await asyncio.wait_for(both_started.wait(), timeout=2)
+        active -= 1
+        return {"ok": True}
+
+    monkeypatch.setitem(HANDLERS, "enrich", concurrent_handler)
+    TestSession = async_sessionmaker(test_engine, expire_on_commit=False)
+    async with TestSession() as first, TestSession() as second:
+        assert await asyncio.gather(process_one(first), process_one(second)) == [True, True]
+    assert maximum == 2
+
+
+@pytest.mark.asyncio
+async def test_cancelled_job_returns_to_pending(db, test_engine, monkeypatch):
+    from sqlalchemy import text
+
+    from app.jobs.handlers import HANDLERS
+    from app.jobs.models import AgentRun
+    from app.jobs.worker import enqueue_job, process_one
+
+    await db.execute(text("DELETE FROM agent_runs WHERE status IN ('pending','running')"))
+    await db.commit()
+    run = await enqueue_job(db, "enrich")
+    started = asyncio.Event()
+
+    async def waiting_handler(_db, _ref_id):
+        started.set()
+        await asyncio.Event().wait()
+
+    monkeypatch.setitem(HANDLERS, "enrich", waiting_handler)
+    TestSession = async_sessionmaker(test_engine, expire_on_commit=False)
+    async with TestSession() as worker_db:
+        task = asyncio.create_task(process_one(worker_db))
+        await asyncio.wait_for(started.wait(), timeout=2)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    async with TestSession() as verify_db:
+        persisted = await verify_db.get(AgentRun, run.id)
+        assert persisted is not None
+        assert persisted.status == "pending"
+        assert persisted.leased_until is None
+        assert persisted.finished_at is None
