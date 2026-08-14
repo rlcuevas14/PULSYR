@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import uuid
 from contextlib import asynccontextmanager
 from urllib.parse import urlparse
 
@@ -17,24 +16,23 @@ from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.config import settings
+from app.logging_config import configure_logging
 from app.observability import capture_exception, init_observability
+from app.request_context import RequestContextMiddleware, request_id_from_scope
 from app.templates_config import templates  # noqa: F401 — re-exported for legacy imports
 from app.web_security import CsrfMiddleware, ResponsePolicyMiddleware
 
 # OBS-1/OBS-2 — Logging centralizado.
 # Configuramos el logging raíz una sola vez aquí (al importar el módulo de arranque) para
-# que CUALQUIER otro módulo pueda emitir logs sin reconfigurar nada:
+# que cualquier otro módulo pueda emitir eventos JSON sin reconfigurar nada:
 #
 #     import logging
 #     logger = logging.getLogger("pulsyr.<modulo>")   # p. ej. "pulsyr.items", "pulsyr.mcp"
 #     logger.info("..."); logger.warning("..."); logger.exception("...")
 #
-# basicConfig es idempotente (no hace nada si el root ya tiene handlers), así que reimportar
-# este módulo no duplica salida. El nivel sube a DEBUG cuando settings.debug está activo.
-logging.basicConfig(
-    level=logging.DEBUG if settings.debug else logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-)
+# La configuración reutiliza los handlers existentes (por ejemplo, Uvicorn) y no añade
+# otro salvo que falten. El nivel sube a DEBUG cuando settings.debug está activo.
+configure_logging()
 logger = logging.getLogger("pulsyr")
 init_observability()
 
@@ -82,15 +80,19 @@ class PrivateIndexingMiddleware:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Pulsyr starting (debug=%s)", settings.debug)
+    from app.database import engine
     from app.jobs.worker import worker_loop
     task = asyncio.create_task(worker_loop())
-    yield
-    task.cancel()
     try:
-        await task
-    except asyncio.CancelledError:
-        pass
-    logger.info("Pulsyr stopped")
+        yield
+    finally:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        await engine.dispose()
+        logger.info("Pulsyr stopped")
 
 
 def _request_prefers_html(request: Request) -> bool:
@@ -100,13 +102,9 @@ def _request_prefers_html(request: Request) -> bool:
     return "text/html" in request.headers.get("accept", "").lower()
 
 
-def _request_id() -> str:
-    return uuid.uuid4().hex
-
-
 async def _http_error_handler(request: Request, exc: Exception) -> Response:
     assert isinstance(exc, StarletteHTTPException)
-    request_id = _request_id()
+    request_id = request_id_from_scope(request.scope)
     response: Response
     if _request_prefers_html(request):
         detail = exc.detail if isinstance(exc.detail, str) else "The requested page is unavailable."
@@ -139,7 +137,7 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> Resp
     nunca llega aquí. Tampoco captura HTTPException ni RequestValidationError: esos van
     registrados aparte para conservar su comportamiento normal (status + detail correctos).
     """
-    request_id = _request_id()
+    request_id = request_id_from_scope(request.scope)
     logger.exception(
         "Excepción no manejada en %s %s (request_id=%s)",
         request.method,
@@ -231,6 +229,8 @@ def create_app() -> FastAPI:
         TrustedHostMiddleware,
         allowed_hosts=trusted_hosts,
     )
+    # Added last so request context wraps every other application middleware.
+    app.add_middleware(RequestContextMiddleware)
 
     @app.get("/health/live", include_in_schema=False)
     async def health_live() -> dict[str, str]:

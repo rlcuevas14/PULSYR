@@ -8,7 +8,11 @@
 - Sentry: optional via `SENTRY_DSN`; environment comes from
   `DEPLOYMENT_ENVIRONMENT`, release from `RELEASE`, default PII is disabled and
   request bodies, cookies, query strings, identity and credential headers are scrubbed.
-- Logs: request ID from error responses correlates browser reports with server logs.
+- Logs: every HTTP response includes `X-Request-ID`. A safe inbound ID is preserved;
+  otherwise Pulsyr creates one. One JSON event per request records only method, route
+  template, status and duration, avoiding query strings, bodies and identities.
+  General log templates are emitted without interpolating runtime arguments in
+  production; exception details remain in the privacy-scrubbed error tracker.
 - Jobs: handler and worker-loop failures are captured with job kind/ID tags, never
   backlog content.
 
@@ -43,3 +47,11 @@ external writes were not performed by P5.
    release is causal and the schema is compatible.
 6. After recovery, document impact, detection gap, timeline, corrective owner and due
    date. Test alert routing quarterly with a controlled staging exception.
+
+## Database capacity guardrail
+
+Each process may open at most `DB_POOL_SIZE + DB_MAX_OVERFLOW` PostgreSQL
+connections. Keep the sum across all replicas below the database connection budget,
+including migrations and operator access. Pool acquisition and SQL execution are
+bounded by `DB_POOL_TIMEOUT_SECONDS` and `DB_STATEMENT_TIMEOUT_SECONDS`; increasing
+either should follow evidence from route latency and database wait metrics.
