@@ -11,6 +11,7 @@ no se simula evidencia externa.
 - [ ] Confirmar backup, migración ensayada y digest anterior para rollback.
 - [ ] Validar TLS/DNS de `pulsyr.dev`, `www.pulsyr.dev`, `app.pulsyr.dev` y staging.
 - [ ] Confirmar que secretos de producción/staging, DB y OAuth están separados.
+- [ ] Configurar un `METRICS_BEARER_TOKEN` distinto por entorno e importar `infra/monitoring/pulsyr-alerts.yml`.
 - [ ] Revisar copy, legal, claims, contraste y teclado manualmente con owner competente.
 
 ## Validación posterior al cambio
@@ -28,6 +29,7 @@ no se simula evidencia externa.
 - [ ] Bing Webmaster Tools recibe/verifica la misma propiedad.
 - [ ] Plausible registra una sola fuente y los cinco eventos, sin staging/app/datos privados.
 - [ ] Monitor externo detecta una prueba controlada y la alerta llega al canal esperado.
+- [ ] El scrape autenticado no expone PII y reporta RED, pool, estados/edad de jobs y `pulsyr_metrics_collection_success=1`.
 - [ ] Sentry recibe un error controlado con environment/release/request ID y sin PII.
 
 ## Criterio go/no-go

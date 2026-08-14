@@ -578,6 +578,13 @@
   },
   {
     "method": "GET",
+    "path": "/metrics",
+    "name": "metrics",
+    "trust_class": "metrics_token",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
     "path": "/password",
     "name": "password_page",
     "trust_class": "browser_session",

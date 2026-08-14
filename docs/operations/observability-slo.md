@@ -5,6 +5,12 @@
 - `/health/live`: process/ASGI liveness only; target for container orchestration.
 - `/health/ready`: bounded critical database query; returns 503 without internal
   exception details when unavailable.
+- `/metrics`: Prometheus text exposition, disabled unless a distinct
+  `METRICS_BEARER_TOKEN` (32+ characters) is configured and then protected with
+  constant-time bearer authentication. It exposes HTTP RED signals, in-progress
+  requests, database-pool saturation, durable job states/age and worker outcomes.
+  Labels use route templates and closed enums only; the endpoint emits no identities,
+  project/item/job IDs, request paths, query strings or payloads.
 - Sentry: optional via `SENTRY_DSN`; environment comes from
   `DEPLOYMENT_ENVIRONMENT`, release from `RELEASE`, default PII is disabled and
   request bodies, cookies, query strings, identity and credential headers are scrubbed.
@@ -15,6 +21,13 @@
   production; exception details remain in the privacy-scrubbed error tracker.
 - Jobs: handler and worker-loop failures are captured with job kind/ID tags, never
   backlog content.
+
+Import `infra/monitoring/pulsyr-alerts.yml` into the Prometheus-compatible monitoring
+system and configure a blackbox probe named `pulsyr-readiness` against
+`/health/ready`. Keep the metrics token in the monitoring secret store and never put it
+in a scrape URL. The application prunes expired database-backed rate-limit buckets at
+startup and every `RATE_LIMIT_PRUNE_INTERVAL_SECONDS`; failure is isolated from request
+serving and reported to Sentry.
 
 Use separate Sentry projects/DSNs for staging and production. Start with
 `SENTRY_TRACES_SAMPLE_RATE=0.0`; increase only after reviewing data volume and privacy.
@@ -70,3 +83,5 @@ types are enforced before authentication, JSON parsing, form parsing or database
 work. Missing media types remain compatible with established signed senders, while
 explicitly contradictory types are rejected. A `413`, `415` or `429` response includes the same request correlation ID as
 the access event.
+
+Capacity diagnosis and scaling calculations are in `api-capacity-runbook.md`.

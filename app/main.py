@@ -1,11 +1,12 @@
 import asyncio
+import hmac
 import logging
 from contextlib import asynccontextmanager
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from sqlalchemy import text
 from starlette.datastructures import MutableHeaders
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -83,15 +84,17 @@ async def lifespan(app: FastAPI):
     logger.info("Pulsyr starting (debug=%s)", settings.debug)
     from app.database import engine
     from app.jobs.worker import worker_loop
-    task = asyncio.create_task(worker_loop())
+    from app.maintenance import maintenance_loop
+    tasks = [
+        asyncio.create_task(worker_loop(), name="pulsyr-worker-supervisor"),
+        asyncio.create_task(maintenance_loop(), name="pulsyr-maintenance"),
+    ]
     try:
         yield
     finally:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
         await engine.dispose()
         logger.info("Pulsyr stopped")
 
@@ -246,6 +249,26 @@ def create_app() -> FastAPI:
             status_code=200 if ready else 503,
             content={"status": "ready" if ready else "unavailable", "database": "ok" if ready else "error"},
         )
+
+    @app.get("/metrics", include_in_schema=False)
+    async def metrics(request: Request) -> Response:
+        configured = settings.metrics_bearer_token
+        supplied = request.headers.get("authorization", "")
+        expected = f"Bearer {configured}"
+        if not configured:
+            raise StarletteHTTPException(status_code=404, detail="Not found")
+        if not hmac.compare_digest(supplied, expected):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Unauthorized"},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        from app.database import SessionFactory
+        from app.metrics import render_metrics
+
+        async with SessionFactory() as db:
+            payload = await render_metrics(db)
+        return PlainTextResponse(payload, media_type="text/plain; version=0.0.4")
     app.include_router(auth_router)
     app.include_router(auth_compat_router)
     app.include_router(setup_router)

@@ -133,6 +133,7 @@ def test_route_inventory_covers_every_operation_and_critical_trust_class():
 
     assert len(rows) >= 100
     assert by_operation[("GET", "/health/live")]["trust_class"] == "public"
+    assert by_operation[("GET", "/metrics")]["trust_class"] == "metrics_token"
     assert by_operation[("GET", "/admin/accounts")]["trust_class"] == "superadmin_session"
     assert by_operation[("POST", "/api/v1/items")]["trust_class"] == "session_or_write_token"
     assert by_operation[("POST", "/webhooks/github")]["trust_class"] == "webhook_signature"

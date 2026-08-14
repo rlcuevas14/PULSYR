@@ -38,6 +38,13 @@ back, restore that digest, run `python scripts/verify_release_image.py`, and res
 only the application service. Verify liveness, readiness, login and one read-only MCP
 request. Retain the failed release's request IDs and Sentry events for investigation.
 
+The production GitHub deployment records the running image before replacement, starts
+the candidate, and requires bounded `/health/ready` success. A failed candidate restores
+only the prior application image and fails the workflow; it never attempts an automatic
+schema downgrade. The last healthy image is also recorded in `.last-successful-image`
+for recovery when no app container is running. Treat the workflow failure as an incident
+until readiness of the restored image is independently confirmed.
+
 ## Migration rollback
 
 Application rollback and schema downgrade are separate decisions. Before a release,
@@ -54,3 +61,21 @@ Creating DNS, proxy secrets, uptime monitors and a real promotion/rollback exerc
 requires deployment authority and is deliberately outside this no-deploy phase. The
 operator must attach timestamps, digest, backup identifier, smoke results and alert
 delivery evidence to the release record before declaring external staging proven.
+
+## Controlled staging failure drill
+
+Run quarterly and before a high-risk release:
+
+1. Deploy the immutable candidate and save the previous digest and backup identifier.
+2. Block only the staging app's database path. Require `/health/live` to stay 200 and
+   `/health/ready` to become 503 within the configured timeout; restore connectivity and
+   require readiness recovery.
+3. Start a non-destructive test job, restart the app while its handler is waiting, and
+   prove it returns to `pending` before a worker completes it once.
+4. Deploy an intentionally non-ready staging-only candidate. Require the deployment to
+   fail, restore the previous image, and prove its readiness. Never run this step against
+   production.
+5. Trigger a controlled worker exception and verify the job-failure alert reaches the
+   named contact without payload or identity data.
+6. Attach timestamps, image digests, request IDs, metric screenshots and alert-delivery
+   evidence. Any missing evidence keeps the external drill open.

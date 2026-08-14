@@ -68,6 +68,18 @@ jobs:
       - name: API trust-boundary inventory
         run: python scripts/export_route_inventory.py --check docs/security/api-route-inventory.json
 
+      - name: Operational configuration contracts
+        run: |
+          cp .env.example .env
+          cp .env.staging.example .env.staging
+          trap 'rm -f .env .env.staging' EXIT
+          docker compose --env-file .env config --quiet
+          docker compose --env-file .env.staging -f compose.staging.yml config --quiet
+          docker run --rm --entrypoint /bin/promtool \
+            -v "$PWD/infra/monitoring:/rules:ro" \
+            prom/prometheus:v3.13.2 \
+            check rules /rules/pulsyr-alerts.yml
+
       # CI-2 / DM-06: validates that migrations apply AND revert (round-trip).
       # env.py reads DATABASE_URL (async URL); Alembic's async engine uses it directly.
       # upgrade head → downgrade base → upgrade head: catches broken or non-idempotent

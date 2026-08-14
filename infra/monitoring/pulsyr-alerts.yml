@@ -1,0 +1,86 @@
+groups:
+  - name: pulsyr-api
+    rules:
+      - alert: PulsyrReadinessUnavailable
+        expr: probe_success{job="pulsyr-readiness"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          owner: service-owner
+        annotations:
+          summary: Pulsyr is not ready to serve traffic
+          runbook: docs/operations/observability-slo.md#triage
+
+      - alert: PulsyrHighServerErrorRatio
+        expr: |
+          sum(rate(pulsyr_http_requests_total{status_class="5xx"}[10m]))
+          /
+          clamp_min(sum(rate(pulsyr_http_requests_total[10m])), 0.001)
+          > 0.02
+        for: 10m
+        labels:
+          severity: critical
+          owner: service-owner
+        annotations:
+          summary: Pulsyr server error ratio is above 2%
+          runbook: docs/operations/observability-slo.md#triage
+
+      - alert: PulsyrHighP95Latency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(pulsyr_http_request_duration_seconds_bucket[15m]))
+          ) > 1.5
+        for: 15m
+        labels:
+          severity: warning
+          owner: service-owner
+        annotations:
+          summary: Pulsyr request p95 is above 1.5 seconds
+          runbook: docs/operations/api-capacity-runbook.md#request-latency
+
+      - alert: PulsyrOldestPendingJob
+        expr: pulsyr_job_oldest_pending_age_seconds > 1200
+        for: 5m
+        labels:
+          severity: warning
+          owner: service-owner
+        annotations:
+          summary: The oldest pending Pulsyr job is more than 20 minutes old
+          runbook: docs/operations/api-capacity-runbook.md#job-backlog
+
+      - alert: PulsyrJobFailures
+        expr: sum(increase(pulsyr_jobs_processed_total{outcome="error"}[15m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          owner: service-owner
+        annotations:
+          summary: Pulsyr workers are repeatedly failing jobs
+          runbook: docs/operations/observability-slo.md#triage
+
+      - alert: PulsyrDatabasePoolSaturation
+        expr: |
+          max by (instance) (pulsyr_db_pool_connections{state="checked_out"})
+          /
+          clamp_min(
+            max by (instance) (pulsyr_db_pool_connections{state="configured_capacity"}),
+            1
+          ) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          owner: service-owner
+        annotations:
+          summary: Pulsyr is using more than 85% of its configured DB pool capacity
+          runbook: docs/operations/api-capacity-runbook.md#database-pool
+
+      - alert: PulsyrMetricsCollectionFailed
+        expr: pulsyr_metrics_collection_success == 0
+        for: 5m
+        labels:
+          severity: warning
+          owner: service-owner
+        annotations:
+          summary: Pulsyr cannot collect its durable queue metrics
+          runbook: docs/operations/observability-slo.md#triage

@@ -16,8 +16,9 @@ services:
 
   app:
     build: .
-    image: ghcr.io/${GITHUB_OWNER:-your-username}/pulsyr:${IMAGE_TAG:-latest}
+    image: ${PULSYR_IMAGE:-ghcr.io/${GITHUB_OWNER:-your-username}/pulsyr:${IMAGE_TAG:-latest}}
     restart: unless-stopped
+    stop_grace_period: 45s
     depends_on:
       db:
         condition: service_healthy
@@ -26,6 +27,12 @@ services:
       DATABASE_URL: postgresql+asyncpg://pulso:${DB_PASSWORD}@db/pulso
     ports:
       - "${PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
 
 volumes:
   pulso_db:

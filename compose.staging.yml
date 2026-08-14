@@ -17,6 +17,7 @@ services:
   app-staging:
     image: ${PULSYR_IMAGE:?set an immutable image digest}
     restart: unless-stopped
+    stop_grace_period: 45s
     depends_on:
       db-staging:
         condition: service_healthy
