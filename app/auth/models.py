@@ -7,6 +7,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     ForeignKey,
+    Integer,
     String,
     UniqueConstraint,
     func,
@@ -110,3 +111,16 @@ class ApiToken(Base):
     )
 
     creator: Mapped["User"] = relationship("User", back_populates="tokens")
+
+
+class RateLimitBucket(Base):
+    """Privacy-preserving shared counter; key_hash never stores a raw IP or email."""
+
+    __tablename__ = "rate_limit_buckets"
+
+    bucket: Mapped[str] = mapped_column(String(80), primary_key=True)
+    key_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    window_start: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), primary_key=True
+    )
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

@@ -42,6 +42,9 @@ def test_debug_allows_placeholder_secret():
         {"db_pool_timeout_seconds": 0},
         {"db_pool_recycle_seconds": 59},
         {"db_statement_timeout_seconds": 301},
+        {"trusted_proxy_cidrs": "not-a-network"},
+        {"request_max_body_bytes": 100},
+        {"mcp_rate_limit_attempts": 10001},
     ],
 )
 def test_database_resource_settings_are_bounded(overrides):

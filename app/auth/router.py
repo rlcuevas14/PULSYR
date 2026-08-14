@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import oauth
 from app.auth.deps import current_user_ui
 from app.auth.models import ApiToken, User
-from app.auth.rate_limit import oauth_rate_limiter
+from app.auth.rate_limit import limit_client, limit_value
 from app.auth.service import (
     authenticate,
     create_api_token,
@@ -88,6 +88,28 @@ async def login_submit(
 ):
     user = await authenticate(db, email, password)
     if user is None:
+        ip_decision = await limit_client(
+            request,
+            action="password_login_ip",
+            limit=settings.password_ip_rate_limit_attempts,
+            window_seconds=settings.oauth_rate_limit_window_seconds,
+        )
+        identity_decision = await limit_value(
+            action="password_login_identity",
+            value=email,
+            limit=settings.password_rate_limit_attempts,
+            window_seconds=settings.oauth_rate_limit_window_seconds,
+        )
+        if not ip_decision.allowed or not identity_decision.allowed:
+            retry_after = max(ip_decision.retry_after, identity_decision.retry_after)
+            logger.warning("password_login_rate_limited")
+            return templates.TemplateResponse(
+                request,
+                "login.html",
+                _login_context(_t("login.error_rate_limit", resolve_lang(request))),
+                status_code=429,
+                headers={"Retry-After": str(retry_after)},
+            )
         return templates.TemplateResponse(
             request,
             "login.html",
@@ -124,7 +146,13 @@ async def signup_start(
     p = oauth.get(provider)
     if not settings.public_signup or p is None:
         return RedirectResponse("/login", status_code=303)
-    if not await oauth_rate_limiter.allow(request, "signup"):
+    decision = await limit_client(
+        request,
+        action="oauth_signup",
+        limit=settings.oauth_rate_limit_attempts,
+        window_seconds=settings.oauth_rate_limit_window_seconds,
+    )
+    if not decision.allowed:
         logger.warning("oauth_rate_limited action=signup")
         context = _login_context(_t("login.error_rate_limit", resolve_lang(request)))
         context["signup_mode"] = True
@@ -133,7 +161,7 @@ async def signup_start(
             "signup.html",
             context,
             status_code=429,
-            headers={"Retry-After": str(settings.oauth_rate_limit_window_seconds)},
+            headers={"Retry-After": str(decision.retry_after)},
         )
     if not accept_terms:
         context = _login_context(_t("signup.error_terms", resolve_lang(request)))
@@ -154,14 +182,20 @@ async def oauth_start(provider: str, request: Request):
     p = oauth.get(provider)
     if p is None:
         return RedirectResponse("/login", status_code=303)
-    if not await oauth_rate_limiter.allow(request, "login"):
+    decision = await limit_client(
+        request,
+        action="oauth_login",
+        limit=settings.oauth_rate_limit_attempts,
+        window_seconds=settings.oauth_rate_limit_window_seconds,
+    )
+    if not decision.allowed:
         logger.warning("oauth_rate_limited action=login")
         return templates.TemplateResponse(
             request,
             "login.html",
             _login_context(_t("login.error_rate_limit", resolve_lang(request))),
             status_code=429,
-            headers={"Retry-After": str(settings.oauth_rate_limit_window_seconds)},
+            headers={"Retry-After": str(decision.retry_after)},
         )
     return RedirectResponse(
         oauth.authorize_url(p, oauth.make_state(provider, intent="login")),
@@ -178,14 +212,20 @@ async def oauth_callback(
     db: AsyncSession = Depends(get_db),
 ):
     lang = resolve_lang(request)
-    if not await oauth_rate_limiter.allow(request, "callback"):
+    decision = await limit_client(
+        request,
+        action="oauth_callback",
+        limit=settings.oauth_rate_limit_attempts,
+        window_seconds=settings.oauth_rate_limit_window_seconds,
+    )
+    if not decision.allowed:
         logger.warning("oauth_rate_limited action=callback")
         return templates.TemplateResponse(
             request,
             "login.html",
             _login_context(_t("login.error_rate_limit", lang)),
             status_code=429,
-            headers={"Retry-After": str(settings.oauth_rate_limit_window_seconds)},
+            headers={"Retry-After": str(decision.retry_after)},
         )
     p = oauth.get(provider)
     state_data = oauth.read_state(state, provider)

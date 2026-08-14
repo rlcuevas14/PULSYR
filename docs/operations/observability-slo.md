@@ -55,3 +55,18 @@ connections. Keep the sum across all replicas below the database connection budg
 including migrations and operator access. Pool acquisition and SQL execution are
 bounded by `DB_POOL_TIMEOUT_SECONDS` and `DB_STATEMENT_TIMEOUT_SECONDS`; increasing
 either should follow evidence from route latency and database wait metrics.
+
+## Abuse-control and proxy boundary
+
+Password login, OAuth, MCP and webhooks use atomic PostgreSQL fixed-window
+counters, so adding application replicas does not multiply the configured limits.
+Counter keys are HMAC digests; raw client addresses and login identities are not
+stored. Expired rows are safe to remove after `RATE_LIMIT_RETENTION_SECONDS`.
+
+`CF-Connecting-IP` is ignored unless the direct ASGI peer belongs to
+`TRUSTED_PROXY_CIDRS`. Configure only the internal Caddy/container network actually
+connected to Uvicorn; never trust the internet as a whole. Body limits and media
+types are enforced before authentication, JSON parsing, form parsing or database
+work. Missing media types remain compatible with established signed senders, while
+explicitly contradictory types are rejected. A `413`, `415` or `429` response includes the same request correlation ID as
+the access event.
