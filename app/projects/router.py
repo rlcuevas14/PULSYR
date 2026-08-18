@@ -213,8 +213,18 @@ async def project_settings_update(
         if clash:
             # Re-render the full settings page with the error — a plain-text 422 on a
             # regular form is a dead end that loses everything the user typed.
-            # Display-only echo of the submitted values; nothing below flushes, so the
-            # in-memory mutation is discarded when the session closes without commit.
+            # Build the context before applying display-only values: the context reads
+            # module configuration and that query would otherwise autoflush the invalid
+            # duplicate slug before we can return the friendly validation response.
+            context = await _settings_context(
+                db,
+                request,
+                user,
+                project,
+                error=_t("projects.sentry_slug_taken", resolve_lang(request)),
+            )
+            # Nothing below flushes, so these in-memory values are only echoed back by
+            # the form and are discarded when the request session closes.
             project.name = name.strip() or project.name
             project.description = description.strip() or None
             project.repo_url = repo_url.strip() or None
@@ -222,13 +232,7 @@ async def project_settings_update(
             return templates.TemplateResponse(
                 request,
                 "projects_settings.html",
-                await _settings_context(
-                    db,
-                    request,
-                    user,
-                    project,
-                    error=_t("projects.sentry_slug_taken", resolve_lang(request)),
-                ),
+                context,
                 status_code=422,
             )
     await ps.update_project(db, project, {
