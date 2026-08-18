@@ -6,7 +6,7 @@
 
 ## What it is
 
-- **Backlog + dependency graph + Sentry incidents + development threads + PMO Management (documents/pendings/Gantt)**: all accessible via 26 MCP tools.
+- **Backlog + dependency graph + Sentry incidents + development threads + PMO Management (documents/pendings/Gantt)**: all accessible via 45 module-aware MCP tools.
 - **Multi-project**: one database, N projects. Each MCP token is project-scoped; the agent cannot write to the wrong project.
 - **Self-hosted OSS**: Docker + Postgres, no external dependencies except optional AI keys.
 - **Repo**: `rlcuevas14/PULSYR` (open source).
@@ -50,7 +50,7 @@ FastAPI + SQLAlchemy async (asyncpg) + Alembic + **Jinja2 + HTMX 2 (CDN) + Tailw
 | `webhooks/` | `SentryIssue`/`SentryConnection`; `connection.py` (account-level Sentry connection: webhook token, config, slug routing, re-attach: tenancy chokepoint for webhooks); service (HMAC verify, dual-shape payload parse, ingest w/ account+project stamping, backfill, fetch stack trace, resolve w/ 429 retry); router (tokened `POST /webhooks/sentry/{token}` + deprecated legacy global route) |
 | `jobs/` | `AgentRun`; `worker.py` (poll-and-lease); `handlers.py` (`enrich`, `triage-sentry`) |
 | `ai/` | `llm.py`: isolated/mockable interface to Haiku (enrich/triage/generate_stage) + Gemini (embed). Degrades without API key |
-| `mcp/` | `server.py` (JSON-RPC transport + 26 tool registry + auth/scope + project-id failsafe); `tools.py` (implementations) |
+| `mcp/` | `server.py` (JSON-RPC transport + dynamic 45-tool registry + module/auth/scope/project enforcement); `tools.py` (shared-service implementations) |
 | `ui/` | `router.py`: screens (`/` card-launcher home, `/backlog`, `/priority`, `/threads`, `/incidents`, `/archive`, `/items/{id}`, `/admin`) + `/ui/...` HTMX action endpoints; `flash.py` (`flash_success`: pop-once session flash → celebration overlay on completions / green toast) |
 
 ---
@@ -67,16 +67,16 @@ FastAPI + SQLAlchemy async (asyncpg) + Alembic + **Jinja2 + HTMX 2 (CDN) + Tailw
 
 **Multi-account (tenancy)**: **`accounts`** (`id, name, slug, is_active`) groups projects. **`users`** gain `account_id` (FK: one account per user), `account_role` (`owner`|`member`), `is_superadmin` (instance operator). **`projects`** gain `account_id`; slug is unique **per account**. **`project_members`** (`user_id, project_id, role` ∈ `viewer`|`editor`) is the per-project grant matrix: owners have implicit editor on every project of their account. **`scopes.name`** is unique **per project** (`(project_id, name)`), not globally. MCP token scope ≤ minter's role on the project.
 
-**Other tables**: `accounts, users, api_tokens, projects, project_members, scopes, item_comments, item_events, ai_enrichments, sentry_issues, agent_runs, item_relationships, threads, thread_artifacts`.
+**Other tables**: `accounts, users, api_tokens, projects, project_members, scopes, item_comments, item_events, ai_enrichments, sentry_issues, sentry_issue_events, agent_runs, item_relationships, threads, thread_artifacts`.
 `item_events(actor, action, payload)` is the **audit primitive**: every mutation must emit one.
 
-**Migrations** (head = `v0024`): v0001 (9 tables) · v0002 (search_vector+GIN) · v0003 (item_relationships) · v0004 (last_touched_at + source_refs→JSONB) · v0005 (threads + items.thread_id) · v0006–v0010 (projects + project_id FKs) · v0011 (English enum rename) · v0012 (accounts + project_members + account columns; backfills existing data into one default account, earliest/admin user → owner+superadmin; scopes.name → unique per project) · v0013 (project isolation hardening) · v0014 (accounts layer) · v0015 (relax project_id back to nullable: isolation is code-enforced) · v0016 (management/PMO domain: compartments, deliverables + append-only deliverable_versions, pendings, plan_tasks, management_events) · v0017 (account-level Sentry routing) · v0018–v0019 (English domain enums) · v0020 (nullable OAuth password hash) · v0021 (hosted plans and OAuth identities) · v0022 (shared rate limits) · v0023 (scale indexes and active-job idempotency) · v0024 (auditable optional project modules with conservative legacy backfill).
+**Migrations** (head = `v0025`): v0001 (9 tables) · v0002 (search_vector+GIN) · v0003 (item_relationships) · v0004 (last_touched_at + source_refs→JSONB) · v0005 (threads + items.thread_id) · v0006–v0010 (projects + project_id FKs) · v0011 (English enum rename) · v0012 (accounts + project_members + account columns; backfills existing data into one default account, earliest/admin user → owner+superadmin; scopes.name → unique per project) · v0013 (project isolation hardening) · v0014 (accounts layer) · v0015 (relax project_id back to nullable: isolation is code-enforced) · v0016 (management/PMO domain: compartments, deliverables + append-only deliverable_versions, pendings, plan_tasks, management_events) · v0017 (account-level Sentry routing) · v0018–v0019 (English domain enums) · v0020 (nullable OAuth password hash) · v0021 (hosted plans and OAuth identities) · v0022 (shared rate limits) · v0023 (scale indexes and active-job idempotency) · v0024 (auditable optional project modules with conservative legacy backfill) · v0025 (append-only Sentry incident audit events).
 
 **Thread stages** (English since v0018): `idea, research, stories, spec, in-development, review, done, discarded` · artifact kinds: `research, stories, spec, notes, decision`
 
 ---
 
-## MCP: 26 tools
+## MCP: 45 module-aware tools
 
 Connect any MCP client to a project (generate token at `/projects/{slug}/settings`). All a
 client needs is the URL `<base>/mcp` plus `Authorization: Bearer <TOKEN>`; the Claude Code
@@ -85,14 +85,15 @@ shortcut for that is:
 claude mcp add --transport http my-project http://localhost:8000/mcp \
   --header "Authorization: Bearer <TOKEN>"
 ```
-`protocolVersion 2025-03-26`. Bearer auth required; write tools require scope `write` (else → `isError`). **New tools only appear after RESTARTING the client** (in Claude Code, don't-ask denies unapproved tools; client-side, not a server bug).
+`protocolVersion 2025-03-26`. Bearer auth required; `tools/list`, prompts and resources are filtered by the project's effective modules. Every direct call rechecks the module before write scope or entity lookup. Write tools require scope `write` (else → `isError`). **New tools only appear after RESTARTING clients that cache discovery** (in Claude Code, don't-ask denies unapproved tools; client-side, not a server bug).
 
 Token MUST have `project_id` set (created from `/projects/{slug}/settings`, not `/admin`). MCP dispatch returns `isError` immediately if `token.project_id is None`.
 
-- **Read**: `pulsyr_context`, `pulsyr_search`, `pulsyr_list`, `pulsyr_areas`, `pulsyr_incidents`, `pulsyr_incident`, `pulsyr_thread_list`, `pulsyr_thread`
-- **Write**: `pulsyr_create` (accepts `thread_id`), `pulsyr_advance`, `pulsyr_complete`, `pulsyr_link`, `pulsyr_move_area`, `pulsyr_incident_resolve`, `pulsyr_thread_create`, `pulsyr_thread_advance`, `pulsyr_thread_link`
-- **Management (PMO)**: documentos: `pulsyr_doc_list`, `pulsyr_doc_get`, `pulsyr_doc_put` (r/w) · pendientes: `pulsyr_pending_list`, `pulsyr_pending_upsert`, `pulsyr_pending_complete` · gantt: `pulsyr_gantt_get`, `pulsyr_gantt_task_upsert`, `pulsyr_gantt_task_remove`. The Gantt is **edited only via MCP** (UI renders it read-only).
-- **Prompts**: `briefing`, `decision`. **Resources**: `pulsyr://area/{name}`, `pulsyr://graph/{item_id}`.
+- **Core (18, always visible)**: capabilities/context/search/list/areas, the full item lifecycle and graph, priority projection, and archive projection.
+- **Threads (7)**: create/read/list/link/advance plus explicit stage changes and append-only artifacts.
+- **Incidents (7)**: list/detail/resolve plus promote, ignore/unignore, and bounded server-side Sentry backfill.
+- **Management (13)**: document list/get/put/rollback/metadata, compartment upsert, pending list/upsert/complete/delete, and Gantt read/upsert/remove. The Gantt is **edited only via MCP** (UI renders it read-only).
+- **Prompts**: `briefing`, `decision`. **Resources**: capabilities, area, graph, thread, open incidents, and management status. See `docs/MCP.md` for exact names and contracts.
 
 Items returned include `area` (name) and `thread_id` when set. Graph is item↔item; thread membership is via `thread_id`, not the graph.
 
@@ -104,7 +105,7 @@ Items returned include `area` (name) and `thread_id` when set. Graph is item↔i
 - **Live graph**: blocking is **derived** (an item is blocked if it has an open `blocks` arc incoming), not a stored state. `pulsyr_context` traverses neighborhood in real time (anti context-collapse).
 - **Incidents (Sentry)**: errors land in `sentry_issues` (**container**, NOT auto-promoted to backlog). AI triage pre-classifies noise; owner/agent **manually promotes** real ones. `pulsyr:UUID` in commit auto-closes (GitHub webhook). **Per-project routing (spec 2026-07-10)**: 1 account ↔ 1 Sentry org: owner configures the connection once at `/account/integrations` (tokened webhook URL + optional HMAC client secret + optional API token/org/base_url for resolve+backfill); each project sets its `sentry_project_slug` in its settings; inbound `POST /webhooks/sentry/{token}` routes by slug **within the token's account** (cross-account collisions can't leak). Unmatched events park with `project_id=NULL` + account stamp; "Re-attach unmatched" fixes them after slug changes. Global `SENTRY_*` env vars are legacy fallback only.
 - **Threads**: funnel for heavy features (80% goes fast through backlog, no thread needed).
-- **Append-only / audit**: every mutation emits `ItemEvent`.
+- **Append-only / audit**: item, management, and incident mutations emit their domain event (`ItemEvent`, `ManagementEvent`, or `SentryIssueEvent`).
 - **Account & project isolation**: an **account** groups projects; a user belongs to one account as `owner` or `member`, with per-project `viewer`/`editor` grants (`project_members`; owners get implicit editor on all account projects). The chokepoint `projects/access.py` resolves the effective project for every REST/UI request (`resolve_project_id`/`resolve_current_project`) and `mcp/tools.py` filters by `token.project_id`. Cross-account access is impossible: members see only granted projects; the super-admin (instance operator) manages accounts but not their backlog data. `create_user` with no `account_id` auto-creates a personal account + `Default` project (tests/simple flows).
 
 ---

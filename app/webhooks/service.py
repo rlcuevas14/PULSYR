@@ -18,7 +18,7 @@ from app.items import service
 from app.items.models import Item, ItemEvent
 from app.scopes.service import resolve_scope
 from app.webhooks.connection import DEFAULT_BASE_URL, effective_base_url, outbound
-from app.webhooks.models import SentryIssue
+from app.webhooks.models import SentryIssue, SentryIssueEvent
 
 logger = logging.getLogger("pulsyr.webhooks")
 
@@ -26,6 +26,43 @@ _TAG_RE = re.compile(r"<[^>]+>")
 # ponytail: accepts the legacy `pulso:` prefix too — commit history is immutable and
 # those references must keep auto-closing. Drop the alternation once no live repo uses it.
 _PULSYR_RE = re.compile(r"(?:closes\s+)?puls(?:yr|o):([0-9a-fA-F-]{36})")
+
+
+class IncidentTransitionError(ValueError):
+    """Invalid reversible incident-container transition."""
+
+
+def _issue_event(
+    db: AsyncSession,
+    issue: SentryIssue,
+    actor: str,
+    action: str,
+    previous_status: str | None,
+    *,
+    note: str | None = None,
+) -> None:
+    db.add(SentryIssueEvent(
+        project_id=issue.project_id,
+        issue_id=issue.id,
+        actor=actor[:255],
+        action=action,
+        previous_status=previous_status,
+        status=issue.status,
+        note=(note or "").strip()[:2000] or None,
+    ))
+
+
+async def _locked_issue(db: AsyncSession, issue: SentryIssue) -> SentryIssue:
+    """Serialize reversible/container transitions and refresh any stale identity-map row."""
+    locked = await db.scalar(
+        select(SentryIssue)
+        .where(SentryIssue.id == issue.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if locked is None:
+        raise IncidentTransitionError("Incident not found.")
+    return locked
 
 
 def verify_sentry_signature(secret: str, body: bytes, header: str | None) -> bool:
@@ -170,11 +207,18 @@ async def promote_issue(
 ) -> str:
     """Promote an issue from the container to the backlog as a bug item (an analyzed
     decision: AI triage or the owner). Idempotent: if already linked, returns the existing item."""
+    issue = await _locked_issue(db, issue)
     if issue.item_id is not None:
         return str(issue.item_id)
-    scope = await resolve_scope(db, issue.project, create=True, source_repo="sentry")
+    if priority not in ("p0", "p1", "p2", "p3"):
+        raise IncidentTransitionError("priority must be one of: p0, p1, p2, p3.")
+    old = issue.status
+    scope = await resolve_scope(
+        db, issue.project, create=True, source_repo="sentry", project_id=issue.project_id
+    )
     item = Item(
-        scope_id=scope.id, title=issue.title[:300], type="bug", status="backlog",
+        scope_id=scope.id, project_id=issue.project_id,
+        title=issue.title[:300], type="bug", status="backlog",
         summary_md=_sanitize(str(issue.payload), 4000), origen="sentry",
         priority=priority, priority_declared=priority, stale_risk=True,
         source_refs={"sentry_issue_id": issue.sentry_issue_id},
@@ -185,8 +229,48 @@ async def promote_issue(
     issue.status = "linked"
     db.add(ItemEvent(item_id=item.id, actor=f"sentry:{issue.sentry_issue_id}",
                      action="created", payload={"from": "sentry", "priority": priority, "by": actor}))
+    _issue_event(db, issue, actor, "promoted", old, note=f"priority={priority}")
     await db.flush()
     return str(item.id)
+
+
+async def ignore_issue(
+    db: AsyncSession,
+    issue: SentryIssue,
+    actor: str,
+    reason: str | None = None,
+) -> SentryIssue:
+    issue = await _locked_issue(db, issue)
+    if issue.status == "ignored":
+        return issue
+    if issue.status != "new":
+        raise IncidentTransitionError(
+            f"Invalid incident transition: {issue.status} → ignored"
+        )
+    old = issue.status
+    issue.status = "ignored"
+    _issue_event(db, issue, actor, "ignored", old, note=reason)
+    await db.flush()
+    return issue
+
+
+async def unignore_issue(
+    db: AsyncSession,
+    issue: SentryIssue,
+    actor: str,
+) -> SentryIssue:
+    issue = await _locked_issue(db, issue)
+    if issue.status == "new":
+        return issue
+    if issue.status != "ignored":
+        raise IncidentTransitionError(
+            f"Invalid incident transition: {issue.status} → new"
+        )
+    old = issue.status
+    issue.status = "new"
+    _issue_event(db, issue, actor, "restored", old)
+    await db.flush()
+    return issue
 
 
 async def resolve_issue(
@@ -206,6 +290,7 @@ async def resolve_issue(
 
     Returns {"id", "status", "resuelto_en_sentry", "item_cerrado"}.
     """
+    previous_status = issue.status
     issue.status = "resolved"
     sentry_done = False
     if in_sentry:
@@ -240,6 +325,7 @@ async def resolve_issue(
                     issue.item_id, issue.id, e,
                 )
 
+    _issue_event(db, issue, actor, "resolved", previous_status, note=nota)
     await db.flush()
     return {
         "id": str(issue.id),
@@ -301,7 +387,10 @@ async def backfill_issues(
     account_id: uuid.UUID | None = None, project_id: uuid.UUID | None = None,
 ) -> dict:
     """Ingest into the container every issue fetched from the Sentry API (dedup by id)."""
-    ingested = 0
+    created = 0
+    updated = 0
+    ignored = 0
+    failures: list[dict[str, str]] = []
     for iss in issues:
         payload = {"data": {"issue": {
             "id": iss.get("id"),
@@ -314,11 +403,25 @@ async def backfill_issues(
             "lastSeen": iss.get("lastSeen"),
         }}}
         try:
-            await ingest_sentry(db, payload, account_id=account_id, project_id=project_id)
-            ingested += 1
-        except ValueError:
-            continue  # issue without an id → skip
-    return {"ingested": ingested, "total": len(issues)}
+            result = await ingest_sentry(
+                db, payload, account_id=account_id, project_id=project_id
+            )
+            if result["created"]:
+                created += 1
+            else:
+                updated += 1
+        except ValueError as exc:
+            ignored += 1
+            failures.append({"code": "invalid_issue", "message": str(exc)[:160]})
+    return {
+        "ingested": created + updated,
+        "total": len(issues),
+        "fetched": len(issues),
+        "created": created,
+        "updated": updated,
+        "ignored": ignored,
+        "failures": failures,
+    }
 
 
 def _format_stacktrace(event: dict, max_frames: int = 12) -> str:

@@ -89,6 +89,77 @@ async def create_compartment(
     return comp
 
 
+async def upsert_compartment(
+    db: AsyncSession,
+    project_id: uuid.UUID,
+    *,
+    actor: str,
+    compartment_id: Optional[uuid.UUID] = None,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    sort_order: Optional[int] = None,
+) -> Compartment:
+    """Create or update compartment metadata without implying a document upload."""
+    if compartment_id is None:
+        clean_name = (name or "").strip()
+        if not clean_name:
+            raise ManagementError("name cannot be empty when creating a compartment.")
+        comp = await resolve_compartment(
+            db, project_id, clean_name, create=True, actor=actor
+        )
+        changed = False
+        if description is not None:
+            comp.description = description.strip() or None
+            changed = True
+        if sort_order is not None:
+            comp.sort_order = int(sort_order)
+            changed = True
+        if changed:
+            await db.flush()
+            _event(
+                db,
+                project_id,
+                "compartment",
+                comp.id,
+                actor,
+                "updated",
+                {
+                    "fields": [
+                        field
+                        for field, present in (
+                            ("description", description is not None),
+                            ("sort_order", sort_order is not None),
+                        )
+                        if present
+                    ]
+                },
+            )
+        return comp
+
+    existing = await db.get(Compartment, compartment_id)
+    if existing is None or existing.project_id != project_id:
+        raise ManagementError("Compartment not found in this project.")
+    comp = existing
+    fields: list[str] = []
+    if name is not None:
+        clean_name = name.strip()
+        if not clean_name:
+            raise ManagementError("name cannot be empty.")
+        comp.name = clean_name[:120]
+        fields.append("name")
+    if description is not None:
+        comp.description = description.strip() or None
+        fields.append("description")
+    if sort_order is not None:
+        comp.sort_order = int(sort_order)
+        fields.append("sort_order")
+    if not fields:
+        raise ManagementError("Provide at least one compartment field to update.")
+    await db.flush()
+    _event(db, project_id, "compartment", comp.id, actor, "updated", {"fields": fields})
+    return comp
+
+
 # ---------- Deliverables ----------
 
 async def list_deliverables(
@@ -270,6 +341,55 @@ async def rollback_deliverable(
     return d
 
 
+async def update_deliverable(
+    db: AsyncSession,
+    project_id: uuid.UUID,
+    deliverable_id: uuid.UUID,
+    changes: dict[str, Any],
+    actor: str,
+) -> Deliverable:
+    """Update deliverable metadata without manufacturing a content version."""
+    d = await get_deliverable(db, project_id, deliverable_id)
+    if d is None:
+        raise ManagementError("Deliverable not found in this project.")
+    allowed = {"name", "summary_md", "status", "owner", "compartment_id"}
+    unknown = set(changes) - allowed
+    if unknown:
+        raise ManagementError(f"Fields are not editable: {', '.join(sorted(unknown))}.")
+    if not changes:
+        raise ManagementError("Provide at least one deliverable field to update.")
+    if "name" in changes:
+        name = str(changes["name"] or "").strip()
+        if not name:
+            raise ManagementError("name cannot be empty.")
+        d.name = name[:200]
+    if "summary_md" in changes:
+        value = changes["summary_md"]
+        d.summary_md = str(value).strip() or None if value is not None else None
+    if "owner" in changes:
+        value = changes["owner"]
+        d.owner = str(value).strip() or None if value is not None else None
+    if "status" in changes:
+        status = changes["status"]
+        if status not in DELIVERABLE_STATUSES:
+            raise ManagementError(
+                f"invalid status '{status}'; use one of: {', '.join(DELIVERABLE_STATUSES)}."
+            )
+        d.status = status
+    if "compartment_id" in changes:
+        compartment_id = changes["compartment_id"]
+        comp = await db.get(Compartment, compartment_id)
+        if comp is None or comp.project_id != project_id:
+            raise ManagementError("Compartment not found in this project.")
+        d.compartment_id = comp.id
+    await db.flush()
+    _event(
+        db, project_id, "deliverable", d.id, actor, "metadata_updated",
+        {"fields": list(changes)},
+    )
+    return d
+
+
 # ---------- Pendings ----------
 
 async def list_pendings(
@@ -376,13 +496,17 @@ async def complete_pending(
 
 async def delete_pending(
     db: AsyncSession, project_id: uuid.UUID, pending_id: uuid.UUID, actor: str,
-) -> None:
+    *, idempotent: bool = False,
+) -> bool:
     p = await get_pending(db, project_id, pending_id)
     if p is None:
+        if idempotent:
+            return False
         raise ManagementError("Pending not found in this project.")
     await db.delete(p)
     _event(db, project_id, "pending", pending_id, actor, "removed")
     await db.flush()
+    return True
 
 
 # ---------- Plan tasks (Gantt) ----------

@@ -15,7 +15,7 @@ async def _setup(client: AsyncClient, scopes: str = "write"):
     s = uuid.uuid4().hex[:8]
     async for db in client.app.dependency_overrides[get_db]():
         acc, owner = await create_account(db, f"a{s}", f"t{s}@t.cl", "T", "password")
-        proj = await create_project(db, name=f"p{s}", account_id=acc.id)
+        proj = await create_project(db, name=f"p{s}", account_id=acc.id, preset="hybrid")
         tok, raw = await create_api_token(db, f"tok{s}", scopes, owner.id)
         tok.project_id = proj.id
         await db.commit()
@@ -189,7 +189,8 @@ async def test_resources(client: AsyncClient):
                       {"title": "Res item", "type": "feature", "area_name": "core"}))
     tmpl = (await _rpc(client, raw, "resources/templates/list")).json()["result"]
     assert "resourceTemplates" in tmpl
-    assert (await _rpc(client, raw, "resources/list")).json()["result"] == {"resources": []}
+    resources = (await _rpc(client, raw, "resources/list")).json()["result"]["resources"]
+    assert any(resource["uri"] == "pulsyr://capabilities" for resource in resources)
     area = (await _rpc(client, raw, "resources/read", {"uri": "pulsyr://area/core"})).json()
     body = json.loads(area["result"]["contents"][0]["text"])
     assert body["area"] == "core"

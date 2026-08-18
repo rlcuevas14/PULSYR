@@ -162,7 +162,15 @@ async def test_process_github_push_autocompletes(db):
 async def test_backfill_issues(db):
     issues = [{"id": "B1", "title": "one", "count": 1}, {"title": "no id"}]
     res = await ws.backfill_issues(db, issues, "web")
-    assert res == {"ingested": 1, "total": 2}
+    assert res == {
+        "ingested": 1,
+        "total": 2,
+        "fetched": 2,
+        "created": 1,
+        "updated": 0,
+        "ignored": 1,
+        "failures": [{"code": "invalid_issue", "message": "Missing Sentry issue id"}],
+    }
 
 
 @pytest.mark.asyncio

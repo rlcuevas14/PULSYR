@@ -27,7 +27,9 @@ async def _token(client: AsyncClient, scopes: str = "write") -> str:
     suffix = uuid.uuid4().hex[:8]
     async for db in client.app.dependency_overrides[get_db]():
         acc, owner = await create_account(db, f"acc-{suffix}", f"ep{suffix}@test.cl", "EP", "password")
-        project = await create_project(db, name=f"proj-{suffix}", account_id=acc.id)
+        project = await create_project(
+            db, name=f"proj-{suffix}", account_id=acc.id, preset="hybrid"
+        )
         tok, raw = await create_api_token(db, f"ep-{suffix}", scopes, owner.id)
         tok.project_id = project.id
         await db.commit()

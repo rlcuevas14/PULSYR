@@ -10,7 +10,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enums import RELATIONS
-from app.items.models import ItemRelationship
+from app.items.models import ItemEvent, ItemRelationship
 from app.items.search import search_items
 
 _SYMMETRIC = ("conflicts", "related")
@@ -23,7 +23,9 @@ class RelationshipError(ValueError):
     """Business error when creating/deleting an arc (not found, ambiguous, self-loop, duplicate)."""
 
 
-async def resolve_query_verbose(db: AsyncSession, query: str) -> dict:
+async def resolve_query_verbose(
+    db: AsyncSession, query: str, project_id: uuid.UUID | None = None
+) -> dict:
     """Resolve a text query to an item via full-text search, with confidence metadata.
 
     Returns {"id": uuid, "title": str, "low_confidence": bool, "margin": float}.
@@ -31,7 +33,7 @@ async def resolve_query_verbose(db: AsyncSession, query: str) -> dict:
     `low_confidence=True` when the relative margin between top-1 and top-2 is narrow
     (the match is plausible but not clear-cut) — the caller may warn the user.
     """
-    rows = await search_items(db, query, limit=2)
+    rows = await search_items(db, query, limit=2, project_id=project_id)
     if not rows:
         raise RelationshipError(f"No item found for «{query}».")
 
@@ -55,13 +57,15 @@ async def resolve_query_verbose(db: AsyncSession, query: str) -> dict:
     }
 
 
-async def resolve_query(db: AsyncSession, query: str) -> uuid.UUID:
+async def resolve_query(
+    db: AsyncSession, query: str, project_id: uuid.UUID | None = None
+) -> uuid.UUID:
     """Resolve a text query to an item_id via full-text search. Aborts on a rank tie in the top-2.
 
     Compatibility: returns only the id (as before). To warn about low confidence,
     use `resolve_query_verbose`.
     """
-    return (await resolve_query_verbose(db, query))["id"]
+    return (await resolve_query_verbose(db, query, project_id=project_id))["id"]
 
 
 async def create_relationship(
@@ -95,7 +99,11 @@ async def create_relationship(
 
 
 async def delete_relationship(
-    db: AsyncSession, source_id: uuid.UUID, target_id: uuid.UUID, relation: str
+    db: AsyncSession,
+    source_id: uuid.UUID,
+    target_id: uuid.UUID,
+    relation: str,
+    actor: str | None = None,
 ) -> bool:
     rel = await db.get(
         ItemRelationship, {"source_id": source_id, "target_id": target_id, "relation": relation}
@@ -109,6 +117,13 @@ async def delete_relationship(
             )
     if rel is None:
         return False
+    if actor:
+        db.add(ItemEvent(
+            item_id=source_id,
+            actor=actor,
+            action="relationship_removed",
+            payload={"target_id": str(target_id), "relation": rel.relation},
+        ))
     await db.delete(rel)
     await db.flush()
     return True

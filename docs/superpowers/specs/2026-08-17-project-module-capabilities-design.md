@@ -1,7 +1,7 @@
 # Spec hijo 2 — Capacidades configurables por proyecto
 
 **Fecha**: 2026-08-17
-**Estado**: implementado; la paridad MCP se completa en el spec hijo 3
+**Estado**: implementado; paridad MCP completada por el spec hijo 3
 **Spec padre**: [Arquitectura de navegación, módulos y paridad MCP](2026-08-17-agent-native-navigation-modules-mcp-program-design.md)
 **Consumidores**: navegación UI, guards de rutas, MCP discovery y MCP execution
 

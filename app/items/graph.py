@@ -154,19 +154,29 @@ async def unblocker_ids(db: AsyncSession, project_id: uuid.UUID | None = None) -
     return {str(r["id"]) for r in result.mappings().all()}
 
 
-async def subgraph(db: AsyncSession, item_id: uuid.UUID) -> dict[str, Any]:
+async def subgraph(
+    db: AsyncSession,
+    item_id: uuid.UUID,
+    project_id: uuid.UUID | None = None,
+) -> dict[str, Any]:
     """Subgraph centered on an item: incoming and outgoing arcs (both directions)."""
+    project_filter = ""
+    params: dict[str, str] = {"id": str(item_id)}
+    if project_id is not None:
+        project_filter = "AND si.project_id = :pid AND ti.project_id = :pid"
+        params["pid"] = str(project_id)
     result = await db.execute(
-        text("""
+        text(f"""
             SELECT r.source_id, r.target_id, r.relation, r.note,
                    si.title AS source_title, si.status AS source_status,
                    ti.title AS target_title, ti.status AS target_status
             FROM item_relationships r
             JOIN items si ON si.id = r.source_id
             JOIN items ti ON ti.id = r.target_id
-            WHERE r.source_id = :id OR r.target_id = :id
+            WHERE (r.source_id = :id OR r.target_id = :id)
+            {project_filter}
         """),
-        {"id": str(item_id)},
+        params,
     )
     arcs = [
         {

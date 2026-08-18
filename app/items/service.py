@@ -5,16 +5,16 @@ so that UI / REST / MCP never diverge.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import Select, select, text
+from sqlalchemy import Select, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.enums import TERMINAL
+from app.enums import COMMENT_KINDS, EFFORTS, PRIORITIES, TERMINAL
 from app.items import graph
 from app.items.lifecycle import valid_transition
-from app.items.models import Item, ItemEvent
+from app.items.models import Item, ItemComment, ItemEvent
 from app.scopes.models import Scope
 
 # Human priority rank for the "priority" ordering (p0 first, no priority last).
@@ -24,6 +24,10 @@ _TOPOLOGICAL_CANDIDATE_LIMIT = 1000
 
 class TransitionError(ValueError):
     """Invalid status transition."""
+
+
+class ItemUpdateError(ValueError):
+    """Invalid item metadata or comment mutation."""
 
 
 async def get_item(db: AsyncSession, item_id: uuid.UUID) -> Item | None:
@@ -123,6 +127,163 @@ async def set_priority(db: AsyncSession, item: Item, priority: str | None, actor
     return item
 
 
+async def update_item(
+    db: AsyncSession,
+    item: Item,
+    changes: dict[str, Any],
+    actor: str,
+) -> Item:
+    """Update non-lifecycle fields and emit a before/after audit receipt.
+
+    Presence in ``changes`` is significant: nullable fields can be explicitly cleared.
+    Status is deliberately excluded and must use the lifecycle services.
+    """
+    allowed = {
+        "title", "summary_md", "priority", "impact_ai", "effort_ai",
+        "stale_risk", "agent_ready",
+    }
+    unknown = set(changes) - allowed
+    if unknown:
+        raise ItemUpdateError(f"Fields are not editable: {', '.join(sorted(unknown))}.")
+    if not changes:
+        raise ItemUpdateError("Provide at least one field to update.")
+
+    normalized = dict(changes)
+    if "title" in normalized:
+        title = str(normalized["title"] or "").strip()
+        if not title:
+            raise ItemUpdateError("title cannot be empty.")
+        normalized["title"] = title[:300]
+    if "summary_md" in normalized and normalized["summary_md"] is not None:
+        normalized["summary_md"] = str(normalized["summary_md"]).strip() or None
+    if "priority" in normalized:
+        priority = normalized["priority"]
+        if priority is not None and priority not in PRIORITIES:
+            raise ItemUpdateError(
+                f"invalid priority '{priority}'; use one of: {', '.join(PRIORITIES)} (or null)."
+            )
+    if "impact_ai" in normalized:
+        impact = normalized["impact_ai"]
+        if impact is not None and (
+            not isinstance(impact, int) or isinstance(impact, bool) or not 1 <= impact <= 5
+        ):
+            raise ItemUpdateError("impact_ai must be an integer 1-5 (or null).")
+    if "effort_ai" in normalized:
+        effort = normalized["effort_ai"]
+        if effort is not None and effort not in EFFORTS:
+            raise ItemUpdateError(
+                f"invalid effort_ai '{effort}'; use one of: {', '.join(EFFORTS)} (or null)."
+            )
+    for field in ("stale_risk", "agent_ready"):
+        if field in normalized and not isinstance(normalized[field], bool):
+            raise ItemUpdateError(f"{field} must be a boolean.")
+
+    before = {field: getattr(item, field) for field in normalized}
+    priority_present = "priority" in normalized
+    priority = normalized.pop("priority", None)
+    if priority_present:
+        await set_priority(db, item, priority, actor)
+    for field, value in normalized.items():
+        setattr(item, field, value)
+    await db.flush()
+    fields = list(changes)
+    db.add(ItemEvent(
+        item_id=item.id,
+        actor=actor,
+        action="item_updated",
+        payload={
+            "fields": fields,
+            "before": before,
+            "after": {field: getattr(item, field) for field in fields},
+        },
+    ))
+    return item
+
+
+async def add_comment(
+    db: AsyncSession,
+    item: Item,
+    body_md: str,
+    kind: str,
+    actor: str,
+) -> ItemComment:
+    body = (body_md or "").strip()
+    if not body:
+        raise ItemUpdateError("Comment cannot be empty.")
+    if kind not in COMMENT_KINDS:
+        raise ItemUpdateError(
+            f"invalid comment kind '{kind}'; use one of: {', '.join(COMMENT_KINDS)}."
+        )
+    comment = ItemComment(item_id=item.id, author=actor, body_md=body, kind=kind)
+    db.add(comment)
+    await db.flush()
+    db.add(ItemEvent(
+        item_id=item.id,
+        actor=actor,
+        action="comment_added",
+        payload={"comment_id": str(comment.id), "kind": kind},
+    ))
+    return comment
+
+
+def iso_week_bounds(week: str) -> tuple[datetime, datetime]:
+    """Parse YYYY-Www into a half-open UTC interval."""
+    try:
+        year = int(week[:4])
+        number = int(week[6:])
+        if len(week) != 8 or week[4:6] != "-W":
+            raise ValueError
+        start = datetime.fromisocalendar(year, number, 1).replace(tzinfo=timezone.utc)
+    except (ValueError, IndexError) as exc:
+        raise ItemUpdateError("week must use ISO format YYYY-Www.") from exc
+    return start, start + timedelta(days=7)
+
+
+async def list_archive_items(
+    db: AsyncSession,
+    project_id: uuid.UUID,
+    *,
+    week: str | None = None,
+    status: str | None = None,
+    scope: Any = None,
+    type: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[Item], dict[uuid.UUID, ItemEvent], int]:
+    """Return a stable, paginated archive projection plus latest close receipts."""
+    if status is not None and status not in TERMINAL:
+        raise ItemUpdateError("status must be done or discarded.")
+    scope_id = await _resolve_scope_id(db, scope, project_id=project_id)
+    if scope is not None and scope_id is None:
+        return [], {}, 0
+    query = select(Item).where(
+        Item.project_id == project_id,
+        Item.status.in_([status] if status else list(TERMINAL)),
+    )
+    if scope_id is not None:
+        query = query.where(Item.scope_id == scope_id)
+    if type is not None:
+        query = query.where(Item.type == type)
+    if week is not None:
+        start, end = iso_week_bounds(week)
+        query = query.where(Item.closed_at >= start, Item.closed_at < end)
+    total = int(await db.scalar(select(func.count()).select_from(query.subquery())) or 0)
+    rows = list((await db.execute(
+        query.order_by(Item.closed_at.desc().nullslast(), Item.id).offset(offset).limit(limit)
+    )).scalars().all())
+    ids = [item.id for item in rows]
+    events: dict[uuid.UUID, ItemEvent] = {}
+    if ids:
+        receipts = list((await db.execute(
+            select(ItemEvent)
+            .where(ItemEvent.item_id.in_(ids), ItemEvent.action == "closed")
+            .order_by(ItemEvent.created_at.desc())
+        )).scalars().all())
+        for event in receipts:
+            events.setdefault(event.item_id, event)
+    return rows, events, total
+
+
 async def touch_embedding_available(db: AsyncSession) -> bool:
     """True if the embedding column exists and has at least one non-NULL value (semantic layer)."""
     try:
@@ -137,7 +298,12 @@ async def touch_embedding_available(db: AsyncSession) -> bool:
 # Single implementation of item listing with filters + ordering, consumed by REST,
 # UI and MCP. Topological ordering uses the graph (graph.topological_order).
 
-async def _resolve_scope_id(db: AsyncSession, scope: Any) -> uuid.UUID | None:
+async def _resolve_scope_id(
+    db: AsyncSession,
+    scope: Any,
+    *,
+    project_id: uuid.UUID | None = None,
+) -> uuid.UUID | None:
     """Accept a scope as a uuid.UUID or as a name (str). Returns the id, or None if it doesn't exist."""
     if scope is None:
         return None
@@ -147,7 +313,10 @@ async def _resolve_scope_id(db: AsyncSession, scope: Any) -> uuid.UUID | None:
     try:
         return uuid.UUID(str(scope))
     except (ValueError, AttributeError):
-        row = await db.scalar(select(Scope).where(Scope.name == str(scope)))
+        query = select(Scope).where(Scope.name == str(scope))
+        if project_id is not None:
+            query = query.where(Scope.project_id == project_id)
+        row = await db.scalar(query)
         return row.id if row else None
 
 
@@ -241,7 +410,7 @@ async def list_items(
     needs the relationship graph, so it is computed over a bounded candidate set
     and pagination is applied only after that ordering.
     """
-    scope_id = await _resolve_scope_id(db, scope)
+    scope_id = await _resolve_scope_id(db, scope, project_id=project_id)
     # If a nonexistent scope was requested by name, the result is empty (not "all").
     if scope is not None and scope_id is None:
         return []
