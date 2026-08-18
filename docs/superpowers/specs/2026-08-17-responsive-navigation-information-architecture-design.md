@@ -1,7 +1,7 @@
 # Spec hijo 1 — Navegación responsive y arquitectura de información
 
 **Fecha**: 2026-08-17
-**Estado**: aprobado; pendiente de implementación secuencial
+**Estado**: implementado
 **Spec padre**: [Arquitectura de navegación, módulos y paridad MCP](2026-08-17-agent-native-navigation-modules-mcp-program-design.md)
 **Dependencia**: el render condicional final consume el servicio definido en el spec hijo 2
 

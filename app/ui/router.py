@@ -149,6 +149,7 @@ async def dashboard(
             "user": user, "cards": cards, "recent": recent,
             "recent_touch": {str(i.id): _recent_touch(i) for i in recent},
             "monthly_cost": float(cost_q or 0), "scopes": scopes,
+            "nav_badges": {"incidents_new": incidents_new},
         },
     )
 

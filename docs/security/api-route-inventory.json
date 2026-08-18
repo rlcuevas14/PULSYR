@@ -555,6 +555,13 @@
   },
   {
     "method": "GET",
+    "path": "/management/pending",
+    "name": "management_pending_compat",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
     "path": "/management/plan",
     "name": "plan_screen",
     "trust_class": "browser_session",
