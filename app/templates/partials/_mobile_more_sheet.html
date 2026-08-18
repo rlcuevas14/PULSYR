@@ -1,0 +1,67 @@
+{# Mobile overflow sheet. Context: `navigation`, `nav_badges`, `user`, `request`. #}
+<div id="nav-more" data-modal role="dialog" aria-modal="true" aria-labelledby="nav-more-title"
+     class="hidden fixed inset-0 z-[95] bg-black/40 md:hidden">
+  <section class="p-mobile-sheet" role="document">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-hairline">
+      <h2 id="nav-more-title" class="text-lg font-semibold text-ink">{{ t("nav.more") }}</h2>
+      <button type="button" data-modal-close="nav-more" class="p-2 text-muted"
+              aria-label="{{ t('nav.close') }}">✕</button>
+    </div>
+    <div class="px-3 py-3 overflow-y-auto">
+      {% for entry in navigation.mobile_more %}
+        {% if entry.key == "management" %}
+        <div class="mt-2 pt-2 border-t border-hairline">
+          <p class="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted">{{ t(entry.label_key) }}</p>
+          {% for child in entry.children %}
+          <a href="{{ child.href }}"
+             class="p-menu-item {% if navigation.active_child_key == child.key %}bg-surface-strong text-ink font-semibold{% endif %}"
+             {% if navigation.active_child_key == child.key %}aria-current="page"{% endif %}>
+            {{ t(child.label_key) }}
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+          {% set badge = nav_badges.get(entry.badge_key, 0) if entry.badge_key else 0 %}
+          {% set is_active = navigation.active_key == entry.key or navigation.active_child_key == entry.key %}
+        <a href="{{ entry.href }}"
+           class="p-menu-item justify-between {% if is_active %}bg-surface-strong text-ink font-semibold{% endif %}"
+           {% if is_active %}aria-current="page"{% endif %}>
+          <span class="flex items-center gap-3">
+            {% include "partials/_nav_icon.html" %}
+            {{ t(entry.label_key) }}
+          </span>
+          {% if badge %}
+          <span class="p-nav-badge" aria-hidden="true">{{ "99+" if badge > 99 else badge }}</span>
+          <span class="sr-only">{{ tn("nav.new_incidents", badge) }}</span>
+          {% endif %}
+        </a>
+        {% endif %}
+      {% endfor %}
+
+      <div class="mt-2 pt-2 border-t border-hairline">
+        <p class="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted">{{ t("nav.settings") }}</p>
+        {% if request.session.get("current_project_slug") %}
+        <a href="/projects/{{ request.session['current_project_slug'] }}/settings" class="p-menu-item">{{ t("nav.project_settings") }}</a>
+        {% endif %}
+        <a href="/projects" class="p-menu-item">{{ t("nav.projects") }}</a>
+        {% if user.account_role == "owner" %}
+        <a href="/account/members" class="p-menu-item">{{ t("nav.members") }}</a>
+        <a href="/account/integrations" class="p-menu-item">{{ t("nav.integrations") }}</a>
+        {% endif %}
+        {% if user.is_superadmin %}<a href="/admin" class="p-menu-item">{{ t("nav.admin") }}</a>{% endif %}
+        <div class="flex items-center justify-between gap-2 px-3 py-2">
+          <div class="flex gap-1" aria-label="{{ t('nav.language') }}">
+            {% for code, label in LANGS %}
+            <a href="/ui/lang/{{ code }}?next={{ lang_next | urlencode }}"
+               class="p-pill text-xs uppercase {% if current_lang() == code %}bg-surface-strong text-ink font-semibold{% else %}text-muted{% endif %}">{{ code }}</a>
+            {% endfor %}
+          </div>
+          <button type="button" data-theme-toggle class="p-2 rounded-xl text-muted hover:text-ink hover:bg-surface-strong"
+                  aria-label="{{ t('nav.toggle_theme') }}">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

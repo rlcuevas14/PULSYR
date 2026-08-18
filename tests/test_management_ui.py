@@ -57,6 +57,8 @@ async def test_management_home_redirects(client: AsyncClient):
     await _login(client)
     r = await client.get("/management", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/management/pendientes"
+    legacy = await client.get("/management/pending", follow_redirects=False)
+    assert legacy.status_code == 308 and legacy.headers["location"] == "/management/pendientes"
 
 
 @pytest.mark.asyncio

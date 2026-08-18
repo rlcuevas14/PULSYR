@@ -28,6 +28,8 @@ class NavigationEntry:
 class NavigationContext:
     primary: tuple[NavigationEntry, ...]
     backlog_tabs: tuple[NavigationEntry, ...]
+    mobile_primary: tuple[NavigationEntry, ...]
+    mobile_more: tuple[NavigationEntry, ...]
     active_key: str | None
     active_child_key: str | None
 
@@ -97,6 +99,9 @@ PRIMARY_NAVIGATION = (
     ),
 )
 
+CREATE_ENTRY = NavigationEntry("create", "nav.create", None, "create", ())
+MORE_ENTRY = NavigationEntry("more", "nav.more", None, "more", ())
+
 
 def _matches(path: str, prefix: str) -> bool:
     return path == prefix or path.startswith(f"{prefix}/")
@@ -123,9 +128,22 @@ def navigation_context(
         *enabled_modules,
     }
     primary = tuple(entry for entry in PRIMARY_NAVIGATION if entry.module in modules)
+    backlog = PRIMARY_NAVIGATION[0]
+    threads = next((entry for entry in primary if entry.key == "threads"), None)
+    incidents = next((entry for entry in primary if entry.key == "incidents"), None)
+    management = next((entry for entry in primary if entry.key == "management"), None)
+    fourth = threads or BACKLOG_TABS[2]
+    mobile_primary = (backlog, BACKLOG_TABS[1], CREATE_ENTRY, fourth, MORE_ENTRY)
+    mobile_more = (
+        (() if threads is None else (BACKLOG_TABS[2],))
+        + (() if incidents is None else (incidents,))
+        + (() if management is None else (management,))
+    )
     return NavigationContext(
         primary=primary,
         backlog_tabs=BACKLOG_TABS,
+        mobile_primary=mobile_primary,
+        mobile_more=mobile_more,
         active_key=_active(primary, path),
         active_child_key=_active(BACKLOG_TABS + MANAGEMENT_CHILDREN, path),
     )

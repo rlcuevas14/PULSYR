@@ -63,6 +63,9 @@
                border-bottom:3px solid transparent; text-decoration:none; }
   .p-navlink:hover { color:var(--ink); }
   .p-navlink-active { color:var(--ink); border-bottom-color:var(--accent); }
+  .p-nav-badge { display:inline-flex; align-items:center; justify-content:center; min-width:1.25rem;
+                 height:1.25rem; padding:0 .3rem; border-radius:9999px; background:var(--accent);
+                 color:var(--accent-fg); font-size:.68rem; font-weight:700; line-height:1; }
   .p-menu { position:relative; }
   .p-menu > summary { list-style:none; cursor:pointer; }
   .p-menu > summary::-webkit-details-marker { display:none; }
@@ -72,6 +75,30 @@
   .p-menu-item { display:flex; align-items:center; min-height:44px; width:100%; text-align:left; padding:8px 10px; border-radius:8px;
                  font-size:14px; color:var(--body); text-decoration:none; }
   .p-menu-item:hover { background:var(--surface-strong); color:var(--ink); }
+  .p-mobile-nav { position:fixed; z-index:80; left:0; right:0; bottom:0; display:grid;
+                  grid-template-columns:repeat(5,minmax(0,1fr)); align-items:end;
+                  min-height:4.25rem; padding:.3rem .35rem max(.35rem,env(safe-area-inset-bottom));
+                  background:var(--surface-card); border-top:1px solid var(--hairline);
+                  box-shadow:0 -8px 24px rgba(0,0,0,.08); }
+  .p-mobile-nav-item { min-width:0; min-height:3.5rem; display:flex; flex-direction:column;
+                       align-items:center; justify-content:center; gap:.15rem; padding:.25rem;
+                       color:var(--muted); font-size:.68rem; font-weight:600; text-decoration:none;
+                       border-radius:.75rem; }
+  .p-mobile-nav-item:hover, .p-mobile-nav-active { color:var(--ink); background:var(--surface-strong); }
+  .p-mobile-nav-action { width:3.4rem; height:3.4rem; min-width:3.4rem; min-height:3.4rem;
+                         margin:0 auto .55rem; display:flex; align-items:center; justify-content:center;
+                         border-radius:9999px; color:var(--accent-fg); background:var(--accent);
+                         box-shadow:0 8px 20px rgba(0,0,0,.2); text-decoration:none; }
+  .p-mobile-sheet { position:absolute; left:0; right:0; bottom:0; max-height:min(80vh,40rem);
+                    padding-bottom:max(.5rem,env(safe-area-inset-bottom)); display:flex;
+                    flex-direction:column; overflow:hidden; background:var(--surface-card);
+                    border:1px solid var(--hairline); border-bottom:0; border-radius:1.25rem 1.25rem 0 0;
+                    box-shadow:0 -12px 36px rgba(0,0,0,.2); }
+  @media (max-width:767px) {
+    .p-mobile-shell main { padding-bottom:6.5rem; }
+    .p-mobile-shell footer { margin-bottom:calc(4.25rem + env(safe-area-inset-bottom)); }
+  }
+  @media (min-width:768px) { .p-mobile-nav { display:none; } }
   .p-homecard { border-radius:24px; padding:24px; min-height:150px; display:flex;
                 flex-direction:column; justify-content:space-between; text-decoration:none;
                 transition:transform .15s ease, box-shadow .15s ease; }

@@ -241,6 +241,13 @@
     enhanceForms(document);
     initializeDeclarativeUi(document);
     initBoard();
+    var query = new URLSearchParams(window.location.search);
+    if (query.get("new") === "1" && document.getElementById("new-item-modal")) {
+      window.openModal("new-item-modal");
+      query.delete("new");
+      var cleanUrl = window.location.pathname + (query.toString() ? "?" + query.toString() : "") + window.location.hash;
+      window.history.replaceState({}, "", cleanUrl);
+    }
     var toast = document.getElementById("toast");
     if (toast && toast.dataset.initialMessage) showToast(toast.dataset.initialMessage, "success");
   });
@@ -285,6 +292,36 @@
   });
 
   var modalTrigger = null;
+
+  function closeNavMenu(menu, restoreFocus) {
+    if (!menu) return;
+    var trigger = menu.querySelector("[data-nav-menu-trigger]");
+    var panel = menu.querySelector("[data-nav-menu-panel]");
+    if (panel) panel.classList.add("hidden");
+    if (trigger) trigger.setAttribute("aria-expanded", "false");
+    if (restoreFocus && trigger) trigger.focus();
+  }
+
+  function closeNavMenus(except) {
+    document.querySelectorAll("[data-nav-menu]").forEach(function (menu) {
+      if (menu !== except) closeNavMenu(menu, false);
+    });
+  }
+
+  function openNavMenu(menu, focusFirst) {
+    if (!menu) return;
+    closeNavMenus(menu);
+    var trigger = menu.querySelector("[data-nav-menu-trigger]");
+    var panel = menu.querySelector("[data-nav-menu-panel]");
+    if (!trigger || !panel) return;
+    panel.classList.remove("hidden");
+    trigger.setAttribute("aria-expanded", "true");
+    if (focusFirst) {
+      var first = panel.querySelector('[role="menuitem"]');
+      if (first) first.focus();
+    }
+  }
+
   function focusable(modal) {
     return Array.from(modal.querySelectorAll(
       'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), ' +
@@ -312,6 +349,30 @@
   };
 
   document.addEventListener("keydown", function (event) {
+    var navTrigger = event.target && event.target.closest
+      ? event.target.closest("[data-nav-menu-trigger]") : null;
+    if (navTrigger && ["Enter", " ", "ArrowDown"].indexOf(event.key) >= 0) {
+      event.preventDefault();
+      openNavMenu(navTrigger.closest("[data-nav-menu]"), true);
+      return;
+    }
+    var menuItem = event.target && event.target.closest
+      ? event.target.closest('[data-nav-menu-panel] [role="menuitem"]') : null;
+    if (menuItem) {
+      var navMenu = menuItem.closest("[data-nav-menu]");
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeNavMenu(navMenu, true);
+        return;
+      }
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        var items = Array.from(navMenu.querySelectorAll('[role="menuitem"]'));
+        var offset = event.key === "ArrowDown" ? 1 : -1;
+        items[(items.indexOf(menuItem) + offset + items.length) % items.length].focus();
+        return;
+      }
+    }
     var modal = document.querySelector("[data-modal]:not(.hidden)");
     if (!modal) return;
     if (event.key === "Escape") {
@@ -333,6 +394,21 @@
 
   document.addEventListener("click", function (event) {
     var target = event.target;
+    var navTrigger = target && target.closest ? target.closest("[data-nav-menu-trigger]") : null;
+    if (navTrigger) {
+      event.preventDefault();
+      var navMenu = navTrigger.closest("[data-nav-menu]");
+      if (navTrigger.getAttribute("aria-expanded") === "true") closeNavMenu(navMenu, false);
+      else openNavMenu(navMenu, false);
+      return;
+    }
+    if (!target.closest || !target.closest("[data-nav-menu]")) closeNavMenus(null);
+    var createItem = target && target.closest ? target.closest("[data-create-item]") : null;
+    if (createItem && document.getElementById("new-item-modal")) {
+      event.preventDefault();
+      window.openModal("new-item-modal");
+      return;
+    }
     var action = target && target.closest ? target.closest(
       "[data-theme-toggle], [data-modal-open], [data-modal-close], [data-remove], " +
       "[data-copy-target], [data-clear-target], [data-hint-dismiss], [data-color-pick], " +

@@ -1,0 +1,27 @@
+{# Five-slot mobile navigation. Context: `navigation`, `nav_badges`. #}
+<nav class="p-mobile-nav md:hidden" aria-label="{{ t('nav.mobile') }}">
+  {% for entry in navigation.mobile_primary %}
+    {% if entry.key == "create" %}
+    <a href="/backlog?new=1" data-create-item
+       class="p-mobile-nav-action" aria-label="{{ t(entry.label_key) }}">
+      {% include "partials/_nav_icon.html" %}
+      <span class="sr-only">{{ t(entry.label_key) }}</span>
+    </a>
+    {% elif entry.key == "more" %}
+    <button type="button" data-modal-open="nav-more" class="p-mobile-nav-item"
+            aria-label="{{ t(entry.label_key) }}">
+      {% include "partials/_nav_icon.html" %}
+      <span>{{ t(entry.label_key) }}</span>
+    </button>
+    {% else %}
+      {% set is_active = navigation.active_child_key == entry.key
+        or (entry.key == "backlog" and navigation.active_child_key == "work")
+        or (entry.key not in ["backlog", "priority", "archive"] and navigation.active_key == entry.key) %}
+    <a href="{{ entry.href }}" class="p-mobile-nav-item {% if is_active %}p-mobile-nav-active{% endif %}"
+       {% if is_active %}aria-current="page"{% endif %}>
+      {% include "partials/_nav_icon.html" %}
+      <span>{{ t(entry.label_key) }}</span>
+    </a>
+    {% endif %}
+  {% endfor %}
+</nav>

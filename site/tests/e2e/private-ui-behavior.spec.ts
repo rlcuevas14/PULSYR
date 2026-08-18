@@ -9,6 +9,14 @@ async function loadFixture(page: Page) {
     <div id="example-modal" data-modal role="dialog" aria-modal="true" aria-labelledby="modal-title" class="hidden">
       <h2 id="modal-title">Example</h2><button id="first">First</button><button id="last">Last</button>
     </div>
+    <div data-nav-menu>
+      <a id="management-trigger" href="/management" data-nav-menu-trigger aria-haspopup="menu" aria-expanded="false">Management</a>
+      <div data-nav-menu-panel role="menu" class="hidden">
+        <a id="pending-link" href="/management/pendientes" role="menuitem">Pendings</a>
+        <a id="plan-link" href="/management/plan" role="menuitem">Plan</a>
+        <a id="documents-link" href="/management/documentos" role="menuitem">Documents</a>
+      </div>
+    </div>
     <form id="sample" data-confirm="Proceed?">
       <label for="email">Email</label><input id="email" name="email" type="email" required>
       <button id="submit" type="submit">Save</button>
@@ -36,6 +44,26 @@ test("modal traps focus, closes with Escape, and restores the trigger", async ({
   await page.keyboard.press("Escape");
   await expect(page.locator("#example-modal")).toHaveClass(/hidden/);
   await expect(page.locator("#open")).toBeFocused();
+});
+
+test("navigation disclosure supports keyboard, arrows, Escape, and outside click", async ({ page }) => {
+  await loadFixture(page);
+  await page.locator("#management-trigger").focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("#management-trigger")).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#pending-link")).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("#plan-link")).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(page.locator("#pending-link")).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#management-trigger")).toBeFocused();
+  await expect(page.locator("#management-trigger")).toHaveAttribute("aria-expanded", "false");
+
+  await page.locator("#management-trigger").click();
+  await expect(page.locator("#pending-link")).toBeVisible();
+  await page.locator("body").click({ position: { x: 1, y: 1 } });
+  await expect(page.locator("#pending-link")).toBeHidden();
 });
 
 test("typing an incomplete value keeps focus in the field", async ({ page }) => {

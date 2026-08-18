@@ -62,6 +62,11 @@ async def management_home(request: Request):
     return RedirectResponse("/management/pendientes", status_code=303)
 
 
+@router.get("/management/pending", include_in_schema=False)
+async def management_pending_compat(request: Request):
+    return RedirectResponse("/management/pendientes", status_code=308)
+
+
 @router.get("/management/documentos", response_class=HTMLResponse)
 async def documentos_screen(
     request: Request,
