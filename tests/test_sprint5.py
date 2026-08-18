@@ -103,6 +103,9 @@ async def test_manual_promote_creates_backlog_item(client: AsyncClient, monkeypa
     async for db in client.app.dependency_overrides[get_db]():
         user = await create_user(db, f"inc{suffix}@test.cl", "Inc", "pass", "admin")
         project = await db.scalar(select(Project).where(Project.account_id == user.account_id))
+        from app.projects.modules import apply_preset
+
+        await apply_preset(db, project.id, "product", user.email)
         issue = (await db.execute(
             select(SentryIssue).where(SentryIssue.sentry_issue_id == sid)
         )).scalar_one()
@@ -269,6 +272,9 @@ async def test_backfill_from_sentry_api(client: AsyncClient, monkeypatch):
         proj = (await db.execute(
             _sel(Project).where(Project.account_id == user.account_id)
         )).scalars().first()
+        from app.projects.modules import apply_preset
+
+        await apply_preset(db, proj.id, "product", user.email)
         proj.sentry_project_slug = "acme"
         expected_pid = proj.id
         await db.commit()

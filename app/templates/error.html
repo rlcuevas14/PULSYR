@@ -18,7 +18,7 @@
     <p class="code">{{ status_code }} · Pulsyr</p>
     <h1>{{ heading }}</h1>
     <p>{{ message }}</p>
-    <div class="actions"><a href="/">Return to Pulsyr</a><a href="https://pulsyr.dev/docs/primeros-pasos/">Public documentation</a></div>
+    <div class="actions"><a href="{{ action_href | default('/') }}">{{ action_label | default('Return to Pulsyr') }}</a><a href="https://pulsyr.dev/docs/primeros-pasos/">Public documentation</a></div>
     <p class="request">Request ID: {{ request_id }}</p>
   </main>
 </body>

@@ -14,7 +14,7 @@ async def _token_pid(client, scopes: str = "write"):
     s = uuid.uuid4().hex[:8]
     async for db in client.app.dependency_overrides[get_db]():
         acc, owner = await create_account(db, f"a{s}", f"o{s}@t.cl", "O", "passw0rd")
-        proj = await create_project(db, name=f"p{s}", account_id=acc.id)
+        proj = await create_project(db, name=f"p{s}", account_id=acc.id, preset="hybrid")
         tok, raw = await create_api_token(db, f"t{s}", scopes, owner.id)
         tok.project_id = proj.id
         await db.commit()

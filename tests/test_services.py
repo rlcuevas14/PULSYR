@@ -222,14 +222,24 @@ async def test_handle_enrich(db, monkeypatch):
 @pytest.mark.asyncio
 async def test_handle_triage_promotes_bug(db, monkeypatch):
     from app.jobs.handlers import handle_triage_sentry
+    from app.projects.modules import apply_preset
     from app.webhooks import service as ws
 
-    await ws.ingest_sentry(db, {"data": {"issue": {"id": f"t{uuid.uuid4().hex[:6]}",
-                                                   "title": "Crash", "project": "api"}}})
+    project, owner = await _project(db)
+    await apply_preset(db, project.id, "product", owner.email)
+    sentry_id = f"t{uuid.uuid4().hex[:6]}"
+    await ws.ingest_sentry(
+        db,
+        {"data": {"issue": {"id": sentry_id, "title": "Crash", "project": "api"}}},
+        account_id=project.account_id,
+        project_id=project.id,
+    )
     from sqlalchemy import select
 
     from app.webhooks.models import SentryIssue
-    issue = (await db.execute(select(SentryIssue).order_by(SentryIssue.first_seen.desc()))).scalars().first()
+    issue = (
+        await db.execute(select(SentryIssue).where(SentryIssue.sentry_issue_id == sentry_id))
+    ).scalar_one()
 
     async def fake_triage(title, ctx):
         return {"triage": "real-bug"}

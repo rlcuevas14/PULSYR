@@ -21,6 +21,9 @@ async def _setup(db, sentry_slug="web", secret=None):
                 sentry_project_slug=sentry_slug)
     db.add(p)
     await db.flush()
+    from app.projects.modules import initialize_modules
+
+    await initialize_modules(db, p.id, "product", "test:webhook")
     conn = await sc.get_or_create(db, a.id)
     if secret:
         conn.client_secret = secret

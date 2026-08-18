@@ -32,18 +32,18 @@
     </span>
     <div><p class="text-lg font-semibold">{{ t("nav.priority") }}</p><p class="text-sm opacity-70">{{ tn("dashboard.quick_wins", cards.quick_wins) }}</p></div>
   </a>
-  <a href="/threads" class="p-homecard bg-brand-lavender text-ink">
+  {% if "threads" in enabled_modules %}<a href="/threads" class="p-homecard bg-brand-lavender text-ink">
     <span class="w-9 h-9 rounded-xl bg-black/10 flex items-center justify-center">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
     </span>
     <div><p class="text-lg font-semibold">{{ t("nav.threads") }}</p><p class="text-sm opacity-70">{{ tn("dashboard.threads_active", cards.threads_active) }}</p></div>
-  </a>
-  <a href="/incidents" class="p-homecard bg-brand-coral text-white">
+  </a>{% endif %}
+  {% if "incidents" in enabled_modules %}<a href="/incidents" class="p-homecard bg-brand-coral text-white">
     <span class="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
     </span>
     <div><p class="text-lg font-semibold">{{ t("nav.incidents") }}</p><p class="text-sm opacity-80">{{ tn("dashboard.incidents_new", cards.incidents_new) }}</p></div>
-  </a>
+  </a>{% endif %}
   <a href="/archive" class="p-homecard bg-brand-mint text-ink">
     <span class="w-9 h-9 rounded-xl bg-black/10 flex items-center justify-center">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9 2 2 4-4"/></svg>

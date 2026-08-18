@@ -447,22 +447,28 @@
     "method": "GET",
     "path": "/hilos",
     "name": "_redirect",
-    "trust_class": "public",
-    "dependencies": []
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
   },
   {
     "method": "GET",
     "path": "/hilos/{thread_id}",
     "name": "_legacy_thread_detail",
-    "trust_class": "public",
-    "dependencies": []
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
   },
   {
     "method": "GET",
     "path": "/incidentes",
     "name": "_redirect",
-    "trust_class": "public",
-    "dependencies": []
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
   },
   {
     "method": "GET",
@@ -514,8 +520,10 @@
     "method": "GET",
     "path": "/management",
     "name": "management_home",
-    "trust_class": "public",
-    "dependencies": []
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
   },
   {
     "method": "GET",
@@ -557,8 +565,10 @@
     "method": "GET",
     "path": "/management/pending",
     "name": "management_pending_compat",
-    "trust_class": "public",
-    "dependencies": []
+    "trust_class": "browser_session",
+    "dependencies": [
+      "current_user_ui"
+    ]
   },
   {
     "method": "GET",
@@ -666,6 +676,26 @@
     "method": "POST",
     "path": "/projects/{slug}/settings",
     "name": "project_settings_update",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/projects/{slug}/settings/modules/preset",
+    "name": "project_modules_apply_preset",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/projects/{slug}/settings/modules/{module}",
+    "name": "project_module_update",
     "trust_class": "owner_session",
     "dependencies": [
       "api_or_session_user",

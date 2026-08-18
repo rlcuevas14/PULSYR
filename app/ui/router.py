@@ -19,11 +19,18 @@ from app.items.lifecycle import allowed_targets, non_terminal_targets
 from app.items.models import Item, ItemComment, ItemEvent
 from app.jobs.models import AgentRun
 from app.projects.access import resolve_current_project, user_role_on_project
+from app.projects.deps import require_project_module_ui
 from app.scopes.models import Scope
 from app.templates_config import templates
 from app.ui.flash import flash_success
 
 router = APIRouter(tags=["ui"])
+threads_ui_router = APIRouter(
+    tags=["ui"], dependencies=[Depends(require_project_module_ui("threads"))]
+)
+incidents_ui_router = APIRouter(
+    tags=["ui"], dependencies=[Depends(require_project_module_ui("incidents"))]
+)
 
 _OPEN = ["idea", "backlog", "spec", "in-progress", "blocked", "in-review"]
 # ponytail: fetch cap keeps the page bounded; the counter shows "{n}+" when hit.
@@ -87,6 +94,7 @@ async def dashboard(
     from app.webhooks.models import SentryIssue
 
     pid = await _project_id(db, user, request)
+    effective_modules = request.state.enabled_modules
     counts_q = await db.execute(
         select(Item.status, func.count().label("n"))
         .where(Item.project_id == pid).group_by(Item.status)
@@ -100,16 +108,24 @@ async def dashboard(
             Item.effort_ai.in_(["XS", "S"]), Item.status.not_in(["done", "discarded"]),
         )
     ) or 0)
-    threads_active = int(await db.scalar(
-        select(func.count()).select_from(Thread).where(
-            Thread.project_id == pid, Thread.stage.not_in(["done", "discarded"]),
-        )
-    ) or 0)
-    incidents_new = int(await db.scalar(
-        select(func.count()).select_from(SentryIssue).where(
-            SentryIssue.project_id == pid, SentryIssue.status == "new",
-        )
-    ) or 0)
+    threads_active = (
+        int(await db.scalar(
+            select(func.count()).select_from(Thread).where(
+                Thread.project_id == pid, Thread.stage.not_in(["done", "discarded"]),
+            )
+        ) or 0)
+        if "threads" in effective_modules
+        else 0
+    )
+    incidents_new = (
+        int(await db.scalar(
+            select(func.count()).select_from(SentryIssue).where(
+                SentryIssue.project_id == pid, SentryIssue.status == "new",
+            )
+        ) or 0)
+        if "incidents" in effective_modules
+        else 0
+    )
 
     recent_q = await db.execute(
         select(Item).where(Item.project_id == pid).order_by(Item.created_at.desc()).limit(10)
@@ -150,6 +166,7 @@ async def dashboard(
             "recent_touch": {str(i.id): _recent_touch(i) for i in recent},
             "monthly_cost": float(cost_q or 0), "scopes": scopes,
             "nav_badges": {"incidents_new": incidents_new},
+            "enabled_modules": effective_modules,
         },
     )
 
@@ -804,7 +821,7 @@ async def ui_create_item(
 
 # ---------- Threads ----------
 
-@router.get("/threads", response_class=HTMLResponse)
+@threads_ui_router.get("/threads", response_class=HTMLResponse)
 async def hilos_page(
     request: Request,
     scope: str | None = None,
@@ -846,7 +863,7 @@ async def hilos_page(
     )
 
 
-@router.get("/threads/{thread_id}", response_class=HTMLResponse)
+@threads_ui_router.get("/threads/{thread_id}", response_class=HTMLResponse)
 async def hilo_detail(
     thread_id: uuid.UUID,
     request: Request,
@@ -877,7 +894,7 @@ async def hilo_detail(
     )
 
 
-@router.post("/ui/threads/create")
+@threads_ui_router.post("/ui/threads/create")
 async def ui_create_hilo(
     request: Request,
     title: str = Form(...),
@@ -895,7 +912,7 @@ async def ui_create_hilo(
     return RedirectResponse(f"/threads/{t.id}", status_code=303)
 
 
-@router.post("/ui/threads/{thread_id}/advance")
+@threads_ui_router.post("/ui/threads/{thread_id}/advance")
 async def ui_advance_hilo(
     thread_id: uuid.UUID,
     request: Request,
@@ -921,7 +938,7 @@ async def ui_advance_hilo(
     return _refresh()
 
 
-@router.post("/ui/threads/{thread_id}/stage")
+@threads_ui_router.post("/ui/threads/{thread_id}/stage")
 async def ui_set_hilo_stage(
     thread_id: uuid.UUID,
     request: Request,
@@ -947,7 +964,7 @@ async def ui_set_hilo_stage(
     return _refresh()
 
 
-@router.post("/ui/threads/{thread_id}/elaborate", response_class=HTMLResponse)
+@threads_ui_router.post("/ui/threads/{thread_id}/elaborate", response_class=HTMLResponse)
 async def ui_elaborate_hilo(
     thread_id: uuid.UUID,
     request: Request,
@@ -975,7 +992,7 @@ async def ui_elaborate_hilo(
 
 # ---------- Incidents (Sentry error container) ----------
 
-@router.get("/incidents", response_class=HTMLResponse)
+@incidents_ui_router.get("/incidents", response_class=HTMLResponse)
 async def incidentes_page(
     request: Request,
     include_ignored: bool = False,
@@ -1012,7 +1029,7 @@ async def incidentes_page(
     )
 
 
-@router.post("/ui/incidents/{issue_id}/promote")
+@incidents_ui_router.post("/ui/incidents/{issue_id}/promote")
 async def ui_promote_issue(
     issue_id: uuid.UUID,
     request: Request,
@@ -1037,7 +1054,7 @@ async def ui_promote_issue(
     return _refresh()
 
 
-@router.post("/ui/incidents/{issue_id}/ignore")
+@incidents_ui_router.post("/ui/incidents/{issue_id}/ignore")
 async def ui_ignore_issue(
     issue_id: uuid.UUID,
     request: Request,
@@ -1058,7 +1075,7 @@ async def ui_ignore_issue(
     return _refresh()
 
 
-@router.post("/ui/incidents/{issue_id}/unignore")
+@incidents_ui_router.post("/ui/incidents/{issue_id}/unignore")
 async def ui_unignore_issue(
     issue_id: uuid.UUID,
     request: Request,
@@ -1079,7 +1096,7 @@ async def ui_unignore_issue(
     return _refresh()
 
 
-@router.post("/ui/incidents/backfill")
+@incidents_ui_router.post("/ui/incidents/backfill")
 async def ui_backfill_sentry(
     request: Request,
     query: str = Form("is:unresolved"),
@@ -1399,11 +1416,24 @@ def _make_legacy_redirect(new_path: str):
 
 
 for _old_path, _new_path in _LEGACY_SLUGS.items():
+    _guard = (
+        require_project_module_ui("threads") if _old_path == "/hilos"
+        else require_project_module_ui("incidents") if _old_path == "/incidentes"
+        else None
+    )
     router.add_api_route(
-        _old_path, _make_legacy_redirect(_new_path), methods=["GET"], include_in_schema=False
+        _old_path,
+        _make_legacy_redirect(_new_path),
+        methods=["GET"],
+        include_in_schema=False,
+        dependencies=[Depends(_guard)] if _guard else None,
     )
 
 
-@router.get("/hilos/{thread_id}", include_in_schema=False)
+@threads_ui_router.get("/hilos/{thread_id}", include_in_schema=False)
 async def _legacy_thread_detail(thread_id: uuid.UUID) -> RedirectResponse:
     return RedirectResponse(f"/threads/{thread_id}", status_code=301)
+
+
+router.include_router(threads_ui_router)
+router.include_router(incidents_ui_router)

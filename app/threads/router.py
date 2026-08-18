@@ -9,10 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.deps import api_or_session_user, current_project_id, require_write
 from app.database import get_db
+from app.projects.deps import require_project_module_rest
 from app.threads import service
 from app.threads.models import Thread, ThreadArtifact
 
-router = APIRouter(prefix="/threads", tags=["threads"])
+router = APIRouter(
+    prefix="/threads",
+    tags=["threads"],
+    dependencies=[Depends(require_project_module_rest("threads"))],
+)
 
 
 class ThreadCreate(BaseModel):

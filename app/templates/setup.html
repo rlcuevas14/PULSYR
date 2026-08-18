@@ -59,6 +59,16 @@
         <p class="text-xs text-muted mb-2">{{ t("setup.more_projects_hint") }}</p>
         <input id="project_name" name="project_name" type="text" required autocomplete="organization" class="p-input" placeholder="{{ t('projects.name_placeholder') }}">
       </div>
+      <div>
+        <label class="p-label" for="preset">{{ t("modules.preset_label") }}</label>
+        <p class="text-xs text-muted mb-1">{{ t("modules.preset_help") }}</p>
+        <select id="preset" name="preset" class="p-input">
+          <option value="solo">{{ t("modules.preset.solo") }}</option>
+          <option value="product">{{ t("modules.preset.product") }}</option>
+          <option value="client">{{ t("modules.preset.client") }}</option>
+          <option value="hybrid">{{ t("modules.preset.hybrid") }}</option>
+        </select>
+      </div>
       <div role="group" aria-labelledby="setup-color-label">
         <p id="setup-color-label" class="p-label">{{ t("setup.project_color") }}</p>
         <div class="flex items-center gap-2 flex-wrap" data-color-picker>

@@ -181,6 +181,49 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> Resp
     )
 
 
+async def _module_disabled_handler(request: Request, exc: Exception) -> Response:
+    from app.i18n import resolve_lang
+    from app.i18n import t as _t
+    from app.projects.modules import ModuleDisabled
+
+    assert isinstance(exc, ModuleDisabled)
+    request_id = request_id_from_scope(request.scope)
+    headers = {"X-Request-ID": request_id, "X-Robots-Tag": "noindex, nofollow"}
+    if not exc.ui:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "code": "module_disabled",
+                "module": exc.module,
+                "detail": _t("modules.disabled", resolve_lang(request)),
+            },
+            headers=headers,
+        )
+    auth = getattr(request.state, "auth_context", None)
+    project = getattr(request.state, "current_project", None)
+    owner_settings = (
+        getattr(auth, "account_role", None) == "owner" and project is not None
+    )
+    action_href = f"/projects/{project.slug}/settings" if project is not None and owner_settings else "/"
+    lang = resolve_lang(request)
+    return templates.TemplateResponse(
+        request,
+        "error.html",
+        {
+            "status_code": 403,
+            "heading": _t("modules.disabled_heading", lang),
+            "message": _t("modules.disabled", lang),
+            "request_id": request_id,
+            "action_href": action_href,
+            "action_label": _t(
+                "modules.open_settings" if owner_settings else "modules.return_home", lang
+            ),
+        },
+        status_code=403,
+        headers=headers,
+    )
+
+
 def create_app() -> FastAPI:
     from app.accounts import models as _accounts_models  # noqa: F401 — register ORM in Base.metadata
     from app.accounts.router import router as accounts_router
@@ -292,6 +335,9 @@ def create_app() -> FastAPI:
     # detail) y RequestValidationError (422 con los errores de validación), que tienen
     # prioridad sobre este. Así, este solo atrapa los errores 500 inesperados.
     app.add_exception_handler(StarletteHTTPException, _http_error_handler)
+    from app.projects.modules import ModuleDisabled
+
+    app.add_exception_handler(ModuleDisabled, _module_disabled_handler)
     app.add_exception_handler(Exception, _unhandled_exception_handler)
     return app
 

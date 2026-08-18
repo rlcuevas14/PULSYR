@@ -24,10 +24,14 @@ from app.i18n import t as _t
 from app.management import gantt
 from app.management import service as mservice
 from app.projects.access import resolve_current_project, user_role_on_project
+from app.projects.deps import require_project_module_ui
 from app.templates_config import templates
 from app.ui.flash import flash_success
 
-router = APIRouter(tags=["management"])
+router = APIRouter(
+    tags=["management"],
+    dependencies=[Depends(require_project_module_ui("management"))],
+)
 
 _SUBTABS = ("pendientes", "plan", "documentos")
 

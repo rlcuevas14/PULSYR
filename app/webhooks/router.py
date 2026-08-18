@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.rate_limit import limit_client
 from app.config import settings
 from app.database import get_db
+from app.projects.modules import is_module_enabled
 from app.webhooks import connection, service
 
 logger = logging.getLogger("pulsyr.webhooks")
@@ -54,6 +55,15 @@ async def sentry_webhook_tokened(
         payload = json.loads(body)
         parsed = service.parse_sentry_payload(payload)
         project = await connection.route_project(db, conn.account_id, parsed["slug"])
+        if project is not None and not await is_module_enabled(db, project.id, "incidents"):
+            logger.info(
+                "sentry webhook skipped: module_disabled project_id=%s", project.id
+            )
+            return JSONResponse({
+                "accepted": True,
+                "status": "ignored",
+                "reason": "module_disabled",
+            })
         result = await service.ingest_sentry(
             db, payload, account_id=conn.account_id,
             project_id=project.id if project else None,

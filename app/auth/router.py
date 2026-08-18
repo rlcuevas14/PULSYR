@@ -515,6 +515,7 @@ async def setup_submit(
     password: str = Form(...),
     project_name: str = Form(...),
     color: str = Form(""),
+    preset: str = Form("solo"),
     db: AsyncSession = Depends(get_db),
 ):
     if not await _no_users(db):
@@ -525,6 +526,15 @@ async def setup_submit(
             {"error": _t("setup.error_password_length", resolve_lang(request))},
             status_code=422,
         )
+    from app.projects.modules import PRESETS
+
+    if preset not in PRESETS:
+        return templates.TemplateResponse(
+            request,
+            "setup.html",
+            {"error": _t("modules.invalid_preset", resolve_lang(request))},
+            status_code=422,
+        )
     from app.accounts.service import create_account
     acc, user = await create_account(
         db, name=name, owner_email=email, owner_name=name, password=password, is_superadmin=True
@@ -533,7 +543,14 @@ async def setup_submit(
 
     # Create the first project and a write token in the same transaction.
     from app.projects.service import create_project
-    project = await create_project(db, name=project_name, account_id=acc.id, color=color or None)
+    project = await create_project(
+        db,
+        name=project_name,
+        account_id=acc.id,
+        color=color or None,
+        preset=preset,
+        actor=user.email,
+    )
     raw = secrets.token_urlsafe(32)
     token = ApiToken(
         name="my-agent",
