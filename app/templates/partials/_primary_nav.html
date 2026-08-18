@@ -1,0 +1,27 @@
+{# Desktop product navigation. Context: `navigation`. #}
+{% for entry in navigation.primary %}
+  {% if entry.children and entry.key == "management" %}
+  <details class="p-menu h-16 flex items-center">
+    <summary class="p-navlink flex items-center gap-1 {% if navigation.active_key == entry.key %}p-navlink-active{% endif %}"
+             aria-label="{{ t(entry.label_key) }}">
+      {{ t(entry.label_key) }}
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M6 9l6 6 6-6"/></svg>
+    </summary>
+    <div class="p-menu-panel left-0 right-auto">
+      {% for child in entry.children %}
+      <a href="{{ child.href }}"
+         class="p-menu-item {% if navigation.active_child_key == child.key %}bg-surface-strong text-ink font-semibold{% endif %}"
+         {% if navigation.active_child_key == child.key %}aria-current="page"{% endif %}>
+        {{ t(child.label_key) }}
+      </a>
+      {% endfor %}
+    </div>
+  </details>
+  {% else %}
+  <a href="{{ entry.href }}"
+     class="p-navlink {% if navigation.active_key == entry.key %}p-navlink-active{% endif %}"
+     {% if navigation.active_key == entry.key %}aria-current="page"{% endif %}>
+    {{ t(entry.label_key) }}
+  </a>
+  {% endif %}
+{% endfor %}

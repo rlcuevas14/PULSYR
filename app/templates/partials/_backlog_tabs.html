@@ -1,0 +1,13 @@
+{# Contextual views of the core Backlog domain. Context: `navigation`. #}
+{% if navigation.active_key == "backlog" %}
+<nav class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-1 overflow-x-auto"
+     aria-label="{{ t('nav.backlog_views') }}">
+  {% for entry in navigation.backlog_tabs %}
+  <a href="{{ entry.href }}"
+     class="px-3 py-2.5 text-sm whitespace-nowrap border-b-2 {% if navigation.active_child_key == entry.key %}text-ink border-current font-semibold{% else %}text-muted border-transparent hover:text-ink{% endif %}"
+     {% if navigation.active_child_key == entry.key %}aria-current="page"{% endif %}>
+    {{ t(entry.label_key) }}
+  </a>
+  {% endfor %}
+</nav>
+{% endif %}

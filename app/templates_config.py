@@ -14,6 +14,7 @@ from app import i18n
 from app.accounts.plans import FREE, limits_for
 from app.config import settings
 from app.items.lifecycle import allowed_targets, non_terminal_targets
+from app.ui.navigation import navigation_context
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -22,6 +23,7 @@ templates.env.globals["non_terminal_targets"] = non_terminal_targets
 templates.env.globals["allowed_targets"] = allowed_targets
 templates.env.globals["base_url"] = settings.base_url
 templates.env.globals["FREE_LIMITS"] = limits_for(FREE)
+templates.env.globals["navigation_context"] = navigation_context
 
 
 @lru_cache(maxsize=1)

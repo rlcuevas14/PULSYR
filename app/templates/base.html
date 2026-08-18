@@ -6,7 +6,7 @@
 </head>
 <body class="bg-canvas text-body font-sans min-h-screen flex flex-col">
   <a class="p-skip-link" href="#main-content">{{ t("nav.skip_content") }}</a>
-  {% set NAV = [("/management", t("nav.management")), ("/backlog", t("nav.backlog")), ("/priority", t("nav.priority")), ("/threads", t("nav.threads")), ("/incidents", t("nav.incidents")), ("/archive", t("nav.archive"))] %}
+  {% set navigation = navigation_context(request.url.path) %}
   {% set lang_next = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
   <header class="sticky top-0 z-50 bg-surface-soft backdrop-blur border-b border-hairline">
     <nav class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
@@ -22,9 +22,7 @@
           <span class="text-lg font-semibold tracking-tight text-ink">pulsyr</span>
         </a>
         <div class="hidden md:flex items-center gap-5">
-          {% for href, label in NAV %}
-          <a href="{{ href }}" class="p-navlink {% if request.url.path == href or request.url.path.startswith(href ~ '/') %}p-navlink-active{% endif %}">{{ label }}</a>
-          {% endfor %}
+          {% include "partials/_primary_nav.html" %}
         </div>
       </div>
       <div class="flex items-center gap-2 sm:gap-3">
@@ -80,6 +78,7 @@
         </details>
       </div>
     </nav>
+    {% include "partials/_backlog_tabs.html" %}
     <div class="h-[3px]" style="background:var(--project)"></div>
   </header>
 
@@ -91,9 +90,7 @@
         <span class="text-lg font-semibold tracking-tight text-ink">pulsyr</span>
         <button data-modal-close="nav-drawer" aria-label="{{ t('nav.close_menu') }}" class="p-2 text-muted">✕</button>
       </div>
-      {% for href, label in NAV %}
-      <a href="{{ href }}" class="p-menu-item text-base {% if request.url.path == href or request.url.path.startswith(href ~ '/') %}bg-surface-strong text-ink{% endif %}">{{ label }}</a>
-      {% endfor %}
+      {% include "partials/_mobile_nav_drawer.html" %}
       <div class="border-t border-hairline mt-2 pt-2">
         <a href="/projects" class="p-menu-item">{{ t("nav.projects") }}</a>
         <div class="flex gap-1 px-3 pt-2">

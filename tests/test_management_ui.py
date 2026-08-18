@@ -56,7 +56,7 @@ async def _upload(client, *, compartment="Docs", filename="proposal.md",
 async def test_management_home_redirects(client: AsyncClient):
     await _login(client)
     r = await client.get("/management", follow_redirects=False)
-    assert r.status_code == 302 and r.headers["location"] == "/management/documentos"
+    assert r.status_code == 303 and r.headers["location"] == "/management/pendientes"
 
 
 @pytest.mark.asyncio
