@@ -13,6 +13,7 @@ from app.config import settings
 from app.database import get_db
 from app.i18n import resolve_lang
 from app.i18n import t as _t
+from app.projects import modules as project_modules
 from app.projects import service as ps
 from app.projects.access import accessible_project_ids, require_project_access, user_role_on_project
 from app.secret_fields import resolve_write_only_secret
@@ -37,6 +38,45 @@ def _connect_snippet(project: ps.Project) -> str:
     )
 
 
+async def _settings_context(
+    db: AsyncSession,
+    request: Request,
+    user: User,
+    project: ps.Project,
+    *,
+    new_token: str | None = None,
+    error: str | None = None,
+) -> dict:
+    role = await user_role_on_project(db, user, project.id)
+    tokens = list((await db.execute(
+        select(ApiToken).where(
+            ApiToken.project_id == project.id,
+            ApiToken.revoked_at.is_(None),
+        ).order_by(ApiToken.created_at.desc())
+    )).scalars().all())
+    module_states = (
+        request.state.module_states
+        if getattr(request.state, "current_project_id", None) == project.id
+        and getattr(request.state, "project_modules_loaded", False)
+        else await project_modules.module_states(db, project.id)
+    )
+    from app.webhooks.connection import outbound
+
+    return {
+        "user": user,
+        "project": project,
+        "tokens": tokens,
+        "can_write": role != "viewer",
+        "snippet": _connect_snippet(project),
+        "new_token": new_token,
+        "error": error,
+        "module_states": module_states,
+        "module_preset": project_modules.infer_preset(module_states),
+        "module_presets": project_modules.PRESETS,
+        "has_sentry_connection": await outbound(db, user.account_id) is not None,
+    }
+
+
 @router.get("/projects", response_class=HTMLResponse)
 async def projects_list(
     request: Request,
@@ -57,7 +97,12 @@ async def projects_new_page(
     request: Request,
     user: User = Depends(require_owner),
 ):
-    return templates.TemplateResponse(request, "projects_new.html", {"user": user, "error": None})
+    return templates.TemplateResponse(request, "projects_new.html", {
+        "user": user,
+        "error": None,
+        "module_presets": project_modules.PRESETS,
+        "selected_preset": "solo",
+    })
 
 
 @router.post("/projects/new")
@@ -67,9 +112,22 @@ async def projects_new_submit(
     slug: str = Form(""),
     description: str = Form(""),
     color: str = Form(""),
+    preset: str = Form("solo"),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_owner),
 ):
+    if preset not in project_modules.PRESETS:
+        return templates.TemplateResponse(
+            request,
+            "projects_new.html",
+            {
+                "user": user,
+                "error": _t("modules.invalid_preset", resolve_lang(request)),
+                "module_presets": project_modules.PRESETS,
+                "selected_preset": "solo",
+            },
+            status_code=422,
+        )
     try:
         project = await ps.create_project(
             db,
@@ -78,6 +136,8 @@ async def projects_new_submit(
             slug=slug or None,
             description=description or None,
             color=color or None,
+            preset=preset,
+            actor=user.email,
         )
         await db.commit()
     except (ps.ProjectError, PlanLimitError) as e:
@@ -87,7 +147,15 @@ async def projects_new_submit(
             else str(e)
         )
         return templates.TemplateResponse(
-            request, "projects_new.html", {"user": user, "error": error}, status_code=422
+            request,
+            "projects_new.html",
+            {
+                "user": user,
+                "error": error,
+                "module_presets": project_modules.PRESETS,
+                "selected_preset": preset,
+            },
+            status_code=422,
         )
     return RedirectResponse(f"/projects/{project.slug}/settings", status_code=303)
 
@@ -103,18 +171,17 @@ async def project_settings(
     if project is None:
         return Response(status_code=404, content="Project not found")
     await require_project_access(db, user, project.id)
-    can_write = await user_role_on_project(db, user, project.id) != "viewer"
-    tokens = list((await db.execute(
-        select(ApiToken).where(
-            ApiToken.project_id == project.id,
-            ApiToken.revoked_at.is_(None),
-        ).order_by(ApiToken.created_at.desc())
-    )).scalars().all())
-    snippet = _connect_snippet(project)
-    return templates.TemplateResponse(request, "projects_settings.html", {
-        "user": user, "project": project, "tokens": tokens, "can_write": can_write,
-        "snippet": snippet, "new_token": request.session.pop("new_token", None),
-    })
+    return templates.TemplateResponse(
+        request,
+        "projects_settings.html",
+        await _settings_context(
+            db,
+            request,
+            user,
+            project,
+            new_token=request.session.pop("new_token", None),
+        ),
+    )
 
 
 @router.post("/projects/{slug}/settings")
@@ -146,24 +213,24 @@ async def project_settings_update(
         if clash:
             # Re-render the full settings page with the error — a plain-text 422 on a
             # regular form is a dead end that loses everything the user typed.
-            tokens = list((await db.execute(
-                select(ApiToken).where(
-                    ApiToken.project_id == project.id,
-                    ApiToken.revoked_at.is_(None),
-                ).order_by(ApiToken.created_at.desc())
-            )).scalars().all())
-            snippet = _connect_snippet(project)
             # Display-only echo of the submitted values; nothing below flushes, so the
             # in-memory mutation is discarded when the session closes without commit.
             project.name = name.strip() or project.name
             project.description = description.strip() or None
             project.repo_url = repo_url.strip() or None
             project.sentry_project_slug = new_sentry_slug
-            return templates.TemplateResponse(request, "projects_settings.html", {
-                "user": user, "project": project, "tokens": tokens, "can_write": True,
-                "snippet": snippet, "new_token": None,
-                "error": _t("projects.sentry_slug_taken", resolve_lang(request)),
-            }, status_code=422)
+            return templates.TemplateResponse(
+                request,
+                "projects_settings.html",
+                await _settings_context(
+                    db,
+                    request,
+                    user,
+                    project,
+                    error=_t("projects.sentry_slug_taken", resolve_lang(request)),
+                ),
+                status_code=422,
+            )
     await ps.update_project(db, project, {
         "name": name.strip(),
         "description": description.strip() or None,
@@ -180,6 +247,47 @@ async def project_settings_update(
     if request.session.get("current_project_id") == str(project.id):
         request.session["current_project_color"] = project.color or "#6366f1"
     flash_success(request, message=_t("flash.settings_saved", resolve_lang(request)))
+    return RedirectResponse(f"/projects/{slug}/settings", status_code=303)
+
+
+@router.post("/projects/{slug}/settings/modules/preset")
+async def project_modules_apply_preset(
+    slug: str,
+    request: Request,
+    preset: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_owner),
+):
+    project = await ps.get_by_slug(db, slug, user.account_id)
+    if project is None:
+        return Response(status_code=404, content="Project not found")
+    if preset not in project_modules.PRESETS:
+        return Response(status_code=422, content="Invalid project preset")
+    await project_modules.apply_preset(db, project.id, preset, user.email)
+    await db.commit()
+    flash_success(request, message=_t("modules.preset_saved", resolve_lang(request)))
+    return RedirectResponse(f"/projects/{slug}/settings", status_code=303)
+
+
+@router.post("/projects/{slug}/settings/modules/{module}")
+async def project_module_update(
+    slug: str,
+    module: str,
+    request: Request,
+    enabled: bool = Form(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_owner),
+):
+    project = await ps.get_by_slug(db, slug, user.account_id)
+    if project is None:
+        return Response(status_code=404, content="Project not found")
+    if module not in project_modules.OPTIONAL_MODULES:
+        return Response(status_code=404, content="Unknown project module")
+    await project_modules.set_module_enabled(
+        db, project.id, module, enabled, user.email, source="manual"
+    )
+    await db.commit()
+    flash_success(request, message=_t("modules.module_saved", resolve_lang(request)))
     return RedirectResponse(f"/projects/{slug}/settings", status_code=303)
 
 
@@ -212,21 +320,18 @@ async def project_token_create(
             project_id=project.id,
         )
     except PlanLimitError as e:
-        tokens = list((await db.execute(
-            select(ApiToken).where(
-                ApiToken.project_id == project.id,
-                ApiToken.revoked_at.is_(None),
-            ).order_by(ApiToken.created_at.desc())
-        )).scalars().all())
-        return templates.TemplateResponse(request, "projects_settings.html", {
-            "user": user,
-            "project": project,
-            "tokens": tokens,
-            "can_write": role != "viewer",
-            "snippet": _connect_snippet(project),
-            "new_token": None,
-            "error": _t(f"plan.limit.{e.resource}", resolve_lang(request), limit=e.limit),
-        }, status_code=422)
+        return templates.TemplateResponse(
+            request,
+            "projects_settings.html",
+            await _settings_context(
+                db,
+                request,
+                user,
+                project,
+                error=_t(f"plan.limit.{e.resource}", resolve_lang(request), limit=e.limit),
+            ),
+            status_code=422,
+        )
     # ponytail: show raw token once via session flash, cleared in GET /settings
     request.session["new_token"] = raw
     return RedirectResponse(f"/projects/{slug}/settings", status_code=303)

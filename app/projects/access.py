@@ -52,6 +52,9 @@ async def resolve_project_id(db: AsyncSession, auth, request) -> uuid.UUID:
     user's selected + accessible project. Raises 400/403 when none applies."""
     from app.auth.models import ApiToken
 
+    cached = getattr(request.state, "current_project_id", None)
+    if isinstance(cached, uuid.UUID):
+        return cached
     if isinstance(auth, ApiToken):
         if auth.project_id is None:
             raise HTTPException(status_code=400, detail="Token has no project assigned")
@@ -75,8 +78,12 @@ async def resolve_project_id(db: AsyncSession, auth, request) -> uuid.UUID:
 async def resolve_current_project(db: AsyncSession, user, request) -> Project | None:
     """UI helper: the session's selected project (if accessible) or the user's earliest
     accessible project, or None when the user can reach no project."""
+    if getattr(request.state, "project_context_loaded", False):
+        return getattr(request.state, "current_project", None)
     ids = await accessible_project_ids(db, user)
     if not ids:
+        request.state.project_context_loaded = True
+        request.state.current_project = None
         return None
     sid = request.session.get("current_project_id")
     if sid:
@@ -85,8 +92,16 @@ async def resolve_current_project(db: AsyncSession, user, request) -> Project | 
         except ValueError:
             pid = None
         if pid is not None and pid in ids:
-            return await db.get(Project, pid)
+            project = await db.get(Project, pid)
+            request.state.project_context_loaded = True
+            request.state.current_project = project
+            request.state.current_project_id = project.id if project else None
+            return project
     rows = await db.execute(
         select(Project).where(Project.id.in_(ids)).order_by(Project.created_at)
     )
-    return rows.scalars().first()
+    project = rows.scalars().first()
+    request.state.project_context_loaded = True
+    request.state.current_project = project
+    request.state.current_project_id = project.id if project else None
+    return project

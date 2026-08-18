@@ -6,7 +6,10 @@
 </head>
 <body class="p-mobile-shell bg-canvas text-body font-sans min-h-screen flex flex-col">
   <a class="p-skip-link" href="#main-content">{{ t("nav.skip_content") }}</a>
-  {% set navigation = navigation_context(request.url.path) %}
+  {% set navigation = navigation_context(
+    request.url.path,
+    request.state.enabled_modules | default(none)
+  ) %}
   {% set nav_badges = nav_badges | default({}) %}
   {% set lang_next = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
   <header class="sticky top-0 z-50 bg-surface-soft backdrop-blur border-b border-hairline">

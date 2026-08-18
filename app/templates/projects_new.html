@@ -29,6 +29,17 @@
         class="w-full p-input text-sm"
         placeholder="{{ t('projects.description_placeholder') }}">
     </div>
+    <div>
+      <label class="p-label" for="preset">{{ t("modules.preset_label") }}</label>
+      <p class="text-xs text-muted mb-1">{{ t("modules.preset_help") }}</p>
+      <select id="preset" name="preset" class="w-full p-input text-sm">
+        {% for preset in module_presets %}
+        <option value="{{ preset }}" {% if selected_preset == preset %}selected{% endif %}>
+          {{ t("modules.preset." ~ preset) }} — {{ t("modules.preset." ~ preset ~ ".description") }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
     <div role="group" aria-labelledby="new-project-color-label">
       <p id="new-project-color-label" class="p-label">{{ t("common.color") }}</p>
       {{ color_picker(None, t("projects.new")) }}

@@ -21,7 +21,9 @@ async def _account_with_data(client: AsyncClient, label: str) -> dict:
         acc, owner = await create_account(
             db, f"{label}-{suffix}", f"{label}{suffix}@t.cl", "Owner", "password123"
         )
-        project = await create_project(db, name=f"{label}-proj-{suffix}", account_id=acc.id)
+        project = await create_project(
+            db, name=f"{label}-proj-{suffix}", account_id=acc.id, preset="hybrid"
+        )
         await db.flush()
         scope = Scope(name=f"{label}-area", project_id=project.id)
         db.add(scope)

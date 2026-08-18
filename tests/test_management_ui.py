@@ -24,6 +24,10 @@ async def _login(client: AsyncClient, role: str = "admin"):
         proj = (await db.execute(
             select(Project).where(Project.account_id == user.account_id)
         )).scalars().first()
+        from app.projects.modules import apply_preset
+
+        await apply_preset(db, proj.id, "client", user.email)
+        await db.commit()
         uid, pid = user.id, proj.id
         break
     resp = await client.post(

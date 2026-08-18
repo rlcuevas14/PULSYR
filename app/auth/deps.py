@@ -12,6 +12,36 @@ from app.database import get_db
 _bearer = HTTPBearer(auto_error=False)
 
 
+async def _load_project_module_context(
+    request: Request,
+    db: AsyncSession,
+    auth: User | ApiToken,
+) -> None:
+    """Resolve capabilities once for this request; never persist them in auth state."""
+    if getattr(request.state, "project_modules_loaded", False):
+        return
+    from app.projects.access import resolve_current_project
+    from app.projects.modules import CORE_MODULE, effective_modules, module_states
+
+    request.state.auth_context = auth
+    if isinstance(auth, ApiToken):
+        project_id = auth.project_id
+        request.state.current_project_id = project_id
+    else:
+        project = await resolve_current_project(db, auth, request)
+        project_id = project.id if project else None
+    if project_id is not None:
+        configured = await module_states(db, project_id)
+        request.state.module_states = configured
+        request.state.enabled_modules = effective_modules(
+            configured, plan_code=getattr(auth, "plan_code", None)
+        )
+    else:
+        request.state.module_states = {}
+        request.state.enabled_modules = frozenset({CORE_MODULE})
+    request.state.project_modules_loaded = True
+
+
 async def current_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -25,6 +55,7 @@ async def current_user(
     from app.accounts.plans import active_plan_code
 
     setattr(user, "plan_code", await active_plan_code(db, user.account_id))
+    await _load_project_module_context(request, db, user)
     return user
 
 
@@ -42,6 +73,7 @@ async def current_user_ui(
     from app.accounts.plans import active_plan_code
 
     setattr(user, "plan_code", await active_plan_code(db, user.account_id))
+    await _load_project_module_context(request, db, user)
     return user
 
 
@@ -79,6 +111,7 @@ async def api_or_session_user(
         token = await verify_api_token(db, credentials.credentials)
         if token is None:
             raise HTTPException(status_code=401, detail="Invalid or revoked token")
+        await _load_project_module_context(request, db, token)
         return token
     user_id = request.session.get("user_id")
     if user_id:
@@ -87,6 +120,7 @@ async def api_or_session_user(
             from app.accounts.plans import active_plan_code
 
             setattr(user, "plan_code", await active_plan_code(db, user.account_id))
+            await _load_project_module_context(request, db, user)
             return user
     raise HTTPException(status_code=401, detail="Not authenticated")
 

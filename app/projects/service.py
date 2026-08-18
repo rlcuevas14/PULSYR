@@ -50,6 +50,8 @@ async def create_project(
     slug: str | None = None,
     description: str | None = None,
     color: str | None = None,
+    preset: str = "solo",
+    actor: str = "system:onboarding",
 ) -> Project:
     from app.accounts.plans import ensure_project_capacity
 
@@ -68,6 +70,9 @@ async def create_project(
     )
     db.add(project)
     await db.flush()
+    from app.projects.modules import initialize_modules
+
+    await initialize_modules(db, project.id, preset, actor)
     # A project must be usable by a human from minute one: the new-item modal
     # requires a scope and the UI has no screen to create one (only MCP/REST do).
     db.add(Scope(name="General", project_id=project.id))

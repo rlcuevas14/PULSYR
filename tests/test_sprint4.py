@@ -16,6 +16,9 @@ async def _setup(client: AsyncClient):
     async for db in client.app.dependency_overrides[get_db]():
         user = await create_user(db, f"s4admin{suffix}@test.cl", "Admin", "pass", "admin")
         project = await db.scalar(select(Project).where(Project.account_id == user.account_id))
+        from app.projects.modules import apply_preset
+
+        await apply_preset(db, project.id, "product", user.email)
         scope = Scope(name=f"s4-{suffix}", project_id=project.id)
         db.add(scope)
         await db.commit()
@@ -118,7 +121,9 @@ async def test_mcp_thread_tools(client: AsyncClient):
     async for db in client.app.dependency_overrides[get_db]():
         from app.projects.service import create_project
         user = await create_user(db, f"mcpt{suffix}@test.cl", "X", "password", "admin")
-        project = await create_project(db, name=f"p-{suffix}", account_id=user.account_id)
+        project = await create_project(
+            db, name=f"p-{suffix}", account_id=user.account_id, preset="product"
+        )
         _t, raw = await create_api_token(db, f"t-{suffix}", "write", user.id)
         _t.project_id = project.id
         await db.commit()

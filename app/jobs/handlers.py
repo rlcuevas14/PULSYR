@@ -74,6 +74,11 @@ async def handle_triage_sentry(db: AsyncSession, ref_id: uuid.UUID | None) -> di
     issue = (await db.execute(select(SentryIssue).where(SentryIssue.id == ref_id))).scalar_one_or_none()
     if issue is None:
         return {"status": "issue-not-found"}
+    if issue.project_id is not None:
+        from app.projects.modules import is_module_enabled
+
+        if not await is_module_enabled(db, issue.project_id, "incidents"):
+            return {"status": "skipped", "reason": "module_disabled"}
 
     try:
         verdict = await llm.triage_sentry(issue.title, str(issue.payload or ""))

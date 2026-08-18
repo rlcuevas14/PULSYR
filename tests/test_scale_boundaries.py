@@ -29,6 +29,9 @@ async def test_collection_limits_are_bounded(client):
         )
         db.add(project)
         await db.flush()
+        from app.projects.modules import initialize_modules
+
+        await initialize_modules(db, project.id, "product", user.email)
         db.add(ApiToken(
             name="limits", token_hash=hashlib.sha256(raw.encode()).hexdigest(),
             scopes="write", project_id=project.id, created_by=user.id,
