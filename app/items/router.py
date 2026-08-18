@@ -284,7 +284,7 @@ async def patch_item(
 
     item = _require_item(await service.get_item(db, item_id), pid)
 
-    changes = body.model_dump(exclude_none=True)
+    changes = body.model_dump(exclude_unset=True)
     actor = _actor(auth)
 
     # status: pasa por el validador de transiciones (terminales → usar /close).
@@ -295,12 +295,12 @@ async def patch_item(
             raise HTTPException(status_code=422, detail=str(e)) from e
 
     # priority: registra priority_declared (lo declarado por el humano).
-    if "priority" in changes:
-        await service.set_priority(db, item, changes.pop("priority"), actor)
-
     # resto de campos: asignación directa.
-    for field, value in changes.items():
-        setattr(item, field, value)
+    if changes:
+        try:
+            await service.update_item(db, item, changes, actor)
+        except service.ItemUpdateError as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
 
     try:
         await db.commit()
@@ -348,15 +348,13 @@ async def add_comment(
     _=Depends(require_write),
     pid: uuid.UUID = Depends(current_project_id),
 ):
-    _require_item(await db.get(Item, item_id), pid)
+    from app.items import service
 
-    comment = ItemComment(
-        item_id=item_id,
-        author=_actor(auth),
-        body_md=body.body_md,
-        kind=body.kind,
-    )
-    db.add(comment)
+    item = _require_item(await db.get(Item, item_id), pid)
+    try:
+        comment = await service.add_comment(db, item, body.body_md, body.kind, _actor(auth))
+    except service.ItemUpdateError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
     try:
         await db.commit()
     except IntegrityError as e:
@@ -460,14 +458,16 @@ async def delete_relationship_endpoint(
     target_id: uuid.UUID,
     relation: str,
     db: AsyncSession = Depends(get_db),
-    _auth=Depends(api_or_session_user),
+    auth=Depends(api_or_session_user),
     _=Depends(require_write),
     pid: uuid.UUID = Depends(current_project_id),
 ):
     from app.items import relationships
 
     await _both_items_in_project(db, source_id, target_id, pid)
-    ok = await relationships.delete_relationship(db, source_id, target_id, relation)
+    ok = await relationships.delete_relationship(
+        db, source_id, target_id, relation, actor=_actor(auth)
+    )
     await db.commit()
     return {"deleted": ok}
 
@@ -482,7 +482,7 @@ async def item_graph(
     from app.items import graph
 
     _require_item(await db.get(Item, item_id), pid)
-    return await graph.subgraph(db, item_id)
+    return await graph.subgraph(db, item_id, project_id=pid)
 
 
 @router.post("/{item_id}/enrich", status_code=202)

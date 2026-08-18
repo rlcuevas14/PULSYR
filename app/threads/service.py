@@ -92,6 +92,8 @@ async def advance_stage(
 async def set_stage(db: AsyncSession, thread: Thread, stage: str) -> Thread:
     if stage not in THREAD_STAGES:
         raise ThreadError(f"Invalid stage: {stage}")
+    if stage == "done" and await _open_linked_items(db, thread) > 0:
+        raise ThreadError("There are still open linked items — close them before marking the thread done.")
     thread.stage = stage
     await db.flush()
     return thread

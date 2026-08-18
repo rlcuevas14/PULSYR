@@ -90,12 +90,16 @@ def test_metric_labels_and_job_values_are_bounded_and_escaped():
     metrics.request_started()
     metrics.request_finished("CUSTOM", '/unknown/"route', 599, 0.02)
     metrics.job_finished("private-kind", "private-outcome")
+    metrics.mcp_tool_finished("private-module", "private-outcome")
+    metrics.mcp_tool_finished("core", "module_disabled")
 
     payload = "\n".join(metrics._runtime_lines())
 
     assert 'method="OTHER"' in payload
     assert 'route="/unknown/\\"route"' in payload
     assert 'kind="unknown",outcome="unknown"' in payload
+    assert 'module="unknown",outcome="unknown"' in payload
+    assert 'module="core",outcome="module_disabled"' in payload
     assert "pulsyr_http_requests_in_progress 0" in payload
 
 

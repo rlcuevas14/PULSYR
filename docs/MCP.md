@@ -54,38 +54,38 @@ Authorization header from the table above. Pulsyr does not care which one asks.
 
 Whatever the client, newly added tools usually appear only after **restarting** it.
 
-## 3. Available tools (26)
+## 3. Dynamic, module-aware discovery (45 tools)
 
-| Tool | Scope | Purpose |
-|------|-------|---------|
-| `pulsyr_context(area?, work_description?)` | read | Session briefing: quick wins, blockers, unlinked incidents, active threads |
-| `pulsyr_search(q, area?, type?, limit?)` | read | Full-text search |
-| `pulsyr_list(area?, status?, type?, order?, quickwins?, limit?)` | read | Filtered list (order: `impact`/`priority`/`topological`/`recent`) |
-| `pulsyr_areas()` | read | List areas (backlog groupings) with counts and examples |
-| `pulsyr_incidents(status?, triage?, limit?)` | read | List Sentry incidents |
-| `pulsyr_incident(issue_id)` | read | Incident detail (with stack trace when available) |
-| `pulsyr_thread_list(stage?)` | read | List development threads |
-| `pulsyr_thread(thread_id)` | read | Thread detail with artifacts and linked items |
-| `pulsyr_create(title, type, area_name, …)` | write | Create item (origin `ai-session`; creates the area if missing) |
-| `pulsyr_advance(item_id\|query, to_status)` | write | Change status (lifecycle-validated; terminals go via `pulsyr_complete`) |
-| `pulsyr_complete(item_id\|search_query, note?, commit_sha?)` | write | Mark done + report newly unblocked items |
-| `pulsyr_link(source, target, relation, note?)` | write | Create a graph edge (`blocks`/`requires`/`conflicts`/`related`/`part_of`) |
-| `pulsyr_move_area(item_id\|query, area_name)` | write | Move an item to another existing area |
-| `pulsyr_incident_resolve(issue_id, note?)` | write | Resolve a Sentry incident |
-| `pulsyr_thread_create(title, area_name, summary?)` | write | Create a development thread |
-| `pulsyr_thread_advance(thread_id, artifact_content?)` | write | Advance a thread to its next stage |
-| `pulsyr_thread_link(thread_id, item_id\|query)` | write | Link an item to a thread |
-| `pulsyr_doc_list(compartment_id?, status?, q?)` | read | List Management deliverables (metadata only) |
-| `pulsyr_doc_get(deliverable_id, include_content?)` | read | Deliverable detail + version history (inlines content up to 256 KB) |
-| `pulsyr_doc_put(compartment, name, doc_type, content\|content_base64, …)` | write | Create a deliverable or append a version (append-only; auto-creates the compartment) |
-| `pulsyr_pending_list(status?, owner?, overdue?, plan_task_id?)` | read | List project pendings (action items) |
-| `pulsyr_pending_upsert(pending_id?, title?, status?, due_date?, owner?, …)` | write | Create or update a pending (omit `pending_id` to create) |
-| `pulsyr_pending_complete(pending_id)` | write | Mark a pending as done |
-| `pulsyr_gantt_get()` | read | Full project plan: task hierarchy, dates, progress, milestones, deps |
-| `pulsyr_gantt_task_upsert(task_id?, name?, parent_id?, start_date?, end_date?, progress?, …)` | write | Create or update a Gantt task (max 3 levels; the Gantt is edited only via MCP) |
-| `pulsyr_gantt_task_remove(task_id)` | write | Delete a Gantt task (children cascade) |
+Pulsyr keeps one `/mcp` URL and one project token. The server filters `tools/list`,
+`prompts/list`, `resources/list`, and `resources/templates/list` from the project's
+effective modules. A direct call to a disabled family returns `module_disabled`
+before checking write scope or looking up an entity. Disabling a module hides its
+surface but does not delete its data.
 
-Prompts: `briefing`, `decision`. Resource templates: `pulsyr://area/{name}`, `pulsyr://graph/{item_id}`.
+Start a session with `pulsyr_capabilities()`. It reports each module's configured,
+entitled, and effective state. The same manifest is available at
+`pulsyr://capabilities`; the discovery methods expose the corresponding catalog.
+
+| Family | Tools |
+|--------|-------|
+| Core / Backlog (18, always enabled) | `pulsyr_capabilities`, `pulsyr_context`, `pulsyr_search`, `pulsyr_list`, `pulsyr_areas`, `pulsyr_move_area`, `pulsyr_create`, `pulsyr_advance`, `pulsyr_complete`, `pulsyr_link`, `pulsyr_item_get`, `pulsyr_item_update`, `pulsyr_discard`, `pulsyr_reopen`, `pulsyr_comment_add`, `pulsyr_unlink`, `pulsyr_priority_view`, `pulsyr_archive_list` |
+| Threads (7) | `pulsyr_thread_create`, `pulsyr_thread_advance`, `pulsyr_thread_list`, `pulsyr_thread`, `pulsyr_thread_link`, `pulsyr_thread_set_stage`, `pulsyr_thread_artifact_add` |
+| Incidents (7) | `pulsyr_incidents`, `pulsyr_incident`, `pulsyr_incident_resolve`, `pulsyr_incident_promote`, `pulsyr_incident_ignore`, `pulsyr_incident_unignore`, `pulsyr_incident_backfill` |
+| Management (13) | `pulsyr_doc_list`, `pulsyr_doc_get`, `pulsyr_doc_put`, `pulsyr_doc_rollback`, `pulsyr_doc_update`, `pulsyr_compartment_upsert`, `pulsyr_pending_list`, `pulsyr_pending_upsert`, `pulsyr_pending_complete`, `pulsyr_pending_delete`, `pulsyr_gantt_get`, `pulsyr_gantt_task_upsert`, `pulsyr_gantt_task_remove` |
+
+The 26 original tool names and their required arguments remain compatible. New lifecycle
+operations use the same domain services as the UI/REST paths. Mutations are audited;
+incident changes use append-only `sentry_issue_events`. Destructive tools are marked in
+their MCP annotations, and idempotent operations explicitly advertise that property.
+
+Prompts: `briefing`, `decision`. Concrete resources: `pulsyr://capabilities`,
+`pulsyr://incidents/open`, `pulsyr://management/status`. Resource templates:
+`pulsyr://area/{name}`, `pulsyr://graph/{item_id}`, `pulsyr://threads/{thread_id}`.
+
+Tool failures return a stable JSON payload inside the MCP error content:
+`{"error":{"code":"...","message":"...","details":{...}}}`. Clients should branch
+on `code`, not parse `message`. Expected codes include `module_disabled`,
+`write_scope_required`, `invalid_argument`, `not_found`, `conflict`, and `internal_error`.
 
 ## 4. Breaking change: tool rename (Spanish → English)
 

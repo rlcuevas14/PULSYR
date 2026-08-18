@@ -21,6 +21,7 @@ _duration_buckets: dict[tuple[str, str], list[int]] = {}
 _duration_sums: dict[tuple[str, str], float] = defaultdict(float)
 _duration_counts: dict[tuple[str, str], int] = defaultdict(int)
 _jobs: dict[tuple[str, str], int] = defaultdict(int)
+_mcp_tools: dict[tuple[str, str], int] = defaultdict(int)
 
 
 def request_started() -> None:
@@ -52,6 +53,18 @@ def job_finished(kind: str, outcome: str) -> None:
         _jobs[(safe_kind, safe_outcome)] += 1
 
 
+def mcp_tool_finished(module: str, outcome: str) -> None:
+    """Record only bounded MCP family/error labels; never tool arguments or entity ids."""
+    safe_module = module if module in {"core", "threads", "incidents", "management"} else "unknown"
+    safe_outcome = outcome if outcome in {
+        "ok", "module_disabled", "write_scope_required", "not_found",
+        "invalid_argument", "invalid_transition", "conflict",
+        "integration_unavailable", "internal_error",
+    } else "unknown"
+    with _lock:
+        _mcp_tools[(safe_module, safe_outcome)] += 1
+
+
 def _escape(value: str) -> str:
     return value.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
 
@@ -68,6 +81,7 @@ def _runtime_lines() -> list[str]:
         duration_sums = dict(_duration_sums)
         duration_counts = dict(_duration_counts)
         jobs = dict(_jobs)
+        mcp_tools = dict(_mcp_tools)
         in_progress = _in_progress
 
     lines = [
@@ -111,6 +125,14 @@ def _runtime_lines() -> list[str]:
     ])
     for (kind, outcome), count in sorted(jobs.items()):
         lines.append(_sample("pulsyr_jobs_processed_total", count, kind=kind, outcome=outcome))
+    lines.extend([
+        "# HELP pulsyr_mcp_tool_calls_total MCP tool calls by capability family and outcome.",
+        "# TYPE pulsyr_mcp_tool_calls_total counter",
+    ])
+    for (module, outcome), count in sorted(mcp_tools.items()):
+        lines.append(_sample(
+            "pulsyr_mcp_tool_calls_total", count, module=module, outcome=outcome
+        ))
     return lines
 
 
@@ -176,3 +198,4 @@ def reset_metrics_for_tests() -> None:
         _duration_sums.clear()
         _duration_counts.clear()
         _jobs.clear()
+        _mcp_tools.clear()

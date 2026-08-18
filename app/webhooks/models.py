@@ -52,6 +52,26 @@ class SentryIssue(Base):
     )
 
 
+class SentryIssueEvent(Base):
+    """Append-only, privacy-minimized audit of incident lifecycle decisions."""
+
+    __tablename__ = "sentry_issue_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=True
+    )
+    issue_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sentry_issues.id", ondelete="CASCADE"), nullable=False
+    )
+    actor: Mapped[str] = mapped_column(String(255), nullable=False)
+    action: Mapped[str] = mapped_column(String(60), nullable=False)
+    previous_status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now())
+
+
 class SentryConnection(Base):
     """Conexión Sentry a nivel cuenta (1:1). El webhook_token enruta + autentica la
     entrada; client_secret habilita verificación HMAC y api_token la salida (feature B).

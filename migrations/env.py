@@ -18,7 +18,7 @@ from app.items.models import (  # noqa: F401
 from app.jobs.models import AgentRun  # noqa: F401
 from app.scopes.models import Scope  # noqa: F401
 from app.threads.models import Thread, ThreadArtifact  # noqa: F401
-from app.webhooks.models import SentryIssue  # noqa: F401
+from app.webhooks.models import SentryIssue, SentryIssueEvent  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

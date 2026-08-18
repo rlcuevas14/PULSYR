@@ -1,7 +1,7 @@
 # Spec hijo 3 — Paridad MCP por módulo y discovery dinámico
 
 **Fecha**: 2026-08-17
-**Estado**: aprobado; pendiente de implementación secuencial
+**Estado**: implementado
 **Spec padre**: [Arquitectura de navegación, módulos y paridad MCP](2026-08-17-agent-native-navigation-modules-mcp-program-design.md)
 **Dependencia**: servicio autoritativo del [spec de capacidades por proyecto](2026-08-17-project-module-capabilities-design.md)
 

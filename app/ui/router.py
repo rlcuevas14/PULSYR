@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -16,7 +16,7 @@ from app.i18n import resolve_lang
 from app.i18n import t as _t
 from app.items import graph, service
 from app.items.lifecycle import allowed_targets, non_terminal_targets
-from app.items.models import Item, ItemComment, ItemEvent
+from app.items.models import Item, ItemEvent
 from app.jobs.models import AgentRun
 from app.projects.access import resolve_current_project, user_role_on_project
 from app.projects.deps import require_project_module_ui
@@ -456,7 +456,7 @@ async def item_detail(
 
     scope = await db.scalar(select(Scope).where(Scope.id == item.scope_id))
     blockers = await graph.blockers_of(db, item.id)
-    sub = await graph.subgraph(db, item.id)
+    sub = await graph.subgraph(db, item.id, project_id=item.project_id)
     scopes = list((await db.execute(
         select(Scope).where(Scope.archived.is_(False), Scope.project_id == item.project_id)
         .order_by(Scope.name)
@@ -537,10 +537,10 @@ async def ui_add_comment(
     item = await db.get(Item, item_id)
     if item is None or item.project_id != pid:
         raise HTTPException(status_code=404, detail="Item not found")
-    body = body_md.strip()
-    if not body:
-        raise HTTPException(status_code=422, detail="Comment cannot be empty")
-    db.add(ItemComment(item_id=item_id, author=user.email, body_md=body, kind="comment"))
+    try:
+        await service.add_comment(db, item, body_md, "comment", user.email)
+    except service.ItemUpdateError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
     await db.commit()
     return _refresh()
 
@@ -704,24 +704,24 @@ async def ui_set_field(
     guard = await _guard_row(db, user, item.project_id, write=True)
     if guard is not None:
         return guard
+    changes: dict[str, Any]
     if field == "priority":
-        await service.set_priority(db, item, value or None, user.email)
+        changes = {field: value or None}
     elif field == "impact_ai":
-        item.impact_ai = int(value) if value else None
-    elif field == "effort_ai":
-        item.effort_ai = value or None
+        try:
+            changes = {field: int(value) if value else None}
+        except ValueError:
+            return Response(content="impact_ai must be an integer 1-5", status_code=422)
+    elif field in {"effort_ai", "summary_md"}:
+        changes = {field: value or None}
     elif field == "title":
-        new_title = value.strip()
-        if not new_title:
-            return Response(content="Title cannot be empty", status_code=422)
-        item.title = new_title
-        db.add(ItemEvent(item_id=item.id, actor=user.email, action="edited", payload={"field": "title"}))
-    elif field == "summary_md":
-        item.summary_md = value.strip() or None
-        db.add(ItemEvent(item_id=item.id, actor=user.email, action="edited",
-                         payload={"field": "summary_md"}))
+        changes = {field: value}
     else:
         return Response(content="Field not editable", status_code=422)
+    try:
+        await service.update_item(db, item, changes, user.email)
+    except service.ItemUpdateError as e:
+        return Response(content=str(e), status_code=422)
     await db.commit()
     return Response(status_code=204, headers={"HX-Refresh": "true"})
 
@@ -736,7 +736,7 @@ async def _open_item_titles(db: AsyncSession, project_id: uuid.UUID | None) -> l
 
 
 async def _render_relations(request: Request, db: AsyncSession, item: Item) -> Response:
-    sub = await graph.subgraph(db, item.id)
+    sub = await graph.subgraph(db, item.id, project_id=item.project_id)
     return templates.TemplateResponse(
         request, "partials/relationship_list.html",
         {"item": item, "subgraph": sub, "open_titles": await _open_item_titles(db, item.project_id)},
@@ -788,7 +788,9 @@ async def ui_delete_relationship(
     guard = await _guard_row(db, user, item.project_id, write=True)
     if guard is not None:
         return guard
-    await relationships.delete_relationship(db, source, target, relation)
+    await relationships.delete_relationship(
+        db, source, target, relation, actor=user.email
+    )
     await db.commit()
     return await _render_relations(request, db, item)
 
@@ -1061,6 +1063,7 @@ async def ui_ignore_issue(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_user_ui),
 ):
+    from app.webhooks import service as wservice
     from app.webhooks.models import SentryIssue
 
     issue = await db.get(SentryIssue, issue_id)
@@ -1069,7 +1072,10 @@ async def ui_ignore_issue(
     guard = await _guard_row(db, user, issue.project_id, write=True)
     if guard is not None:
         return guard
-    issue.status = "ignored"
+    try:
+        await wservice.ignore_issue(db, issue, user.email)
+    except wservice.IncidentTransitionError as e:
+        return Response(content=str(e), status_code=422)
     await db.commit()
     flash_success(request, message=_t("flash.incident_ignored", resolve_lang(request)))
     return _refresh()
@@ -1082,15 +1088,19 @@ async def ui_unignore_issue(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_user_ui),
 ):
+    from app.webhooks import service as wservice
     from app.webhooks.models import SentryIssue
 
     issue = await db.get(SentryIssue, issue_id)
-    if issue is None or issue.status != "ignored":
+    if issue is None:
         return Response(status_code=404)
     guard = await _guard_row(db, user, issue.project_id, write=True)
     if guard is not None:
         return guard
-    issue.status = "new"
+    try:
+        await wservice.unignore_issue(db, issue, user.email)
+    except wservice.IncidentTransitionError as e:
+        return Response(content=str(e), status_code=422)
     await db.commit()
     flash_success(request, message=_t("flash.incident_restored", resolve_lang(request)))
     return _refresh()

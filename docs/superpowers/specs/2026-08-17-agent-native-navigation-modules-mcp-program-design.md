@@ -1,7 +1,7 @@
 # Spec padre — Arquitectura de navegación, módulos y paridad MCP agent-native
 
 **Fecha**: 2026-08-17
-**Estado**: aprobado; implementación secuencial en curso
+**Estado**: implementado
 **Tipo**: spec padre / programa de implementación
 **Producto**: Pulsyr — FastAPI + Jinja + HTMX + PostgreSQL + JSON-RPC MCP
 
