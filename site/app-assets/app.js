@@ -241,12 +241,11 @@
     enhanceForms(document);
     initializeDeclarativeUi(document);
     initBoard();
-    var query = new URLSearchParams(window.location.search);
-    if (query.get("new") === "1" && document.getElementById("new-item-modal")) {
-      window.openModal("new-item-modal");
-      query.delete("new");
-      var cleanUrl = window.location.pathname + (query.toString() ? "?" + query.toString() : "") + window.location.hash;
-      window.history.replaceState({}, "", cleanUrl);
+    var currentUrl = new URL(location);
+    if (currentUrl.searchParams.get("new") === "1" && document.getElementById("new-item-modal")) {
+      openModal("new-item-modal");
+      currentUrl.searchParams.delete("new");
+      history.replaceState({}, "", currentUrl);
     }
     var toast = document.getElementById("toast");
     if (toast && toast.dataset.initialMessage) showToast(toast.dataset.initialMessage, "success");
