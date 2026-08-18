@@ -355,6 +355,8 @@
   "nav.admin": "Admin",
   "nav.archive": "Archive",
   "nav.backlog": "Backlog",
+  "nav.backlog_views": "Vues du backlog",
+  "nav.backlog_work": "Travail",
   "nav.change_password": "Changer le mot de passe",
   "nav.close_menu": "Fermer le menu",
   "nav.current_project": "Projet actuel",

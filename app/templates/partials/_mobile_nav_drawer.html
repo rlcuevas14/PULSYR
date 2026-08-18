@@ -1,0 +1,19 @@
+{# Mobile fallback for the product hierarchy. Replaced by bottom navigation in child spec 1. #}
+{% for entry in navigation.primary %}
+  <a href="{{ entry.href }}"
+     class="p-menu-item text-base font-medium {% if navigation.active_key == entry.key %}bg-surface-strong text-ink{% endif %}"
+     {% if navigation.active_key == entry.key %}aria-current="page"{% endif %}>
+    {{ t(entry.label_key) }}
+  </a>
+  {% if entry.children %}
+  <div class="ml-3 pl-3 border-l border-hairline">
+    {% for child in entry.children %}
+    <a href="{{ child.href }}"
+       class="p-menu-item {% if navigation.active_child_key == child.key %}bg-surface-strong text-ink{% endif %}"
+       {% if navigation.active_child_key == child.key %}aria-current="page"{% endif %}>
+      {{ t(child.label_key) }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endfor %}

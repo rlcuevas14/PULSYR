@@ -29,7 +29,7 @@ from app.ui.flash import flash_success
 
 router = APIRouter(tags=["management"])
 
-_SUBTABS = ("documentos", "plan", "pendientes")
+_SUBTABS = ("pendientes", "plan", "documentos")
 
 
 async def _pid(db: AsyncSession, user: User, request: Request) -> uuid.UUID:
@@ -59,7 +59,7 @@ def _safe_filename(name: str, doc_type: str) -> str:
 
 @router.get("/management", response_class=HTMLResponse)
 async def management_home(request: Request):
-    return RedirectResponse("/management/documentos", status_code=302)
+    return RedirectResponse("/management/pendientes", status_code=303)
 
 
 @router.get("/management/documentos", response_class=HTMLResponse)
