@@ -140,14 +140,9 @@ async def apply_paddle_subscription(
     if status is None:
         return "ignored:unknown_status"
 
-    mirrored_subscription_id: str | None = subscription_id
-    if status == "canceled":
+    is_cancellation = status == "canceled"
+    if is_cancellation:
         plan_code, status = FREE, "active"
-        # The subscription is gone at Paddle, so keeping its id would leave the
-        # billing screen offering plan changes and cancellations against a dead
-        # one. The customer id stays: that customer still exists, and a future
-        # purchase reuses it.
-        mirrored_subscription_id = None
 
     subscription = await subscription_for(db, account_id, for_update=True)
     if subscription is None:
@@ -157,6 +152,24 @@ async def apply_paddle_subscription(
         subscription.paddle_event_at >= occurred_at
     ):
         return "ignored:stale_event"
+
+    mirrored_subscription_id: str | None = subscription_id
+    if is_cancellation:
+        # The subscription is gone at Paddle, so keeping its id would leave the
+        # billing screen offering plan changes and cancellations against a dead
+        # one. The customer id stays: that customer still exists, and a future
+        # purchase reuses it.
+        #
+        # But only clear the pointer when this cancellation is about the
+        # subscription we are currently mirroring. The webhook resolves the
+        # account from custom_data, not from the subscription id, so a
+        # cancellation for a subscription we already superseded (e.g. an
+        # upgrade that created a new one) must not erase the pointer to the
+        # one we are still tracking.
+        if subscription.paddle_subscription_id == subscription_id:
+            mirrored_subscription_id = None
+        else:
+            mirrored_subscription_id = subscription.paddle_subscription_id
 
     subscription.plan_code = plan_code
     subscription.status = status

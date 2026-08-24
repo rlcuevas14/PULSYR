@@ -245,6 +245,42 @@ async def test_cancellation_clears_the_dead_subscription_id(
 
 
 @pytest.mark.asyncio
+async def test_cancellation_for_a_superseded_subscription_keeps_the_live_pointer(
+    client: AsyncClient, db, monkeypatch
+):
+    """A cancellation event names the subscription it is about. When that id no
+    longer matches the one we are mirroring, e.g. an upgrade already replaced it
+    with a new subscription, clearing the pointer would erase the id of the
+    subscription that is actually live. The account still resolves from
+    custom_data, so the plan still drops to Free; only the id is protected."""
+    monkeypatch.setattr(settings, "paddle_webhook_secret", SECRET)
+    account = await _account(db)
+    # Captured before the first _subscription() call below expires it, same
+    # pattern as test_cancellation_clears_the_dead_subscription_id above.
+    account_id = account.id
+    live_sub = "sub_live"
+    active = _event(
+        account_id, occurred_at="2026-08-23T12:00:00.000000Z", subscription_id=live_sub
+    )
+    await client.post("/webhooks/paddle", content=active, headers=_signed(active))
+    assert (await _subscription(db, account_id)).paddle_subscription_id == live_sub
+
+    canceled = _event(
+        account_id,
+        status="canceled",
+        event_type="subscription.canceled",
+        occurred_at="2026-09-23T12:00:00.000000Z",
+        subscription_id="sub_superseded",
+    )
+    r = await client.post("/webhooks/paddle", content=canceled, headers=_signed(canceled))
+    assert r.status_code == 200
+
+    row = await _subscription(db, account_id)
+    assert (row.plan_code, row.status) == (FREE, "active")
+    assert row.paddle_subscription_id == live_sub
+
+
+@pytest.mark.asyncio
 async def test_out_of_order_delivery_cannot_undo_newer_state(
     client: AsyncClient, db, monkeypatch
 ):

@@ -98,7 +98,6 @@ async def billing_screen(
         "detail": detail,
         "detail_failed": detail_failed,
         "has_subscription": has_subscription,
-        "actions_available": paddle.configured(),
         "prices": prices,
         "price_labels": price_labels,
         "preselected_price_id": preselected_price_id,
@@ -191,11 +190,22 @@ async def billing_confirm(
             subscription.paddle_subscription_id, target.price_id, proration
         )
 
+    recurring = _money(preview.recurring_amount, preview.currency_code)
+    if recurring is None:
+        # A confirmation screen that cannot state the recurring price must not
+        # render at all: a customer confirming a charge should never see the
+        # literal string "None" where a price belongs.
+        logger.warning(
+            "plan preview for account %s returned an unparseable recurring amount",
+            user.account_id,
+        )
+        raise HTTPException(status_code=502, detail="billing_provider_error")
+
     return templates.TemplateResponse(request, "billing_confirm.html", {
         "user": user,
         "target": target,
         "immediate": _money(preview.immediate_amount, preview.currency_code),
-        "recurring": _money(preview.recurring_amount, preview.currency_code),
+        "recurring": recurring,
         "next_billed_at": preview.next_billed_at,
         "is_downgrade": proration == paddle.PRORATION_DOWNGRADE,
     })

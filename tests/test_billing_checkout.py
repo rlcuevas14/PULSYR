@@ -248,6 +248,11 @@ async def test_paying_account_keeps_the_guard_when_the_live_read_fails(
     r = await client.get("/billing")
     assert r.status_code == 200
     assert "data-paddle-price" not in r.text
+    # The negative assertion alone would also pass if the catalog section
+    # stopped rendering for an unrelated reason, proving nothing about the
+    # guard. Assert the section is still there, offering the switch link
+    # instead of the buy button.
+    assert "/ui/billing/confirm?price_id=pri_studio_m" in r.text
 
 
 @pytest.mark.asyncio

@@ -277,6 +277,38 @@ async def test_an_unparseable_amount_falls_through_instead_of_erroring(
 
 
 @pytest.mark.asyncio
+async def test_an_unparseable_recurring_amount_is_a_provider_error(
+    client: AsyncClient, db, monkeypatch,
+):
+    """The recurring price is the one figure a confirmation screen may never
+    omit: a customer confirming a charge must never see the literal string
+    "None" where a price belongs. Unlike the immediate amount, an unparseable
+    recurring_amount must fail the whole screen as a provider error rather than
+    fall through to a blank field."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    _account, owner = await _paid_owner(db, monkeypatch)
+
+    async def prices():
+        return [_price("studio", "monthly", "pri_studio_m")]
+
+    async def current_subscription(_subscription_id: str) -> paddle.SubscriptionView:
+        return paddle.SubscriptionView(
+            "active", "pri_solo_m", "solo", "monthly", None, None, None, None, None)
+
+    async def preview(subscription_id, price_id, proration):
+        return paddle.ChangePreview("1240", "not-a-number", "USD", None)
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    monkeypatch.setattr(paddle, "get_subscription", current_subscription)
+    monkeypatch.setattr(paddle, "preview_change", preview)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.get("/ui/billing/confirm?price_id=pri_studio_m")
+    assert r.status_code == 502
+    assert "None" not in r.text
+
+
+@pytest.mark.asyncio
 async def test_change_calls_paddle_and_writes_nothing_locally(client: AsyncClient, db, monkeypatch):
     """The webhook is the only writer. A route that also wrote would create a
     second source of truth that disagrees the moment a payment declines."""
