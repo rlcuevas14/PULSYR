@@ -311,13 +311,17 @@ Create `app/static/paddle-checkout.js`:
 Note: `document.currentScript` is null inside a `defer`red script's callbacks but
 valid during initial execution, which is where it is read here.
 
-Create `app/templates/billing_checkout.html`:
+Create `app/templates/billing_checkout.html`. It extends **`auth_base.html`**, not
+`base.html`: this page is deliberately session-free, and `base.html` reads `user.*`
+unconditionally, so extending it would 500 for exactly the visitor this page exists
+to serve. `auth_base.html` is the shell the login page already uses for the same
+reason, and it includes `partials/_head.html` so the styling still applies.
 
 ```jinja
-{% extends "base.html" %}
-{% block content %}
-<h1 class="text-2xl font-semibold mb-4">{{ t("billing.checkout_title") }}</h1>
-<p>{{ t("billing.checkout_body") }}</p>
+{% extends "auth_base.html" %}
+{% block title %}{{ t("billing.checkout_title") }}{% endblock %}
+{% block tagline %}{{ t("billing.checkout_body") }}{% endblock %}
+{% block card %}
 {% include "partials/_paddle_js.html" %}
 {% endblock %}
 ```
