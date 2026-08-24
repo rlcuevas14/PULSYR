@@ -214,3 +214,66 @@ async def test_confirmation_shows_zero_value_charge_not_no_charge(
     assert r.status_code == 200
     assert "USD 0.00" in r.text
     assert "No charge today." not in r.text
+
+
+@pytest.mark.asyncio
+async def test_change_calls_paddle_and_writes_nothing_locally(client: AsyncClient, db, monkeypatch):
+    """The webhook is the only writer. A route that also wrote would create a
+    second source of truth that disagrees the moment a payment declines."""
+    from app.accounts.plans import subscription_for
+
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    account, owner = await _paid_owner(db, monkeypatch)
+    # Captured now, before db.expire_all() below expires it: reading an expired
+    # attribute as a bare argument (rather than through an awaited SQLAlchemy
+    # call) crashes with MissingGreenlet, same as the account_id parameter
+    # pattern already used in tests/test_paddle_webhook.py's _subscription().
+    account_id = account.id
+    called = {}
+
+    async def prices():
+        return [_price("studio", "monthly", "pri_studio_m")]
+
+    async def get_sub(subscription_id):
+        return paddle.SubscriptionView(
+            "active", "pri_solo_m", "solo", "monthly", None, None, None, None, None)
+
+    async def change(subscription_id, price_id, proration):
+        called["args"] = (subscription_id, price_id, proration)
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    monkeypatch.setattr(paddle, "get_subscription", get_sub)
+    monkeypatch.setattr(paddle, "change_plan", change)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.post("/ui/billing/change", data={"price_id": "pri_studio_m"})
+    assert r.status_code in (200, 204)
+    assert called["args"][1:] == ("pri_studio_m", paddle.PRORATION_UPGRADE)
+
+    db.expire_all()
+    row = await subscription_for(db, account_id)
+    assert row.plan_code == "solo"  # unchanged until the webhook arrives
+
+
+@pytest.mark.asyncio
+async def test_a_declined_change_is_reported_not_swallowed(client: AsyncClient, db, monkeypatch):
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    _account, owner = await _paid_owner(db, monkeypatch)
+
+    async def prices():
+        return [_price("studio", "monthly", "pri_studio_m")]
+
+    async def get_sub(subscription_id):
+        return paddle.SubscriptionView(
+            "active", "pri_solo_m", "solo", "monthly", None, None, None, None, None)
+
+    async def boom(subscription_id, price_id, proration):
+        raise paddle.PaddleError("card declined")
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    monkeypatch.setattr(paddle, "get_subscription", get_sub)
+    monkeypatch.setattr(paddle, "change_plan", boom)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.post("/ui/billing/change", data={"price_id": "pri_studio_m"})
+    assert r.status_code >= 400

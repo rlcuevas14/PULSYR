@@ -116,6 +116,7 @@
   "backlog.view_list": "Liste",
   "billing.available_plans": "Forfaits disponibles",
   "billing.cancels_on": "Votre forfait se termine le {date}",
+  "billing.change_submitted": "Changement soumis. Il apparaîtra ici dans quelques secondes.",
   "billing.checkout_body": "Complétez votre paiement ci-dessous pour garder votre abonnement actif.",
   "billing.checkout_title": "Complétez votre paiement",
   "billing.choose_plan": "Choisir ce forfait",

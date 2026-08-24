@@ -116,6 +116,7 @@
   "backlog.view_list": "List",
   "billing.available_plans": "Available plans",
   "billing.cancels_on": "Your plan ends on {date}",
+  "billing.change_submitted": "Change submitted. It appears here in a few seconds.",
   "billing.checkout_body": "Complete your payment below to keep your subscription active.",
   "billing.checkout_title": "Complete your payment",
   "billing.choose_plan": "Choose plan",

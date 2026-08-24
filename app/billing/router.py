@@ -8,8 +8,8 @@ into our database is a pending cancellation that can go stale.
 import logging
 import re
 
-from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Form, Query, Request
+from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.exceptions import HTTPException
 
@@ -20,7 +20,10 @@ from app.billing import paddle
 from app.billing import service as billing_service
 from app.config import settings
 from app.database import get_db
+from app.i18n import resolve_lang
+from app.i18n import t as _t
 from app.templates_config import templates
+from app.ui.flash import flash_success
 
 logger = logging.getLogger("pulsyr.billing")
 
@@ -155,3 +158,37 @@ async def billing_confirm(
         "next_billed_at": preview.next_billed_at,
         "is_downgrade": proration == paddle.PRORATION_DOWNGRADE,
     })
+
+
+@router.post("/ui/billing/change")
+async def billing_change(
+    request: Request,
+    price_id: str = Form(...),
+    user: User = Depends(require_owner),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Ask Paddle to change the plan, then say so honestly.
+
+    Nothing about the plan is written here. The subscription id comes from the
+    owner's own row rather than the request, so no owner can act on another
+    tenant's subscription by guessing an id.
+    """
+    subscription = await plans.subscription_for(db, user.account_id)
+    if subscription is None or not subscription.paddle_subscription_id:
+        raise HTTPException(status_code=400, detail="no subscription to change")
+
+    target = await _resolve_target(price_id)
+    current = await paddle.get_subscription(subscription.paddle_subscription_id)
+    proration = billing_service.proration_for(current, target)
+    try:
+        await paddle.change_plan(
+            subscription.paddle_subscription_id, target.price_id, proration
+        )
+    except paddle.PaddleError as exc:
+        logger.warning("plan change failed for account %s: %s", user.account_id, exc)
+        raise HTTPException(status_code=502, detail="billing_provider_error") from exc
+
+    # Deliberately not the new plan name: the webhook has not landed yet and
+    # painting it now would contradict itself if the change did not stick.
+    flash_success(request, message=_t("billing.change_submitted", resolve_lang(request)))
+    return Response(status_code=204, headers={"HX-Refresh": "true"})
