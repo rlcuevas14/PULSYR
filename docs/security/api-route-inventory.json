@@ -424,6 +424,23 @@
   },
   {
     "method": "GET",
+    "path": "/billing",
+    "name": "billing_screen",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/billing/checkout",
+    "name": "billing_checkout",
+    "trust_class": "public",
+    "dependencies": []
+  },
+  {
+    "method": "GET",
     "path": "/callback/{provider}",
     "name": "oauth_callback",
     "trust_class": "public",
@@ -793,6 +810,36 @@
   },
   {
     "method": "POST",
+    "path": "/ui/billing/cancel",
+    "name": "billing_cancel",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/billing/change",
+    "name": "billing_change",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/ui/billing/confirm",
+    "name": "billing_confirm",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
+    "method": "POST",
     "path": "/ui/incidents/backfill",
     "name": "ui_backfill_sentry",
     "trust_class": "browser_session",
@@ -1027,6 +1074,13 @@
     "method": "POST",
     "path": "/webhooks/github",
     "name": "github_webhook",
+    "trust_class": "webhook_signature",
+    "dependencies": []
+  },
+  {
+    "method": "POST",
+    "path": "/webhooks/paddle",
+    "name": "paddle_webhook",
     "trust_class": "webhook_signature",
     "dependencies": []
   },
