@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ t("billing.title") }}{% endblock %}
+{% block content %}
+<h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-ink mb-6">{{ t("billing.title") }}</h1>
+
+{% if status == "active" and detail and detail.status == "past_due" %}
+<div class="mb-6 bg-warning/10 border border-warning/30 text-warning-strong rounded-xl px-4 py-3 text-sm">
+  <p class="font-medium">{{ t("billing.past_due_title") }}</p>
+  <p>{{ t("billing.past_due_body") }}</p>
+  {% if detail.update_payment_method_url %}
+  <a class="p-btn mt-3" href="{{ detail.update_payment_method_url }}">{{ t("billing.update_card") }}</a>
+  {% endif %}
+</div>
+{% endif %}
+
+<section class="p-card p-5 mb-6">
+  <p class="text-sm opacity-70">{{ t("billing.current_plan") }}</p>
+  <p class="text-xl font-semibold">{{ t("plan." ~ plan_code) }}</p>
+  {% if detail %}
+    <p>{{ t("billing.term." ~ detail.billing_period) }}</p>
+    {% if detail.scheduled_action == "cancel" and detail.scheduled_at %}
+      <p>{{ t("billing.cancels_on", date=detail.scheduled_at | fecha) }}</p>
+    {% elif detail.next_billed_at %}
+      <p>{{ t("billing.next_billed_on", date=detail.next_billed_at | fecha) }}</p>
+    {% endif %}
+    {% if detail.update_payment_method_url %}
+      <a class="p-btn-ghost mt-3" href="{{ detail.update_payment_method_url }}">{{ t("billing.payment_method") }}</a>
+    {% endif %}
+    {% if detail.scheduled_action != "cancel" %}
+      <form hx-post="/ui/billing/cancel" class="mt-4">
+        <button type="submit" class="p-btn-ghost">{{ t("billing.cancel_plan") }}</button>
+      </form>
+    {% endif %}
+  {% elif detail_failed %}
+    <p class="opacity-70">{{ t("billing.detail_unavailable") }}</p>
+  {% endif %}
+</section>
+
+<section class="p-card p-5">
+  <h2 class="font-semibold mb-4">{{ t("billing.usage") }}</h2>
+  <dl class="grid sm:grid-cols-3 gap-4">
+    <div>
+      <dt class="text-sm opacity-70">{{ t("billing.projects") }}</dt>
+      <dd>{{ usage.projects }}{% if limits.projects %} / {{ limits.projects }}{% endif %}</dd>
+    </div>
+    <div>
+      <dt class="text-sm opacity-70">{{ t("billing.collaborators") }}</dt>
+      <dd>{{ usage.members }}{% if limits.members is not none %} / {{ limits.members }}{% endif %}</dd>
+    </div>
+    <div>
+      <dt class="text-sm opacity-70">{{ t("billing.storage") }}</dt>
+      <dd>{{ (usage.storage_bytes / 1048576) | round(1) }} MB{% if limits.storage_bytes %} / {{ (limits.storage_bytes / 1048576) | round(0) | int }} MB{% endif %}</dd>
+    </div>
+  </dl>
+</section>
+
+{% if prices %}
+<section class="p-card p-5 mt-6">
+  <h2 class="font-semibold mb-4">{{ t("billing.available_plans") }}</h2>
+  <div class="grid sm:grid-cols-2 gap-4">
+    {% for price in prices %}
+      {# The card to skip is the exact price the account is on, not every price of
+         its tier: hiding the tier hid the other billing term with it, which is
+         how switching monthly to yearly became unreachable. #}
+      <article class="p-card p-4">
+        <p class="font-semibold">{{ t("plan." ~ price.plan_code) }}</p>
+        {% if price_labels[price.price_id] %}
+        <p class="text-lg">{{ price_labels[price.price_id] }}</p>
+        {% endif %}
+        <p class="text-sm opacity-70">{{ t("billing.term." ~ price.billing_period) }}</p>
+        {% if detail and price.price_id == detail.price_id %}
+        <p class="p-pill mt-3">{{ t("billing.current_plan_badge") }}</p>
+        {% elif not has_subscription %}
+        <button type="button" class="p-btn mt-3"
+                data-paddle-price="{{ price.price_id }}"
+                data-account-id="{{ account_id }}"
+                data-email="{{ user_email }}"
+                {% if price.price_id == preselected_price_id %}autofocus{% endif %}>{{ t("billing.choose_plan") }}</button>
+        {% else %}
+        <a class="p-btn mt-3" href="/ui/billing/confirm?price_id={{ price.price_id }}">{{ t("billing.switch_to") }}</a>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% include "partials/_paddle_js.html" %}
+{% endif %}
+{% endblock %}

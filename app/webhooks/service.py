@@ -1,11 +1,13 @@
-"""Webhook logic: HMAC signature verification + Sentry ingest + Git progress."""
+"""Webhook logic: HMAC signature verification + Sentry ingest + Paddle + Git progress."""
 
 import asyncio
 import hashlib
 import hmac
 import logging
 import re
+import time
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
@@ -13,6 +15,7 @@ import httpx
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.accounts.plans import PAID_LIMITS
 from app.config import settings
 from app.items import service
 from app.items.models import Item, ItemEvent
@@ -21,6 +24,8 @@ from app.webhooks.connection import DEFAULT_BASE_URL, effective_base_url, outbou
 from app.webhooks.models import SentryIssue, SentryIssueEvent
 
 logger = logging.getLogger("pulsyr.webhooks")
+
+PADDLE_MAX_SKEW_SECONDS = 5
 
 _TAG_RE = re.compile(r"<[^>]+>")
 # ponytail: accepts the legacy `pulso:` prefix too — commit history is immutable and
@@ -70,6 +75,83 @@ def verify_sentry_signature(secret: str, body: bytes, header: str | None) -> boo
         return False
     expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, header)
+
+
+def verify_paddle_signature(secret: str, body: bytes, header: str | None) -> bool:
+    """`Paddle-Signature: ts=<unix>;h1=<hex>`, HMAC-SHA256 over `<ts>:<raw body>`.
+
+    Five seconds is Paddle's documented tolerance. It also means a server whose clock
+    has drifted further rejects every event, so this endpoint silently depends on NTP.
+    Retries carry a fresh `ts`, so a tight window costs nothing in normal operation.
+    """
+    if not secret or not header:
+        return False
+    parts: dict[str, str] = {}
+    for chunk in header.split(";"):
+        key, _, value = chunk.partition("=")
+        if value:
+            parts[key.strip()] = value.strip()
+    ts, h1 = parts.get("ts", ""), parts.get("h1", "")
+    if not ts.isdigit() or not h1:
+        return False
+    if abs(time.time() - int(ts)) > PADDLE_MAX_SKEW_SECONDS:
+        return False
+    signed = ts.encode() + b":" + body
+    expected = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, h1)
+
+
+@dataclass(frozen=True)
+class PaddleSubscription:
+    account_id: uuid.UUID
+    plan_code: str
+    paddle_status: str
+    subscription_id: str
+    customer_id: str | None
+    occurred_at: datetime
+
+
+def parse_paddle_subscription(event: dict[str, Any]) -> PaddleSubscription:
+    """Read the account, plan and status out of a Paddle `subscription.*` event.
+
+    The plan code rides on the price's `custom_data`, stamped when the catalog was
+    created, so adding a tier never means redeploying a price-id map. Anything this
+    cannot resolve raises: a customer has paid for something we could not provision,
+    which must fail loudly in Paddle's notification log rather than be swallowed.
+    """
+    data = event.get("data") or {}
+    raw_account = (data.get("custom_data") or {}).get("account_id")
+    if not raw_account:
+        raise ValueError("subscription event carries no custom_data.account_id")
+    try:
+        account_id = uuid.UUID(str(raw_account))
+    except ValueError:
+        raise ValueError(f"custom_data.account_id is not a UUID: {raw_account!r}") from None
+
+    plan_code = ""
+    for item in data.get("items") or []:
+        candidate = ((item.get("price") or {}).get("custom_data") or {}).get("plan_code")
+        if candidate:
+            plan_code = str(candidate)
+            break
+    if plan_code not in PAID_LIMITS:
+        raise ValueError(f"no known plan_code on subscription items: {plan_code!r}")
+
+    subscription_id = str(data.get("id") or "")
+    status = str(data.get("status") or "")
+    occurred_at = _parse_dt(event.get("occurred_at"))
+    if not subscription_id or not status or occurred_at is None:
+        raise ValueError("subscription event is missing id, status or occurred_at")
+
+    customer_id = data.get("customer_id")
+    return PaddleSubscription(
+        account_id=account_id,
+        plan_code=plan_code,
+        paddle_status=status,
+        subscription_id=subscription_id,
+        customer_id=str(customer_id) if customer_id else None,
+        occurred_at=occurred_at,
+    )
 
 
 def verify_github_signature(secret: str, body: bytes, header: str | None) -> bool:

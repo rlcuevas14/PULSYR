@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.accounts import plans
 from app.auth.rate_limit import limit_client
 from app.config import settings
 from app.database import get_db
@@ -16,6 +17,14 @@ from app.webhooks import connection, service
 logger = logging.getLogger("pulsyr.webhooks")
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+
+# Every `subscription.*` event carries the same full subscription entity, and the
+# handler reads the status off that entity rather than inferring it from the event
+# name. Matching the prefix instead of listing names means a status Paddle signals
+# with a specific event (past_due, paused, resumed, trialing) cannot be missed
+# because nobody ticked its box. Everything else Paddle sends is acknowledged and
+# dropped: billing state lives in these.
+PADDLE_SUBSCRIPTION_PREFIX = "subscription."
 
 
 async def _limited(request: Request) -> JSONResponse | None:
@@ -94,6 +103,45 @@ async def sentry_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=422)
     return JSONResponse(result)
+
+
+@router.post("/paddle")
+async def paddle_webhook(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+    """Billing events from Paddle. The signature is the auth; there is no token in the
+    path because one Paddle account bills every tenant and the payload names the account.
+
+    Only a 2xx tells Paddle the event was delivered, so every failure here answers
+    non-2xx on purpose: the delivery stays in the notification log and gets retried
+    instead of a paid subscription vanishing silently."""
+    if limited := await _limited(request):
+        return limited
+    if not settings.paddle_webhook_secret:
+        return JSONResponse({"error": "Paddle webhook not configured"}, status_code=503)
+    body = await request.body()
+    sig = request.headers.get("paddle-signature")
+    if not service.verify_paddle_signature(settings.paddle_webhook_secret, body, sig):
+        return JSONResponse({"error": "invalid signature"}, status_code=401)
+    try:
+        event = json.loads(body)
+        event_type = event.get("event_type", "")
+        if not event_type.startswith(PADDLE_SUBSCRIPTION_PREFIX):
+            return JSONResponse({"accepted": True, "status": "ignored", "event": event_type})
+        parsed = service.parse_paddle_subscription(event)
+        result = await plans.apply_paddle_subscription(
+            db,
+            account_id=parsed.account_id,
+            plan_code=parsed.plan_code,
+            paddle_status=parsed.paddle_status,
+            subscription_id=parsed.subscription_id,
+            customer_id=parsed.customer_id,
+            occurred_at=parsed.occurred_at,
+        )
+        await db.commit()
+    except (ValueError, json.JSONDecodeError) as e:
+        logger.warning("paddle webhook rejected: %s", e)
+        return JSONResponse({"error": str(e)}, status_code=422)
+    logger.info("paddle webhook %s account=%s %s", event_type, parsed.account_id, result)
+    return JSONResponse({"accepted": True, "status": result})
 
 
 @router.post("/github")

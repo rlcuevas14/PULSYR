@@ -64,11 +64,24 @@ class Settings(BaseSettings):
     webhook_max_body_bytes: int = Field(default=1024 * 1024, ge=1024, le=10 * 1024 * 1024)
     mcp_max_body_bytes: int = Field(default=1024 * 1024, ge=1024, le=10 * 1024 * 1024)
     upload_max_body_bytes: int = Field(default=11 * 1024 * 1024, ge=1024, le=20 * 1024 * 1024)
-    terms_version: str = "2026-08-12"
+    # Must match the version printed on pulsyr.dev/terminos/. Signup stamps this on
+    # the user row, so a drift here means we recorded consent to a document nobody saw.
+    terms_version: str = "2026-08-23"
 
     # Global fallbacks for webhook secrets (move to per-project settings in a future version)
     sentry_client_secret: str = ""
     github_webhook_secret: str = ""
+    # Paddle notification destination secret. Empty on a self-hosted instance: with no
+    # secret the billing webhook answers 503 and no paid plan can ever be granted.
+    paddle_webhook_secret: str = ""
+    # Server-side Paddle key. Empty on a self-hosted install: the billing screen
+    # then renders plan and usage and hides every action.
+    paddle_api_key: str = ""
+    # Public by design: this one is embedded in the page for Paddle.js.
+    paddle_client_token: str = ""
+    # Selects both the API host and the Paddle.js environment. Sandbox keys are
+    # prefixed pdl_sdbx_ and cannot reach live even if this is set wrong.
+    paddle_environment: str = "sandbox"
     sentry_api_token: str = ""
     sentry_org: str = ""
 

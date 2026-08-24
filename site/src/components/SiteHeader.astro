@@ -8,11 +8,13 @@ const isSpanish = locale === "es";
 const links = (isSpanish ? [
   ["/producto/", "Producto"],
   ["/integraciones/mcp/", "Integración MCP"],
+  ["/precios/", "Precios"],
   ["/open-source/", "Código abierto"],
   ["/docs/primeros-pasos/", "Documentación"],
 ] : [
   ["/producto/", "Product"],
   ["/integraciones/mcp/", "MCP integration"],
+  ["/precios/", "Pricing"],
   ["/open-source/", "Open source"],
   ["/docs/primeros-pasos/", "Docs"],
 ]).map(([href, label]) => [localizedPath(href, locale), label]);

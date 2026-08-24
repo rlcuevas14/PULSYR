@@ -32,9 +32,9 @@ class Account(Base):
 class AccountSubscription(Base):
     """The product tier and lifecycle attached to one tenant.
 
-    Billing-provider identifiers deliberately do not live here yet: the Free and
-    self-hosted tiers do not need a payment processor, while the stable account-level
-    contract below leaves room for a paid provider integration later.
+    The Paddle columns are written only by the billing webhook. `paddle_event_at`
+    holds the `occurred_at` of the last applied event so a retried or out-of-order
+    delivery cannot overwrite newer state with older state.
     """
 
     __tablename__ = "account_subscriptions"
@@ -60,6 +60,13 @@ class AccountSubscription(Base):
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
     onboarding_completed_at: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
+    paddle_customer_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    paddle_subscription_id: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, unique=True
+    )
+    paddle_event_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True), nullable=True
     )
     account: Mapped["Account"] = relationship("Account", back_populates="subscription")

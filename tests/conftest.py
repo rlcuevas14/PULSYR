@@ -1,6 +1,7 @@
 import os
 from typing import AsyncGenerator
 
+import httpx
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -9,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from testcontainers.postgres import PostgresContainer
 
 from app import database
+from app.billing import paddle
 from app.database import Base, get_db
 from app.main import create_app
 from app.web_security import CSRF_COOKIE
@@ -32,6 +34,21 @@ class CsrfAsyncClient(AsyncClient):
             headers.setdefault("X-CSRF-Token", token)
             kwargs["headers"] = headers
         return await super().request(method, url, **kwargs)
+
+
+@pytest.fixture(autouse=True)
+def _refuse_unmocked_paddle_calls(monkeypatch):
+    """A test that forgets to mock a Paddle call must fail here, not reach the
+    payment provider. Two tests in this suite escaped to the real sandbox API
+    before this existed, and both passed anyway because the 403 they got back
+    happened to produce the error they tolerated."""
+    def _refuse(request: httpx.Request) -> httpx.Response:
+        raise AssertionError(
+            f"unmocked Paddle call to {request.method} {request.url}: "
+            "monkeypatch the paddle function this route calls"
+        )
+
+    monkeypatch.setattr(paddle, "_transport", httpx.MockTransport(_refuse))
 
 
 @pytest.fixture(scope="session")

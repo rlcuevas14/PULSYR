@@ -1,0 +1,8 @@
+{% if paddle_token %}
+<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+<script src="/static/paddle-checkout.js"
+        data-paddle-token="{{ paddle_token }}"
+        data-paddle-environment="{{ paddle_environment }}"
+        {% if transaction_id %}data-paddle-transaction="{{ transaction_id }}"{% endif %}
+        defer></script>
+{% endif %}

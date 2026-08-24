@@ -1,0 +1,6 @@
+{% extends "auth_base.html" %}
+{% block title %}{{ t("billing.checkout_title") }}{% endblock %}
+{% block tagline %}{{ t("billing.checkout_body") }}{% endblock %}
+{% block card %}
+{% include "partials/_paddle_js.html" %}
+{% endblock %}

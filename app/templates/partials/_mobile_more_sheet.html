@@ -47,6 +47,7 @@
         {% if user.account_role == "owner" %}
         <a href="/account/members" class="p-menu-item">{{ t("nav.members") }}</a>
         <a href="/account/integrations" class="p-menu-item">{{ t("nav.integrations") }}</a>
+        {% if billing_enabled() %}<a href="/billing" class="p-menu-item">{{ t("nav.billing") }}</a>{% endif %}
         {% endif %}
         {% if user.is_superadmin %}<a href="/admin" class="p-menu-item">{{ t("nav.admin") }}</a>{% endif %}
         <div class="flex items-center justify-between gap-2 px-3 py-2">

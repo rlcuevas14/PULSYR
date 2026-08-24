@@ -130,6 +130,14 @@ async def signup_page(request: Request, db: AsyncSession = Depends(get_db)):
     # offer here, so send them to the form they can actually use.
     if not settings.public_signup or not oauth.configured():
         return RedirectResponse("/login", status_code=303)
+
+    from app.accounts.plans import PAID_LIMITS
+
+    plan = request.query_params.get("plan", "")
+    cycle = request.query_params.get("cycle", "")
+    if plan in PAID_LIMITS and cycle in ("monthly", "yearly"):
+        request.session["billing_intent"] = {"plan": plan, "cycle": cycle}
+
     context = _login_context()
     context["signup_mode"] = True
     return templates.TemplateResponse(request, "signup.html", context)

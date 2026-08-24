@@ -26,6 +26,16 @@ templates.env.globals["FREE_LIMITS"] = limits_for(FREE)
 templates.env.globals["navigation_context"] = navigation_context
 
 
+def billing_enabled() -> bool:
+    """Read at render time, not at import time: a value frozen when the module
+    loaded cannot follow a settings change, and every test that monkeypatches
+    the key would be asserting against the value the process started with."""
+    return bool(settings.paddle_api_key)
+
+
+templates.env.globals["billing_enabled"] = billing_enabled
+
+
 @lru_cache(maxsize=1)
 def _asset_manifest() -> dict[str, str]:
     path = Path("app/static/asset-manifest.json")

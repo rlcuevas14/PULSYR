@@ -3,28 +3,73 @@ import PageHero from "../../../components/PageHero.astro";
 import PublicLayout from "../../../layouts/PublicLayout.astro";
 ---
 
-<PublicLayout title="Términos" description="Términos del servicio alojado Gratuito de Pulsyr y del sitio público, separados de la licencia del software de código abierto.">
-  <PageHero compact eyebrow="Legal" breadcrumbLabel="Términos" title="Términos del servicio alojado" lead="Estos términos rigen las cuentas alojadas de Pulsyr y el sitio público. El código abierto y las marcas continúan bajo sus documentos separados." />
+<PublicLayout title="Términos" description="Términos del servicio alojado de Pulsyr, sus planes Gratuito y de pago, y del sitio público, separados de la licencia del software de código abierto.">
+  <PageHero compact eyebrow="Legal" breadcrumbLabel="Términos" title="Términos del servicio alojado" lead="Estos términos rigen las cuentas alojadas de Pulsyr en todos los planes y el sitio público. El código abierto y las marcas continúan bajo sus documentos separados." />
   <article class="section-tight container prose">
-    <p><strong>Fecha de vigencia y versión:</strong> 12 de agosto de 2026 · 2026-08-12</p>
+    <p><strong>Fecha de vigencia y versión:</strong> 23 de agosto de 2026 · 2026-08-23</p>
+
+    <h2>Quiénes somos</h2>
+    <p>El servicio alojado es operado por <strong>Avonlea Systems SpA</strong>, RUT 77.890.325-3, Hamburgo 550, Ñuñoa, Santiago, Chile. Contacto legal: <a href="mailto:legal@pulsyr.dev">legal@pulsyr.dev</a>. Soporte: <a href="mailto:soporte@pulsyr.dev">soporte@pulsyr.dev</a>. "Nosotros" y "Pulsyr" significan Avonlea Systems SpA; "tú" significa la persona o entidad titular de la cuenta.</p>
+    <p>Estos términos no aplican al software de código abierto Pulsyr, que puedes ejecutar por tu cuenta bajo la licencia MIT sin ningún acuerdo con nosotros.</p>
+
     <h2>Aceptación y cuenta</h2>
-    <p>Al crear una cuenta alojada aceptas estos términos y reconoces el Aviso de privacidad. Debes tener capacidad para aceptar este acuerdo, usar una identidad bajo tu control, proteger tu cuenta OAuth y tokens MCP, e informar oportunamente un acceso no autorizado.</p>
-    <h2>Plan Gratuito</h2>
-    <p>El plan alojado Gratuito incluye actualmente un proyecto activo, un colaborador adicional, tres tokens MCP activos por proyecto y 25 MB de versiones de documentos. No requiere tarjeta. Los límites pueden evolucionar, pero Pulsyr publicará las reducciones materiales antes de aplicarlas a cuentas activas existentes.</p>
+    <p>Al crear una cuenta alojada aceptas estos términos y reconoces el Aviso de privacidad. Debes tener capacidad para aceptar este acuerdo, usar una identidad bajo tu control, proteger tu cuenta OAuth y tokens MCP, e informar oportunamente un acceso no autorizado. Una persona o entidad por cuenta.</p>
+
+    <h2>Planes y límites</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">Límite</th><th scope="col">Gratuito</th><th scope="col">Solo</th><th scope="col">Studio</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Precio</td><td>Gratis</td><td>USD 8 / mes · USD 80 / año</td><td>USD 20 / mes · USD 200 / año</td></tr>
+          <tr><td>Proyectos</td><td>1</td><td>5</td><td>Ilimitados (uso justo: 25)</td></tr>
+          <tr><td>Colaboradores</td><td>1</td><td>3</td><td>10</td></tr>
+          <tr><td>Operaciones de IA</td><td>100 / mes</td><td>2.000 / mes</td><td>10.000 / mes</td></tr>
+          <tr><td>Almacenamiento de documentos</td><td>25 MB</td><td>5 GB</td><td>25 GB</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>Todos los planes tienen todas las funciones.</strong> Los planes se diferencian por cuánta de nuestra infraestructura usas, nunca por qué funcionalidad recibes. Autohospedar sigue siendo gratis e ilimitado.</p>
+    <p><strong>Uso justo.</strong> Cuando un plan dice ilimitado significa que no lo medimos, no que no exista un techo. La cifra entre paréntesis es el punto en que te escribiremos para acordar un plan que calce. Siempre te escribiremos antes de restringir algo, y nunca borraremos tus datos por una cuota. Si tu cuenta pasa a un plan menor, los proyectos, documentos y colaboradores existentes siguen disponibles; solo se pausa la creación de nuevos hasta que vuelvas dentro del límite.</p>
+    <p>Las <strong>operaciones de IA</strong> son llamadas a proveedores de IA externos hechas por tu cuenta, como estimación de impacto y esfuerzo, triaje de incidentes, redacción de hilos y embeddings. Puedes usar tu propia clave de proveedor de IA en cualquier plan, incluido el Gratuito; ese uso no cuenta aquí y te lo cobra ese proveedor directamente.</p>
+    <p>Los límites pueden evolucionar. Publicamos las reducciones materiales antes de aplicarlas a cuentas activas existentes.</p>
+
+    <h2>Pagos</h2>
+    <p><strong>Los pagos son procesados por Paddle.com Market Limited, que actúa como nuestro revendedor autorizado y Merchant of Record.</strong> Esto tiene dos consecuencias que conviene entender:</p>
+    <ul>
+      <li>Tu contrato de compra por esa transacción es con Paddle, y le aplican los términos de comprador de Paddle. Paddle aparece en tu estado de cuenta y emite tu factura.</li>
+      <li>Paddle recauda y entera el IVA, impuestos a las ventas y equivalentes en tu jurisdicción. Avonlea no maneja tus datos tributarios.</li>
+    </ul>
+    <p>Estos términos siguen rigiendo tu uso del servicio en sí.</p>
+    <p>Los precios están en dólares estadounidenses y excluyen impuestos, que se agregan al pagar. Las suscripciones se renuevan automáticamente por el mismo período hasta que las canceles. Puedes cancelar cuando quieras desde tu cuenta; el acceso continúa hasta el fin del período pagado. Cambiar a un plan mayor toma efecto de inmediato y se cobra a prorrata; cambiar a un plan menor toma efecto de inmediato y la diferencia se acredita en tu siguiente renovación.</p>
+    <p>Podemos cambiar precios avisando con 30 días por correo. Un precio nuevo aplica en tu siguiente renovación, nunca a mitad de período.</p>
+
+    <h2>Reembolsos</h2>
+    <p>Reembolsamos cualquier cobro completo dentro de 14 días, sin preguntas. La política completa, incluido cómo solicitarlo y los tres casos que reembolsamos sin importar el tiempo transcurrido, está en la <a href="/es/reembolsos/">Política de reembolsos</a>.</p>
+
     <h2>Uso aceptable</h2>
-    <p>No puedes usar el servicio para infringir la ley o derechos, distribuir malware, explorar o interrumpir sistemas sin autorización, evadir límites o controles de seguridad, sobrecargar la plataforma ni ayudar a otra persona a hacerlo. Los agentes automatizados permanecen bajo tu control y responsabilidad.</p>
+    <p>No puedes usar el servicio para infringir la ley o derechos, distribuir malware, explorar o interrumpir sistemas sin autorización, evadir límites o controles de seguridad, sobrecargar la plataforma, revender el servicio como propio ni ayudar a otra persona a hacerlo. Los agentes automatizados permanecen bajo tu control y responsabilidad.</p>
+
     <h2>Tu contenido</h2>
-    <p>Conservas los derechos sobre el contenido que ingresas. Otorgas a Pulsyr el permiso limitado necesario para alojarlo, procesarlo, respaldarlo y transmitirlo exclusivamente para operar y proteger el servicio. Eres responsable de tener los derechos y autorizaciones para ingresar ese contenido y conectar integraciones externas.</p>
+    <p>Conservas los derechos sobre el contenido que ingresas. Otorgas a Pulsyr el permiso limitado necesario para alojarlo, procesarlo, respaldarlo y transmitirlo exclusivamente para operar y proteger el servicio. Eres responsable de tener los derechos y autorizaciones para ingresar ese contenido y conectar integraciones externas. No entrenamos modelos de IA con tu contenido, y no permitimos que nuestros proveedores lo hagan.</p>
+    <p>Puedes recuperar tus datos cuando quieras mediante la API REST y las herramientas MCP. Tras el término los conservamos 30 días para que puedas exportarlos, y luego los eliminamos.</p>
+
     <h2>Disponibilidad y cambios</h2>
-    <p>El servicio alojado no incluye un acuerdo de nivel de servicio pagado. Mantenimiento, seguridad o circunstancias fuera del control razonable pueden interrumpirlo. Las funciones pueden cambiar con la evolución del producto; los cambios materiales para cuentas alojadas se comunicarán dentro del servicio o en la documentación publicada.</p>
+    <p>El servicio alojado no incluye un acuerdo de nivel de servicio pagado en ningún plan. Mantenimiento, seguridad o circunstancias fuera del control razonable pueden interrumpirlo. Las funciones pueden cambiar con la evolución del producto; los cambios materiales para cuentas alojadas se comunicarán dentro del servicio o en la documentación publicada.</p>
+
     <h2>Suspensión y término</h2>
-    <p>Pulsyr puede restringir o suspender una cuenta cuando sea razonablemente necesario para detener abuso, proteger usuarios o infraestructura, cumplir la ley o corregir un incumplimiento material. Puedes dejar de usar el servicio y solicitar la eliminación de la cuenta mediante <a href="mailto:legal@pulsyr.dev">legal@pulsyr.dev</a>. Algunos registros limitados pueden conservarse por seguridad, respaldos u obligaciones legales.</p>
+    <p>Pulsyr puede restringir o suspender una cuenta cuando sea razonablemente necesario para detener abuso, proteger usuarios o infraestructura, cumplir la ley o corregir un incumplimiento material. Puedes dejar de usar el servicio y solicitar la eliminación de la cuenta mediante <a href="mailto:legal@pulsyr.dev">legal@pulsyr.dev</a>. Algunos registros limitados pueden conservarse por seguridad, respaldos u obligaciones legales. Si discontinuamos el servicio, reembolsamos la parte no usada de cualquier período prepagado.</p>
+
     <h2>Servicios de terceros</h2>
     <p>GitHub, Google, clientes MCP, proveedores de IA, Sentry y otras integraciones son servicios independientes con sus propios términos. Pulsyr no responde por su disponibilidad, acciones o prácticas de datos.</p>
+
     <h2>Código abierto y marcas</h2>
     <p>El código fuente se entrega bajo la <a href="https://github.com/rlcuevas14/PULSYR/blob/main/LICENSE">licencia MIT</a>. “Pulsyr”, su logotipo y otras marcas se rigen por la <a href="https://github.com/rlcuevas14/PULSYR/blob/main/TRADEMARK.md">política de marcas</a>. Estos términos del servicio alojado no reducen los permisos MIT.</p>
+
     <h2>Exclusiones y responsabilidad</h2>
-    <p>En la medida permitida por la ley aplicable, el servicio Gratuito se entrega según disponibilidad y sin garantías adicionales a aquellas que legalmente no puedan excluirse. Pulsyr no reemplaza tu control de versiones, respaldos, revisión de seguridad ni supervisión humana de agentes automatizados. Nada aquí limita derechos o responsabilidades que la ley no permita renunciar.</p>
+    <p>En la medida permitida por la ley aplicable, el servicio se entrega según disponibilidad y sin garantías adicionales a aquellas que legalmente no puedan excluirse. Pulsyr no reemplaza tu control de versiones, respaldos, revisión de seguridad ni supervisión humana de agentes automatizados. Nada aquí limita derechos o responsabilidades que la ley no permita renunciar.</p>
+
     <h2>Ley, cambios y contacto</h2>
     <p>Estos términos se rigen por las leyes de Chile. Las revisiones materiales tendrán una nueva fecha de versión y, cuando corresponda, requerirán nueva aceptación. Puedes escribir a <a href="mailto:legal@pulsyr.dev">legal@pulsyr.dev</a>.</p>
   </article>
