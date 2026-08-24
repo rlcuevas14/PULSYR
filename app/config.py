@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     # Global fallbacks for webhook secrets (move to per-project settings in a future version)
     sentry_client_secret: str = ""
     github_webhook_secret: str = ""
+    # Paddle notification destination secret. Empty on a self-hosted instance: with no
+    # secret the billing webhook answers 503 and no paid plan can ever be granted.
+    paddle_webhook_secret: str = ""
     sentry_api_token: str = ""
     sentry_org: str = ""
 
