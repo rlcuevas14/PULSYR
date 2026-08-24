@@ -6,16 +6,11 @@ PaddleNotConfigured when no key is set, so a caller has exactly one branch to
 handle rather than a scatter of None checks.
 """
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import httpx
 
 from app.config import settings
-
-if TYPE_CHECKING:
-    from typing import Any as PlanPrice
 
 _SANDBOX = "https://sandbox-api.paddle.com"
 _PRODUCTION = "https://api.paddle.com"
@@ -53,5 +48,6 @@ async def _request(method: str, path: str, payload: dict[str, Any] | None = None
     return response.json().get("data")
 
 
-async def list_plan_prices() -> list[PlanPrice]:  # noqa: F821
+async def list_plan_prices() -> list[Any]:
+    # Real PlanPrice type arrives with catalog mapping in the next task.
     return await _request("GET", "/prices") or []
