@@ -145,3 +145,72 @@ async def test_confirmation_rejects_a_price_outside_the_catalog(client: AsyncCli
 
     r = await client.get("/ui/billing/confirm?price_id=pri_someone_elses")
     assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_confirmation_shows_downgrade_warning_and_no_charge_today(
+    client: AsyncClient, db, monkeypatch,
+):
+    """A downgrade must show the capacity-drops-now warning and must not claim a
+    charge today: Paddle reports no immediate transaction for a downgrade. The
+    proration mode is not hardcoded here; it is left for the route to derive from
+    proration_for and pass through to preview_change."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    _account, owner = await _paid_owner(db, monkeypatch, plan_code="studio")
+
+    async def prices():
+        return [_price("solo", "monthly", "pri_solo_m")]
+
+    async def current_subscription(_subscription_id: str) -> paddle.SubscriptionView:
+        return paddle.SubscriptionView(
+            status="active", price_id="pri_studio_m", plan_code="studio",
+            billing_period="monthly", next_billed_at=None, scheduled_action=None,
+            scheduled_at=None, update_payment_method_url=None, cancel_url=None,
+        )
+
+    async def preview(subscription_id, price_id, proration):
+        return paddle.ChangePreview(None, "800", "USD", None)
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    monkeypatch.setattr(paddle, "get_subscription", current_subscription)
+    monkeypatch.setattr(paddle, "preview_change", preview)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.get("/ui/billing/confirm?price_id=pri_solo_m")
+    assert r.status_code == 200
+    assert "Your new limits apply immediately. The difference is credited to your next renewal." in r.text
+    assert "No charge today." in r.text
+
+
+@pytest.mark.asyncio
+async def test_confirmation_shows_zero_value_charge_not_no_charge(
+    client: AsyncClient, db, monkeypatch,
+):
+    """A real zero-value immediate charge (Paddle's `"0"`) must render as a charge
+    of zero, never collapse into the "no charge today" wording reserved for
+    immediate_amount=None."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    _account, owner = await _paid_owner(db, monkeypatch)
+
+    async def prices():
+        return [_price("studio", "monthly", "pri_studio_m")]
+
+    async def current_subscription(_subscription_id: str) -> paddle.SubscriptionView:
+        return paddle.SubscriptionView(
+            status="active", price_id="pri_solo_m", plan_code="solo",
+            billing_period="monthly", next_billed_at=None, scheduled_action=None,
+            scheduled_at=None, update_payment_method_url=None, cancel_url=None,
+        )
+
+    async def preview(subscription_id, price_id, proration):
+        return paddle.ChangePreview("0", "2000", "USD", None)
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    monkeypatch.setattr(paddle, "get_subscription", current_subscription)
+    monkeypatch.setattr(paddle, "preview_change", preview)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.get("/ui/billing/confirm?price_id=pri_studio_m")
+    assert r.status_code == 200
+    assert "USD 0.00" in r.text
+    assert "No charge today." not in r.text
