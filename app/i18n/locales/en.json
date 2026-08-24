@@ -129,6 +129,7 @@
   "billing.confirm_recurring": "Then {amount}, {term}.",
   "billing.confirm_title": "Confirm your change to {plan}",
   "billing.current_plan": "Current plan",
+  "billing.current_plan_badge": "Current plan",
   "billing.detail_unavailable": "Billing detail is temporarily unavailable.",
   "billing.downgrade_takes_effect_now": "Your new limits apply immediately. The difference is credited to your next renewal.",
   "billing.next_billed_on": "Next billed on {date}",

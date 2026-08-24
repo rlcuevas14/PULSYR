@@ -176,6 +176,48 @@ async def test_paying_account_is_not_offered_a_second_checkout(client: AsyncClie
 
 
 @pytest.mark.asyncio
+async def test_the_other_billing_term_of_the_current_tier_is_offered(
+    client: AsyncClient, db, monkeypatch,
+):
+    """Switching Solo monthly to Solo yearly is a supported flow. Filtering the
+    cards by tier hid every price of the account's own tier, the other term
+    included, which left proration_for's term tiebreaker unreachable in
+    production. Only the exact price the account is on is off the table, and it
+    is marked rather than hidden."""
+    from app.billing import paddle
+
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
+    _account, owner = await _paid_owner_account(db, plan_code="solo")
+
+    async def prices():
+        return [
+            paddle.PlanPrice("pri_solo_m", "solo", "monthly", "800", "USD"),
+            paddle.PlanPrice("pri_solo_y", "solo", "yearly", "8000", "USD"),
+            paddle.PlanPrice("pri_studio_m", "studio", "monthly", "2000", "USD"),
+        ]
+
+    async def fake_get_subscription(_subscription_id: str) -> paddle.SubscriptionView:
+        return paddle.SubscriptionView(
+            "active", "pri_solo_m", "solo", "monthly", None, None, None, None, None,
+        )
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    monkeypatch.setattr(paddle, "get_subscription", fake_get_subscription)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.get("/billing")
+    assert r.status_code == 200
+    assert "/ui/billing/confirm?price_id=pri_solo_y" in r.text
+    assert "/ui/billing/confirm?price_id=pri_studio_m" in r.text
+    # The price they already pay for: shown, badged, and not clickable. Asserted
+    # on the pill markup, not on the words: "Current plan" is also the label of
+    # the summary section above, so the text alone would pass either way.
+    assert "/ui/billing/confirm?price_id=pri_solo_m" not in r.text
+    assert 'class="p-pill mt-3">Current plan</p>' in r.text
+
+
+@pytest.mark.asyncio
 async def test_paying_account_keeps_the_guard_when_the_live_read_fails(
     client: AsyncClient, db, monkeypatch,
 ):

@@ -129,6 +129,7 @@
   "billing.confirm_recurring": "Luego {amount}, {term}.",
   "billing.confirm_title": "Confirma tu cambio a {plan}",
   "billing.current_plan": "Plan actual",
+  "billing.current_plan_badge": "Plan actual",
   "billing.detail_unavailable": "El detalle de facturación no está disponible por ahora.",
   "billing.downgrade_takes_effect_now": "Tus nuevos límites aplican de inmediato. La diferencia se acredita en tu próxima renovación.",
   "billing.next_billed_on": "Próximo cobro el {date}",

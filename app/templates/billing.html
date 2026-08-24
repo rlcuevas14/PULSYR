@@ -59,11 +59,15 @@
   <h2 class="font-semibold mb-4">{{ t("billing.available_plans") }}</h2>
   <div class="grid sm:grid-cols-2 gap-4">
     {% for price in prices %}
-      {% if price.plan_code != plan_code %}
+      {# The card to skip is the exact price the account is on, not every price of
+         its tier: hiding the tier hid the other billing term with it, which is
+         how switching monthly to yearly became unreachable. #}
       <article class="p-card p-4">
         <p class="font-semibold">{{ t("plan." ~ price.plan_code) }}</p>
         <p class="text-sm opacity-70">{{ t("billing.term." ~ price.billing_period) }}</p>
-        {% if not has_subscription %}
+        {% if detail and price.price_id == detail.price_id %}
+        <p class="p-pill mt-3">{{ t("billing.current_plan_badge") }}</p>
+        {% elif not has_subscription %}
         <button type="button" class="p-btn mt-3"
                 data-paddle-price="{{ price.price_id }}"
                 data-account-id="{{ account_id }}"
@@ -73,7 +77,6 @@
         <a class="p-btn mt-3" href="/ui/billing/confirm?price_id={{ price.price_id }}">{{ t("billing.switch_to") }}</a>
         {% endif %}
       </article>
-      {% endif %}
     {% endfor %}
   </div>
 </section>

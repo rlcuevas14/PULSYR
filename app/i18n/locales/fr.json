@@ -129,6 +129,7 @@
   "billing.confirm_recurring": "Puis {amount}, {term}.",
   "billing.confirm_title": "Confirmez votre changement vers {plan}",
   "billing.current_plan": "Forfait actuel",
+  "billing.current_plan_badge": "Forfait actuel",
   "billing.detail_unavailable": "Le détail de facturation est temporairement indisponible.",
   "billing.downgrade_takes_effect_now": "Vos nouvelles limites s'appliquent immédiatement. La différence est créditée à votre prochain renouvellement.",
   "billing.next_billed_on": "Prochain prélèvement le {date}",
