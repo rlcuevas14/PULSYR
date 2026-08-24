@@ -7,6 +7,7 @@ handle rather than a scatter of None checks.
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -92,3 +93,52 @@ async def list_plan_prices() -> list[PlanPrice]:
             currency_code=str(unit.get("currency_code", "USD")),
         ))
     return prices
+
+
+@dataclass(frozen=True)
+class SubscriptionView:
+    status: str
+    price_id: str
+    plan_code: str
+    billing_period: str
+    next_billed_at: datetime | None
+    scheduled_action: str | None
+    scheduled_at: datetime | None
+    update_payment_method_url: str | None
+    cancel_url: str | None
+
+
+def _dt(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+async def get_subscription(subscription_id: str) -> SubscriptionView:
+    """Billing detail read live rather than mirrored.
+
+    Everything here changes without a webhook we subscribe to, or goes stale the
+    moment it is copied: the next billing date, a pending cancellation, the URL
+    Paddle mints for updating a card. The local mirror keeps only what the
+    entitlement guards read on every request.
+    """
+    data = await _request("GET", f"/subscriptions/{subscription_id}") or {}
+    items = data.get("items") or []
+    price = (items[0].get("price") if items else {}) or {}
+    custom = price.get("custom_data") or {}
+    scheduled = data.get("scheduled_change") or {}
+    urls = data.get("management_urls") or {}
+    return SubscriptionView(
+        status=str(data.get("status", "")),
+        price_id=str(price.get("id", "")),
+        plan_code=str(custom.get("plan_code", "")),
+        billing_period=_billing_period(price),
+        next_billed_at=_dt(data.get("next_billed_at")),
+        scheduled_action=str(scheduled["action"]) if scheduled.get("action") else None,
+        scheduled_at=_dt(scheduled.get("effective_at")),
+        update_payment_method_url=urls.get("update_payment_method"),
+        cancel_url=urls.get("cancel"),
+    )

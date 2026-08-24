@@ -85,3 +85,64 @@ async def test_list_plan_prices_ignores_prices_without_a_known_plan(monkeypatch)
     monkeypatch.setattr(paddle, "_transport", _mock_transport(handler))
     assert await paddle.list_plan_prices() == []
     assert "enterprise" not in PAID_LIMITS
+
+
+_SUBSCRIPTION = {
+    "id": "sub_x",
+    "status": "active",
+    "next_billed_at": "2026-09-23T12:00:00Z",
+    "scheduled_change": {"action": "cancel", "effective_at": "2026-09-23T12:00:00Z"},
+    "management_urls": {
+        "update_payment_method": "https://pay.paddle.io/update/x",
+        "cancel": "https://pay.paddle.io/cancel/x",
+    },
+    "items": [{"price": {
+        "id": "pri_solo_m",
+        "custom_data": {"plan_code": "solo", "billing_period": "monthly"},
+        "billing_cycle": {"interval": "month", "frequency": 1},
+    }}],
+}
+
+
+@pytest.mark.asyncio
+async def test_get_subscription_exposes_the_scheduled_change(monkeypatch):
+    """A cancellation leaves status active with a scheduled change. The screen
+    must be able to say 'Solo until 23 September' rather than 'canceled'."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/subscriptions/sub_x"
+        return httpx.Response(200, json={"data": _SUBSCRIPTION})
+
+    monkeypatch.setattr(paddle, "_transport", _mock_transport(handler))
+    view = await paddle.get_subscription("sub_x")
+
+    assert view.status == "active"
+    assert view.plan_code == "solo"
+    assert view.billing_period == "monthly"
+    assert view.price_id == "pri_solo_m"
+    assert view.scheduled_action == "cancel"
+    assert view.scheduled_at is not None and view.scheduled_at.year == 2026
+    assert view.update_payment_method_url == "https://pay.paddle.io/update/x"
+
+
+@pytest.mark.asyncio
+async def test_get_subscription_without_a_scheduled_change(monkeypatch):
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    payload = {**_SUBSCRIPTION, "scheduled_change": None}
+
+    monkeypatch.setattr(paddle, "_transport", _mock_transport(
+        lambda r: httpx.Response(200, json={"data": payload})))
+    view = await paddle.get_subscription("sub_x")
+
+    assert view.scheduled_action is None
+    assert view.scheduled_at is None
+
+
+@pytest.mark.asyncio
+async def test_paddle_error_is_raised_on_http_failure(monkeypatch):
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    monkeypatch.setattr(paddle, "_transport", _mock_transport(
+        lambda r: httpx.Response(500, json={})))
+    with pytest.raises(paddle.PaddleError):
+        await paddle.get_subscription("sub_x")
