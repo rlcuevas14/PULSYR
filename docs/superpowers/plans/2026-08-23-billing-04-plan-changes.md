@@ -302,15 +302,15 @@ Create `app/templates/billing_confirm.html`:
 <p>{{ t("billing.confirm_recurring", amount=recurring, term=t("billing.term." ~ target.billing_period)) }}</p>
 
 {% if is_downgrade %}
-<div class="p-card p-4 my-4 border-warning">
+<div class="my-4 bg-warning/10 border border-warning/30 text-warning-strong rounded-xl px-4 py-3 text-sm">
   <p>{{ t("billing.downgrade_takes_effect_now") }}</p>
 </div>
 {% endif %}
 
-<form hx-post="/ui/billing/change" class="mt-4">
+<form hx-post="/ui/billing/change" class="mt-4 flex items-center gap-3">
   <input type="hidden" name="price_id" value="{{ target.price_id }}">
-  <button type="submit" class="p-btn">{{ t("billing.confirm_button") }}</button>
-  <a class="p-link ml-3" href="/billing">{{ t("common.cancel") }}</a>
+  <button type="submit" class="p-btn-primary">{{ t("billing.confirm_button") }}</button>
+  <a class="p-btn-ghost" href="/billing">{{ t("common.cancel") }}</a>
 </form>
 {% endblock %}
 ```
@@ -564,7 +564,7 @@ exists and `detail.scheduled_action` is not `"cancel"`:
 
 ```jinja
 <form hx-post="/ui/billing/cancel" class="mt-4">
-  <button type="submit" class="p-btn-quiet">{{ t("billing.cancel_plan") }}</button>
+  <button type="submit" class="p-btn-ghost">{{ t("billing.cancel_plan") }}</button>
 </form>
 ```
 

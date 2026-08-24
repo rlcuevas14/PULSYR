@@ -342,7 +342,7 @@ first for the available `.p-*` classes and tokens. Every string uses `t(...)`.
 <h1 class="text-2xl font-semibold mb-6">{{ t("billing.title") }}</h1>
 
 {% if status == "active" and detail and detail.status == "past_due" %}
-<div class="p-card p-4 mb-6 border-warning">
+<div class="mb-6 bg-warning/10 border border-warning/30 text-warning-strong rounded-xl px-4 py-3 text-sm">
   <p class="font-medium">{{ t("billing.past_due_title") }}</p>
   <p>{{ t("billing.past_due_body") }}</p>
   {% if detail.update_payment_method_url %}
@@ -362,7 +362,7 @@ first for the available `.p-*` classes and tokens. Every string uses `t(...)`.
       <p>{{ t("billing.next_billed_on", date=detail.next_billed_at | fecha) }}</p>
     {% endif %}
     {% if detail.update_payment_method_url %}
-      <a class="p-link" href="{{ detail.update_payment_method_url }}">{{ t("billing.payment_method") }}</a>
+      <a class="p-btn-ghost mt-3" href="{{ detail.update_payment_method_url }}">{{ t("billing.payment_method") }}</a>
     {% endif %}
   {% elif detail_failed %}
     <p class="opacity-70">{{ t("billing.detail_unavailable") }}</p>
