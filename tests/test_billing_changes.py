@@ -41,3 +41,29 @@ def test_tier_change_wins_over_term_change():
     assert service.proration_for(
         _price("studio", "yearly"), _price("solo", "monthly")
     ) == paddle.PRORATION_DOWNGRADE
+
+
+def test_tier_upgrade_overrides_term_downgrade():
+    """Solo yearly to Studio monthly is an upgrade: tier wins even when the
+    term shortens. This proves tier is checked before term in the decision."""
+    assert service.proration_for(
+        _price("solo", "yearly"), _price("studio", "monthly")
+    ) == paddle.PRORATION_UPGRADE
+
+
+def test_unknown_plan_code_credits_at_renewal():
+    """When Paddle omits items from the subscription response, plan_code is
+    empty. Never charge on a guess; credit at renewal instead."""
+    current = paddle.SubscriptionView(
+        status="active",
+        price_id="pri_current",
+        plan_code="",
+        billing_period="monthly",
+        next_billed_at=None,
+        scheduled_action=None,
+        scheduled_at=None,
+        update_payment_method_url=None,
+        cancel_url=None,
+    )
+    target = _price("studio", "monthly")
+    assert service.proration_for(current, target) == paddle.PRORATION_DOWNGRADE

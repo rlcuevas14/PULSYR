@@ -18,6 +18,12 @@ def proration_for(
     Term is the tiebreaker within the same tier, where moving to a year is the
     larger payment and belongs today.
     """
+    if current.plan_code not in PLAN_RANK:
+        # We could not identify what they are on, which happens when Paddle omits
+        # items from a subscription response. Never charge on a guess: credit at
+        # renewal instead, where a wrong call costs nobody money today.
+        return paddle.PRORATION_DOWNGRADE
+
     current_tier = PLAN_RANK.get(current.plan_code, 0)
     target_tier = PLAN_RANK.get(target.plan_code, 0)
     if target_tier != current_tier:
