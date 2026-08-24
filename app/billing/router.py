@@ -53,6 +53,12 @@ async def billing_screen(
         except paddle.PaddleError:
             logger.warning("plan catalog unavailable for account %s", user.account_id)
 
+    # Whether this account already pays us is a fact in the local mirror, which is
+    # always readable, never an inference from whether the live read succeeded. A
+    # Paddle outage that left `detail` None used to reopen the buy buttons for a
+    # paying account, and a second checkout there is a second live subscription.
+    has_subscription = bool(subscription and subscription.paddle_subscription_id)
+
     detail = None
     detail_failed = False
     if paddle.configured() and subscription and subscription.paddle_subscription_id:
@@ -81,6 +87,7 @@ async def billing_screen(
         "usage": usage,
         "detail": detail,
         "detail_failed": detail_failed,
+        "has_subscription": has_subscription,
         "actions_available": paddle.configured(),
         "prices": prices,
         "preselected_price_id": preselected_price_id,

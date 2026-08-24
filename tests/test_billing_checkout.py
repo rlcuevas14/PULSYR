@@ -161,6 +161,36 @@ async def test_paying_account_is_not_offered_a_second_checkout(client: AsyncClie
 
 
 @pytest.mark.asyncio
+async def test_paying_account_keeps_the_guard_when_the_live_read_fails(
+    client: AsyncClient, db, monkeypatch,
+):
+    """The gap between the two tests around this one: a subscription is active,
+    both Paddle settings are set and the catalog loads, but the live subscription
+    read fails. `detail` is None for a reason that has nothing to do with whether
+    the account pays us, so deciding on it would offer a paying customer a second
+    checkout, and a second live subscription orphans the first."""
+    from app.billing import paddle
+
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
+    _account, owner = await _paid_owner_account(db, plan_code="solo")
+
+    async def prices():
+        return [paddle.PlanPrice("pri_studio_m", "studio", "monthly", "2000", "USD")]
+
+    async def boom(_subscription_id: str) -> paddle.SubscriptionView:
+        raise paddle.PaddleError("down")
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    monkeypatch.setattr(paddle, "get_subscription", boom)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.get("/billing")
+    assert r.status_code == 200
+    assert "data-paddle-price" not in r.text
+
+
+@pytest.mark.asyncio
 async def test_catalog_error_still_renders_plan_and_usage(client: AsyncClient, db, monkeypatch):
     from app.billing import paddle
 
