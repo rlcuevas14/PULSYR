@@ -64,6 +64,39 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         return response
 
 
+# Only the billing paths get these. Paddle serves its script from a CDN, renders
+# checkout in an iframe on its own origin, and calls home over XHR, none of which
+# the default policy allows. Widening globally would hand every other screen a
+# weaker policy for no reason.
+_PADDLE_ORIGINS = "https://*.paddle.com https://*.paddle.io"
+_PADDLE_SCRIPT = "https://cdn.paddle.com"
+_BILLING_PREFIX = "/billing"
+
+
+def _strict_csp() -> str:
+    return (
+        "default-src 'self'; "
+        "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
+        "form-action 'self'; script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+        "font-src 'self'; connect-src 'self'; frame-src 'self'; manifest-src 'self'"
+    )
+
+
+def _billing_csp() -> str:
+    return (
+        "default-src 'self'; "
+        "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
+        f"form-action 'self' {_PADDLE_ORIGINS}; "
+        f"script-src 'self' {_PADDLE_SCRIPT}; "
+        "style-src 'self' 'unsafe-inline'; "
+        f"img-src 'self' data: {_PADDLE_ORIGINS}; "
+        "font-src 'self'; "
+        f"connect-src 'self' {_PADDLE_ORIGINS}; "
+        f"frame-src 'self' {_PADDLE_ORIGINS}; manifest-src 'self'"
+    )
+
+
 class ResponsePolicyMiddleware(BaseHTTPMiddleware):
     """Apply security and cache policy even to short-circuited middleware responses."""
 
@@ -76,18 +109,20 @@ class ResponsePolicyMiddleware(BaseHTTPMiddleware):
         headers = response.headers
         # Dynamic brand/project colors still need inline styles. Executable code is
         # external and self-hosted, so scripts need no inline exception.
-        headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
-            "form-action 'self'; script-src 'self'; "
-            "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
-            "font-src 'self'; connect-src 'self'; frame-src 'self'; manifest-src 'self'"
-        )
+        is_billing = request.url.path.startswith(_BILLING_PREFIX)
+        headers["Content-Security-Policy"] = _billing_csp() if is_billing else _strict_csp()
         headers["X-Frame-Options"] = "DENY"
         headers["X-Content-Type-Options"] = "nosniff"
         headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Paddle's overlay checkout uses the Payment Request API; everywhere else
+        # payment stays fully denied.
+        payment = (
+            'payment=(self "https://buy.paddle.com" "https://sandbox-buy.paddle.com")'
+            if is_billing
+            else "payment=()"
+        )
         headers["Permissions-Policy"] = (
-            "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+            f"camera=(), microphone=(), geolocation=(), {payment}, usb=(), interest-cohort=()"
         )
         if not settings.debug:
             headers["Strict-Transport-Security"] = "max-age=31536000"
