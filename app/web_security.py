@@ -70,7 +70,6 @@ class CsrfMiddleware(BaseHTTPMiddleware):
 # weaker policy for no reason.
 _PADDLE_ORIGINS = "https://*.paddle.com https://*.paddle.io"
 _PADDLE_SCRIPT = "https://cdn.paddle.com"
-_BILLING_PREFIX = "/billing"
 
 
 def _strict_csp() -> str:
@@ -109,7 +108,10 @@ class ResponsePolicyMiddleware(BaseHTTPMiddleware):
         headers = response.headers
         # Dynamic brand/project colors still need inline styles. Executable code is
         # external and self-hosted, so scripts need no inline exception.
-        is_billing = request.url.path.startswith(_BILLING_PREFIX)
+        # Boundary-anchored, like the /webhooks/ and /static/ checks below: a bare
+        # prefix would also match an unrelated future route like /billingsomething.
+        path = request.url.path
+        is_billing = path == "/billing" or path.startswith("/billing/")
         headers["Content-Security-Policy"] = _billing_csp() if is_billing else _strict_csp()
         headers["X-Frame-Options"] = "DENY"
         headers["X-Content-Type-Options"] = "nosniff"

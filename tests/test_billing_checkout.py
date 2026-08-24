@@ -39,3 +39,12 @@ async def test_other_paths_keep_the_strict_policy(client: AsyncClient):
     assert "paddle.com" not in csp
     assert "script-src 'self';" in csp
     assert r.headers["permissions-policy"].startswith("camera=(), microphone=(), geolocation=(), payment=()")
+
+
+@pytest.mark.asyncio
+async def test_billing_prefix_is_boundary_anchored(client: AsyncClient):
+    """A path that merely starts with the same letters must not inherit the Paddle policy."""
+    r = await client.get("/billingsomething")
+    csp = r.headers["content-security-policy"]
+    assert "paddle.com" not in csp
+    assert r.headers["permissions-policy"].startswith("camera=(), microphone=(), geolocation=(), payment=()")
