@@ -480,15 +480,26 @@ distinguishes the hosted service from somebody's own install.
 In `app/templates_config.py`, beside the existing `FREE_LIMITS` global (line 25):
 
 ```python
-templates.env.globals["BILLING_ENABLED"] = bool(settings.paddle_api_key)
+def billing_enabled() -> bool:
+    """Read at render time, not at import time: a value frozen when the module
+    loaded cannot follow a settings change, and every test that monkeypatches
+    the key would be asserting against the value the process started with."""
+    return bool(settings.paddle_api_key)
+
+
+templates.env.globals["billing_enabled"] = billing_enabled
 ```
 
 Then in both `app/templates/base.html:71` and
 `app/templates/partials/_mobile_more_sheet.html:48`, beside the members entry:
 
 ```jinja
-{% if BILLING_ENABLED %}<a href="/billing" class="p-menu-item">{{ t("nav.billing") }}</a>{% endif %}
+{% if billing_enabled() %}<a href="/billing" class="p-menu-item">{{ t("nav.billing") }}</a>{% endif %}
 ```
+
+Note the call parentheses. A bare `{% if billing_enabled %}` tests the function
+object, which is always truthy, and the self-hosted test would pass while the
+link rendered for everyone.
 
 placed inside the existing `{% if user.account_role == 'owner' %}` block, so it
 inherits the owner check rather than repeating it.
