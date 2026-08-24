@@ -115,6 +115,8 @@
   "backlog.view_board": "Tablero",
   "backlog.view_list": "Lista",
   "billing.cancels_on": "Tu plan termina el {date}",
+  "billing.checkout_body": "Completa tu pago a continuación para mantener tu suscripción activa.",
+  "billing.checkout_title": "Completa tu pago",
   "billing.collaborators": "Colaboradores",
   "billing.current_plan": "Plan actual",
   "billing.detail_unavailable": "El detalle de facturación no está disponible por ahora.",

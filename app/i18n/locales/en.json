@@ -115,6 +115,8 @@
   "backlog.view_board": "Board",
   "backlog.view_list": "List",
   "billing.cancels_on": "Your plan ends on {date}",
+  "billing.checkout_body": "Complete your payment below to keep your subscription active.",
+  "billing.checkout_title": "Complete your payment",
   "billing.collaborators": "Collaborators",
   "billing.current_plan": "Current plan",
   "billing.detail_unavailable": "Billing detail is temporarily unavailable.",

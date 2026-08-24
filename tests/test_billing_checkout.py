@@ -7,7 +7,7 @@ from httpx import AsyncClient
 
 from app.accounts.plans import FREE
 from app.accounts.service import create_account
-from app.config import settings  # noqa: F401 (used once later tasks in this feature add more tests here)
+from app.config import settings
 
 
 async def _owner_account(db, plan_code=FREE):
@@ -48,3 +48,28 @@ async def test_billing_prefix_is_boundary_anchored(client: AsyncClient):
     csp = r.headers["content-security-policy"]
     assert "paddle.com" not in csp
     assert r.headers["permissions-policy"].startswith("camera=(), microphone=(), geolocation=(), payment=()")
+
+
+@pytest.mark.asyncio
+async def test_checkout_page_needs_no_session(client: AsyncClient, monkeypatch):
+    monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
+    r = await client.get("/billing/checkout?_ptxn=txn_123")
+    assert r.status_code == 200
+    assert "txn_123" in r.text
+    assert "test_abc" in r.text
+
+
+@pytest.mark.asyncio
+async def test_checkout_page_never_leaks_the_api_key(client: AsyncClient, monkeypatch):
+    monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_secret")
+    r = await client.get("/billing/checkout?_ptxn=txn_123")
+    assert "pdl_sdbx_apikey_secret" not in r.text
+
+
+@pytest.mark.asyncio
+async def test_checkout_page_rejects_a_malformed_transaction_id(client: AsyncClient, monkeypatch):
+    """The id goes straight into a script call, so it is validated, not trusted."""
+    monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
+    r = await client.get("/billing/checkout?_ptxn=<script>alert(1)</script>")
+    assert r.status_code == 400
