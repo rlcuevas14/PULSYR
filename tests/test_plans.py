@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.accounts.members import create_member
 from app.accounts.models import AccountSubscription
-from app.accounts.plans import FREE, PlanLimitError, subscription_for
+from app.accounts.plans import FREE, PlanLimitError, subscription_for, usage_for
 from app.accounts.service import create_account
 from app.auth.models import User
 from app.auth.service import authenticate, create_api_token, verify_api_token
@@ -143,3 +143,19 @@ async def test_suspended_subscription_cannot_authenticate(db):
 
     assert await authenticate(db, owner.email, "password123") is None
     assert await verify_api_token(db, raw) is None
+
+
+@pytest.mark.asyncio
+async def test_usage_matches_what_the_guards_count(db):
+    """The screen and the guard must never disagree about how full a plan is."""
+    account, _owner = await _free_account(db)
+    await create_project(db, name="First", account_id=account.id)
+    await db.commit()
+
+    usage = await usage_for(db, account.id)
+    assert usage.projects == 1
+    assert usage.members == 0
+    assert usage.storage_bytes == 0
+
+    with pytest.raises(PlanLimitError, match="projects"):
+        await create_project(db, name="Second", account_id=account.id)

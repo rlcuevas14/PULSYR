@@ -30,6 +30,13 @@ class PlanLimits:
     storage_bytes: int | None
 
 
+@dataclass(frozen=True)
+class Usage:
+    projects: int
+    members: int
+    storage_bytes: int
+
+
 class PlanLimitError(ValueError):
     def __init__(self, resource: str, limit: int) -> None:
         self.resource = resource
@@ -153,19 +160,55 @@ async def apply_paddle_subscription(
     return f"applied:{plan_code}/{status}"
 
 
-async def ensure_project_capacity(db: AsyncSession, account_id: uuid.UUID) -> None:
-    limits = limits_for(await active_plan_code(db, account_id, for_update=True))
-    if limits.projects is None:
-        return
+async def count_projects(db: AsyncSession, account_id: uuid.UUID) -> int:
     from app.projects.models import Project
 
-    used = await db.scalar(
+    return int(await db.scalar(
         select(func.count()).select_from(Project).where(
             Project.account_id == account_id,
             Project.archived_at.is_(None),
         )
+    ) or 0)
+
+
+async def count_members(db: AsyncSession, account_id: uuid.UUID) -> int:
+    from app.auth.models import User
+
+    return int(await db.scalar(
+        select(func.count()).select_from(User).where(
+            User.account_id == account_id,
+            User.account_role == "member",
+            User.is_active.is_(True),
+        )
+    ) or 0)
+
+
+async def used_storage_bytes(db: AsyncSession, account_id: uuid.UUID) -> int:
+    from app.management.models import Deliverable, DeliverableVersion
+    from app.projects.models import Project
+
+    return int(await db.scalar(
+        select(func.coalesce(func.sum(DeliverableVersion.size_bytes), 0))
+        .select_from(DeliverableVersion)
+        .join(Deliverable, Deliverable.id == DeliverableVersion.deliverable_id)
+        .join(Project, Project.id == Deliverable.project_id)
+        .where(Project.account_id == account_id)
+    ) or 0)
+
+
+async def usage_for(db: AsyncSession, account_id: uuid.UUID) -> Usage:
+    return Usage(
+        projects=await count_projects(db, account_id),
+        members=await count_members(db, account_id),
+        storage_bytes=await used_storage_bytes(db, account_id),
     )
-    if (used or 0) >= limits.projects:
+
+
+async def ensure_project_capacity(db: AsyncSession, account_id: uuid.UUID) -> None:
+    limits = limits_for(await active_plan_code(db, account_id, for_update=True))
+    if limits.projects is None:
+        return
+    if await count_projects(db, account_id) >= limits.projects:
         raise PlanLimitError("projects", limits.projects)
 
 
@@ -173,16 +216,7 @@ async def ensure_member_capacity(db: AsyncSession, account_id: uuid.UUID) -> Non
     limits = limits_for(await active_plan_code(db, account_id, for_update=True))
     if limits.members is None:
         return
-    from app.auth.models import User
-
-    used = await db.scalar(
-        select(func.count()).select_from(User).where(
-            User.account_id == account_id,
-            User.account_role == "member",
-            User.is_active.is_(True),
-        )
-    )
-    if (used or 0) >= limits.members:
+    if await count_members(db, account_id) >= limits.members:
         raise PlanLimitError("members", limits.members)
 
 
@@ -210,15 +244,5 @@ async def ensure_storage_capacity(
     limits = limits_for(await active_plan_code(db, account_id, for_update=True))
     if limits.storage_bytes is None:
         return
-    from app.management.models import Deliverable, DeliverableVersion
-    from app.projects.models import Project
-
-    used = await db.scalar(
-        select(func.coalesce(func.sum(DeliverableVersion.size_bytes), 0))
-        .select_from(DeliverableVersion)
-        .join(Deliverable, Deliverable.id == DeliverableVersion.deliverable_id)
-        .join(Project, Project.id == Deliverable.project_id)
-        .where(Project.account_id == account_id)
-    )
-    if int(used or 0) + additional_bytes > limits.storage_bytes:
+    if await used_storage_bytes(db, account_id) + additional_bytes > limits.storage_bytes:
         raise PlanLimitError("storage", limits.storage_bytes)
