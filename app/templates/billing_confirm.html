@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-4">{{ t("billing.confirm_title", plan=t("plan." ~ target.plan_code)) }}</h1>
+
+{% if immediate %}
+<p>{{ t("billing.confirm_charge_now", amount=immediate) }}</p>
+{% else %}
+<p>{{ t("billing.confirm_no_charge_now") }}</p>
+{% endif %}
+<p>{{ t("billing.confirm_recurring", amount=recurring, term=t("billing.term." ~ target.billing_period)) }}</p>
+
+{% if is_downgrade %}
+<div class="my-4 bg-warning/10 border border-warning/30 text-warning-strong rounded-xl px-4 py-3 text-sm">
+  <p>{{ t("billing.downgrade_takes_effect_now") }}</p>
+</div>
+{% endif %}
+
+<form hx-post="/ui/billing/change" class="mt-4 flex items-center gap-3">
+  <input type="hidden" name="price_id" value="{{ target.price_id }}">
+  <button type="submit" class="p-btn-primary">{{ t("billing.confirm_button") }}</button>
+  <a class="p-btn-ghost" href="/billing">{{ t("common.cancel") }}</a>
+</form>
+{% endblock %}

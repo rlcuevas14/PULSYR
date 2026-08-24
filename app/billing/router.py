@@ -17,6 +17,7 @@ from app.accounts import plans
 from app.auth.deps import require_owner
 from app.auth.models import User
 from app.billing import paddle
+from app.billing import service as billing_service
 from app.config import settings
 from app.database import get_db
 from app.templates_config import templates
@@ -109,4 +110,48 @@ async def billing_checkout(
         "transaction_id": _ptxn,
         "paddle_token": settings.paddle_client_token,
         "paddle_environment": settings.paddle_environment,
+    })
+
+
+def _money(amount: str | None, currency: str) -> str | None:
+    """Paddle sends the lowest denomination as a string. Two decimals covers
+    every currency the catalog uses; a zero-decimal currency such as CLP or JPY
+    would need its own case here."""
+    if amount is None:
+        return None
+    return f"{currency} {int(amount) / 100:.2f}"
+
+
+async def _resolve_target(price_id: str) -> paddle.PlanPrice:
+    for price in await paddle.list_plan_prices():
+        if price.price_id == price_id:
+            return price
+    raise HTTPException(status_code=400, detail="unknown price")
+
+
+@router.get("/ui/billing/confirm", response_class=HTMLResponse)
+async def billing_confirm(
+    request: Request,
+    price_id: str = Query(...),
+    user: User = Depends(require_owner),
+    db: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
+    subscription = await plans.subscription_for(db, user.account_id)
+    if subscription is None or not subscription.paddle_subscription_id:
+        raise HTTPException(status_code=400, detail="no subscription to change")
+
+    target = await _resolve_target(price_id)
+    current = await paddle.get_subscription(subscription.paddle_subscription_id)
+    proration = billing_service.proration_for(current, target)
+    preview = await paddle.preview_change(
+        subscription.paddle_subscription_id, target.price_id, proration
+    )
+
+    return templates.TemplateResponse(request, "billing_confirm.html", {
+        "user": user,
+        "target": target,
+        "immediate": _money(preview.immediate_amount, preview.currency_code),
+        "recurring": _money(preview.recurring_amount, preview.currency_code),
+        "next_billed_at": preview.next_billed_at,
+        "is_downgrade": proration == paddle.PRORATION_DOWNGRADE,
     })
