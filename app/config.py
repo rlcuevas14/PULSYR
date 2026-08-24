@@ -64,7 +64,9 @@ class Settings(BaseSettings):
     webhook_max_body_bytes: int = Field(default=1024 * 1024, ge=1024, le=10 * 1024 * 1024)
     mcp_max_body_bytes: int = Field(default=1024 * 1024, ge=1024, le=10 * 1024 * 1024)
     upload_max_body_bytes: int = Field(default=11 * 1024 * 1024, ge=1024, le=20 * 1024 * 1024)
-    terms_version: str = "2026-08-12"
+    # Must match the version printed on pulsyr.dev/terminos/. Signup stamps this on
+    # the user row, so a drift here means we recorded consent to a document nobody saw.
+    terms_version: str = "2026-08-23"
 
     # Global fallbacks for webhook secrets (move to per-project settings in a future version)
     sentry_client_secret: str = ""

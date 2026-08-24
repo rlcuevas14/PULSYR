@@ -1,0 +1,33 @@
+---
+import PageHero from "../../components/PageHero.astro";
+import PublicLayout from "../../layouts/PublicLayout.astro";
+---
+
+<PublicLayout title="Refunds" description="Refund policy for paid Pulsyr hosted plans: 14 days no questions asked, how to request one, and the cases refunded regardless of elapsed time.">
+  <PageHero compact eyebrow="Legal" breadcrumbLabel="Refunds" title="Refund policy" lead="Fourteen days, no questions asked. No retention call, no maze to find the button." />
+  <article class="section-tight container prose">
+    <p><strong>Effective date and version:</strong> 23 August 2026 · 2026-08-23</p>
+
+    <h2>Fourteen days, no questions asked</h2>
+    <p>If Pulsyr Cloud is not what you needed, write to <a href="mailto:soporte@pulsyr.dev">soporte@pulsyr.dev</a> within 14 days of a charge and we refund it in full. You do not have to explain why. This applies to your first purchase and to every renewal, monthly or annual.</p>
+
+    <h2>How to request one</h2>
+    <p>Email <a href="mailto:soporte@pulsyr.dev">soporte@pulsyr.dev</a> from your account address with the date of the charge. That is the whole process.</p>
+    <p>We approve requests within 2 business days. Because Paddle.com Market Limited is our authorised reseller and Merchant of Record, the refund is issued by Paddle to your original payment method and typically reaches you in 5 to 10 business days depending on your bank. You can also request the refund directly from Paddle using the link on your invoice.</p>
+
+    <h2>After 14 days</h2>
+    <p>We do not refund past 14 days, including the unused part of an annual plan, with three exceptions where we refund regardless of elapsed time:</p>
+    <ul>
+      <li>We charged you in error, or charged you twice.</li>
+      <li>A subscription you had cancelled renewed anyway.</li>
+      <li>We discontinue the service, in which case we refund the unused portion of your prepaid period.</li>
+    </ul>
+    <p>If the service was materially broken for a sustained period, write to us. We would rather refund you than argue about it.</p>
+
+    <h2>Cancelling is not the same as a refund</h2>
+    <p>You can cancel at any time from your account. Cancellation stops future renewals; it is not itself a refund request. Your plan stays active until the end of the period you already paid for, and then the account moves to the Free plan. We never delete your data because a subscription ended: existing projects, documents and collaborators remain available, and only creating new ones is paused while you are above the Free limits.</p>
+
+    <h2>Contact</h2>
+    <p>Refunds and billing: <a href="mailto:soporte@pulsyr.dev">soporte@pulsyr.dev</a>. Legal: <a href="mailto:legal@pulsyr.dev">legal@pulsyr.dev</a>. This policy forms part of the <a href="/terminos/">hosted service terms</a>.</p>
+  </article>
+</PublicLayout>

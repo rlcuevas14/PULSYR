@@ -1,0 +1,77 @@
+---
+import CallToAction from "../../../components/CallToAction.astro";
+import PageHero from "../../../components/PageHero.astro";
+import PublicLayout from "../../../layouts/PublicLayout.astro";
+---
+
+<PublicLayout title="Precios" description="Planes de Pulsyr Cloud: Gratuito, Solo a USD 8 al mes y Studio a USD 20 al mes. Todos los planes tienen todas las funciones, y autohospedar es gratis para siempre.">
+  <PageHero eyebrow="Precios" title="Los planes se diferencian por cuánto usas, nunca por qué recibes." lead="Todos los planes tienen todas las funciones. Limitamos proyectos, colaboradores, llamadas de IA y almacenamiento de documentos porque nos cuestan dinero, no para retener funcionalidad. Autohospedar el software de código abierto es gratis e ilimitado.">
+    <div class="actions"><a class="button button-dark" data-analytics-event="cta_signup" href="https://app.pulsyr.dev/signup">Comenzar gratis</a><a class="button button-outline" href="/es/docs/primeros-pasos/">Instalarlo tú mismo</a></div>
+  </PageHero>
+
+  <section class="section container" aria-labelledby="plans-heading">
+    <h2 id="plans-heading" class="sr-only">Planes</h2>
+    <div class="grid-3">
+      <article class="card">
+        <span class="kicker">Gratuito</span>
+        <p class="plan-price">USD 0</p>
+        <p class="plan-note">Sin tarjeta.</p>
+        <ul class="feature-list">
+          <li>1 proyecto</li>
+          <li>1 colaborador</li>
+          <li>100 operaciones de IA al mes</li>
+          <li>25 MB de documentos</li>
+          <li>3 tokens MCP por proyecto</li>
+        </ul>
+        <div class="actions"><a class="button button-outline" data-analytics-event="cta_signup" href="https://app.pulsyr.dev/signup?plan=free">Comenzar gratis</a></div>
+      </article>
+
+      <article class="card">
+        <span class="kicker">Solo · El más elegido</span>
+        <p class="plan-price">USD 8<span> / mes</span></p>
+        <p class="plan-note">O USD 80 al año, dos meses gratis.</p>
+        <ul class="feature-list">
+          <li>5 proyectos</li>
+          <li>3 colaboradores</li>
+          <li>2.000 operaciones de IA al mes</li>
+          <li>5 GB de documentos</li>
+          <li>Respaldos por 7 días</li>
+        </ul>
+        <div class="actions"><a class="button button-dark" data-analytics-event="cta_signup" href="https://app.pulsyr.dev/signup?plan=solo&amp;cycle=monthly">Elegir Solo</a></div>
+      </article>
+
+      <article class="card">
+        <span class="kicker">Studio</span>
+        <p class="plan-price">USD 20<span> / mes</span></p>
+        <p class="plan-note">O USD 200 al año, dos meses gratis.</p>
+        <ul class="feature-list">
+          <li>Proyectos ilimitados</li>
+          <li>10 colaboradores</li>
+          <li>10.000 operaciones de IA al mes</li>
+          <li>25 GB de documentos</li>
+          <li>Respaldos por 30 días</li>
+        </ul>
+        <div class="actions"><a class="button button-outline" data-analytics-event="cta_signup" href="https://app.pulsyr.dev/signup?plan=studio&amp;cycle=monthly">Elegir Studio</a></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section-tight container prose">
+    <h2>Lo que conviene saber antes de pagar</h2>
+    <p><strong>Los precios están en dólares estadounidenses y excluyen impuestos.</strong> El impuesto se agrega al pagar según dónde estés. Los pagos los procesa Paddle.com Market Limited, nuestro revendedor autorizado y Merchant of Record, que emite tu factura y aparece en tu estado de cuenta.</p>
+    <p><strong>Reembolsos dentro de 14 días, sin preguntas</strong>, en tu primera compra y en cada renovación. Ver la <a href="/es/reembolsos/">Política de reembolsos</a>.</p>
+    <p><strong>Cancela desde tu cuenta cuando quieras.</strong> El acceso continúa hasta el fin del período que pagaste y después la cuenta pasa al plan Gratuito. Nunca borramos tus datos porque terminó un plan: lo que existe sigue disponible, y solo se pausa la creación de proyectos nuevos mientras estés por sobre los límites del Gratuito.</p>
+    <p><strong>Usa tu propia clave de IA en cualquier plan, incluido el Gratuito.</strong> Ese uso te lo cobra el proveedor directamente y no cuenta contra las operaciones mensuales de IA. Si no configuras ninguna clave, Pulsyr degrada con elegancia: los ítems simplemente no llevan estimación.</p>
+    <p><strong>Autohospedar es gratis y siempre lo será.</strong> El software tiene licencia MIT y todas las funciones del servicio alojado. Los planes de arriba pagan nuestra infraestructura, no desbloquean funcionalidad.</p>
+    <p>Los límites completos, los umbrales de uso justo y las condiciones de pago están en los <a href="/es/terminos/">términos del servicio alojado</a>.</p>
+  </section>
+
+  <CallToAction />
+</PublicLayout>
+
+<style>
+  .plan-price { margin:1rem 0 .25rem; font-size:clamp(1.9rem,4vw,2.4rem); font-weight:800; letter-spacing:-.02em; color:var(--ink); }
+  .plan-price span { font-size:.95rem; font-weight:650; color:var(--muted); letter-spacing:0; }
+  .plan-note { margin:0; font-size:.85rem; color:var(--muted); }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+</style>

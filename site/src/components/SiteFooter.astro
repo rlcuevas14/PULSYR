@@ -17,6 +17,7 @@ const local = (path: string) => localizedPath(path, locale);
       <h2>{isSpanish ? "Producto" : "Product"}</h2>
       <a href={local("/producto/")}>{isSpanish ? "Características" : "Features"}</a>
       <a href={local("/integraciones/mcp/")}>{isSpanish ? "Integración MCP" : "MCP integration"}</a>
+      <a href={local("/precios/")}>{isSpanish ? "Precios" : "Pricing"}</a>
       <a data-analytics-event="cta_docs" href={local("/docs/primeros-pasos/")}>{isSpanish ? "Primeros pasos" : "Get started"}</a>
     </div>
     <div>
@@ -30,6 +31,7 @@ const local = (path: string) => localizedPath(path, locale);
       <a href={local("/contacto/")}>{isSpanish ? "Contacto" : "Contact"}</a>
       <a href={local("/privacidad/")}>{isSpanish ? "Privacidad" : "Privacy"}</a>
       <a href={local("/terminos/")}>{isSpanish ? "Términos" : "Terms"}</a>
+      <a href={local("/reembolsos/")}>{isSpanish ? "Reembolsos" : "Refunds"}</a>
     </div>
   </div>
 </footer>
