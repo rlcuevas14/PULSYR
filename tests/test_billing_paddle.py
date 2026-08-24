@@ -193,6 +193,40 @@ async def test_downgrade_preview_charges_nothing_today(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_preview_survives_a_null_details_block(monkeypatch):
+    """Paddle sends an explicit null for a block that does not apply, and a null
+    is not a dict to call .get on. This used to be an AttributeError, which is
+    not the one error the caller knows how to handle."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    monkeypatch.setattr(paddle, "_transport", _mock_transport(
+        lambda r: httpx.Response(200, json={"data": {
+            "immediate_transaction": {"details": None},
+            "recurring_transaction_details": {"totals": {
+                "total": "800", "currency_code": "USD"}},
+        }})))
+
+    preview = await paddle.preview_change("sub_x", "pri_solo_m", paddle.PRORATION_DOWNGRADE)
+    assert preview.immediate_amount is None
+    assert preview.recurring_amount == "800"
+
+
+@pytest.mark.asyncio
+async def test_preview_refuses_a_response_with_no_recurring_total(monkeypatch):
+    """A confirmation screen that cannot state the recurring price must not be
+    rendered. Defaulting to "0" would quote a free plan for a paid one, right
+    next to an immediate amount that correctly stays None."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    monkeypatch.setattr(paddle, "_transport", _mock_transport(
+        lambda r: httpx.Response(200, json={"data": {
+            "immediate_transaction": None,
+            "recurring_transaction_details": {"totals": {"currency_code": "USD"}},
+        }})))
+
+    with pytest.raises(paddle.PaddleError):
+        await paddle.preview_change("sub_x", "pri_solo_m", paddle.PRORATION_DOWNGRADE)
+
+
+@pytest.mark.asyncio
 async def test_change_plan_replaces_items_and_prevents_change_on_decline(monkeypatch):
     """items is replace-not-append, and a declined prorated charge must not
     hand out the new plan."""

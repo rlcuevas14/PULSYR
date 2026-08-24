@@ -246,6 +246,37 @@ async def test_confirmation_shows_zero_value_charge_not_no_charge(
 
 
 @pytest.mark.asyncio
+async def test_an_unparseable_amount_falls_through_instead_of_erroring(
+    client: AsyncClient, db, monkeypatch,
+):
+    """_money parses Paddle's lowest-denomination string. Anything that is not an
+    integer used to raise into a 500 on a page about money; the template already
+    has a branch for "no figure to show" and falling into it is the honest
+    answer."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    _account, owner = await _paid_owner(db, monkeypatch)
+
+    async def prices():
+        return [_price("studio", "monthly", "pri_studio_m")]
+
+    async def current_subscription(_subscription_id: str) -> paddle.SubscriptionView:
+        return paddle.SubscriptionView(
+            "active", "pri_solo_m", "solo", "monthly", None, None, None, None, None)
+
+    async def preview(subscription_id, price_id, proration):
+        return paddle.ChangePreview("12.40", "2000", "USD", None)
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    monkeypatch.setattr(paddle, "get_subscription", current_subscription)
+    monkeypatch.setattr(paddle, "preview_change", preview)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.get("/ui/billing/confirm?price_id=pri_studio_m")
+    assert r.status_code == 200
+    assert "No charge today." in r.text
+
+
+@pytest.mark.asyncio
 async def test_change_calls_paddle_and_writes_nothing_locally(client: AsyncClient, db, monkeypatch):
     """The webhook is the only writer. A route that also wrote would create a
     second source of truth that disagrees the moment a payment declines."""

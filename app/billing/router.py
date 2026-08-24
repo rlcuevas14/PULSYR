@@ -134,10 +134,18 @@ async def billing_checkout(
 def _money(amount: str | None, currency: str) -> str | None:
     """Paddle sends the lowest denomination as a string. Two decimals covers
     every currency the catalog uses; a zero-decimal currency such as CLP or JPY
-    would need its own case here."""
+    would need its own case here.
+
+    Anything that is not an integer string returns None, the same as a missing
+    amount: the caller's template already has a branch for "no figure to show",
+    and falling into it beats a 500 on a page about money.
+    """
     if amount is None:
         return None
-    return f"{currency} {int(amount) / 100:.2f}"
+    try:
+        return f"{currency} {int(amount) / 100:.2f}"
+    except ValueError:
+        return None
 
 
 async def _resolve_target(price_id: str) -> paddle.PlanPrice:

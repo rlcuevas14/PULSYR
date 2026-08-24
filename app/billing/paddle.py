@@ -61,7 +61,13 @@ class PlanPrice:
 
 
 def _billing_period(price: dict[str, Any]) -> str:
-    """Prefer the stamped custom_data, fall back to the cycle Paddle reports."""
+    """Prefer the stamped custom_data, fall back to the cycle Paddle reports.
+
+    The final "monthly" is only ever a tiebreaker between two prices of the same
+    tier, so guessing wrong there costs a proration mode, never a tier. A
+    subscription with no items at all does not reach that decision: proration_for
+    refuses an unrecognised plan code first and credits at renewal instead.
+    """
     stamped = (price.get("custom_data") or {}).get("billing_period")
     if stamped in ("monthly", "yearly"):
         return str(stamped)
@@ -109,11 +115,19 @@ class SubscriptionView:
 
 
 def _dt(value: Any) -> datetime | None:
+    """Deliberate twin of `_parse_dt` in app/webhooks/service.py.
+
+    They stay separate because they belong to different layers, an outbound API
+    client and an inbound webhook parser, and neither should have to import the
+    other to read a timestamp. Both swallow the same two failures: a string that
+    is not a date (ValueError) and a value that is not a string at all
+    (TypeError). Keep them in step.
+    """
     if not value:
         return None
     try:
         return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except ValueError:
+    except (TypeError, ValueError):
         return None
 
 
@@ -172,11 +186,27 @@ async def preview_change(subscription_id: str, price_id: str, proration: str) ->
         "PATCH", f"/subscriptions/{subscription_id}/preview",
         _change_body(price_id, proration),
     ) or {}
-    immediate = (data.get("immediate_transaction") or {}).get("details", {}).get("totals", {})
-    recurring = (data.get("recurring_transaction_details") or {}).get("totals", {})
+    # `or {}` at every level: Paddle sends an explicit null for a block that does
+    # not apply, and a null is not a dict to call .get on.
+    immediate = (
+        ((data.get("immediate_transaction") or {}).get("details") or {}).get("totals") or {}
+    )
+    recurring = (data.get("recurring_transaction_details") or {}).get("totals") or {}
+
+    # grand_total on the immediate transaction, total on the recurring one, and
+    # the difference is not cosmetic: the immediate figure is the whole amount
+    # the card is charged today, tax and credit balance included, while the
+    # recurring block quotes the subscription's own total for the next period.
+    recurring_total = recurring.get("total")
+    if recurring_total is None:
+        # A confirmation screen that cannot state the recurring price must not be
+        # rendered at all. Defaulting to "0" would quote a free plan for a paid
+        # one, next to an immediate amount that correctly stays None.
+        raise PaddleError("Paddle preview carried no recurring total")
+
     return ChangePreview(
         immediate_amount=immediate.get("grand_total"),
-        recurring_amount=str(recurring.get("total", "0")),
+        recurring_amount=str(recurring_total),
         currency_code=str(recurring.get("currency_code") or immediate.get("currency_code") or "USD"),
         next_billed_at=_dt(data.get("next_billed_at")),
     )
