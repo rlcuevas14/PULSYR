@@ -148,6 +148,35 @@ async def test_confirmation_rejects_a_price_outside_the_catalog(client: AsyncCli
 
 
 @pytest.mark.asyncio
+async def test_confirmation_reports_a_paddle_outage_as_a_provider_error(
+    client: AsyncClient, db, monkeypatch,
+):
+    """The confirmation route used to wrap nothing, so an outage anywhere in its
+    three Paddle calls surfaced as a 500. Every billing action answers a Paddle
+    outage the same way, and 502 is the one that says whose fault it is."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    _account, owner = await _paid_owner(db, monkeypatch)
+
+    async def prices():
+        return [_price("studio", "monthly", "pri_studio_m")]
+
+    async def get_sub(_subscription_id):
+        return paddle.SubscriptionView(
+            "active", "pri_solo_m", "solo", "monthly", None, None, None, None, None)
+
+    async def boom(subscription_id, price_id, proration):
+        raise paddle.PaddleError("down")
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    monkeypatch.setattr(paddle, "get_subscription", get_sub)
+    monkeypatch.setattr(paddle, "preview_change", boom)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.get("/ui/billing/confirm?price_id=pri_studio_m")
+    assert r.status_code == 502
+
+
+@pytest.mark.asyncio
 async def test_confirmation_shows_downgrade_warning_and_no_charge_today(
     client: AsyncClient, db, monkeypatch,
 ):
@@ -277,6 +306,35 @@ async def test_a_declined_change_is_reported_not_swallowed(client: AsyncClient, 
 
     r = await client.post("/ui/billing/change", data={"price_id": "pri_studio_m"})
     assert r.status_code >= 400
+
+
+@pytest.mark.asyncio
+async def test_change_reports_an_outage_in_the_reads_it_makes_first(
+    client: AsyncClient, db, monkeypatch,
+):
+    """The change route reads the catalog and the live subscription before it
+    asks Paddle to do anything. Those two calls sat outside the try block, so an
+    outage in them was an unhandled error rather than the 502 the design asks
+    for."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    _account, owner = await _paid_owner(db, monkeypatch)
+
+    async def prices():
+        return [_price("studio", "monthly", "pri_studio_m")]
+
+    async def boom(_subscription_id):
+        raise paddle.PaddleError("down")
+
+    async def change(subscription_id, price_id, proration):
+        raise AssertionError("a failed read must never reach the write")
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    monkeypatch.setattr(paddle, "get_subscription", boom)
+    monkeypatch.setattr(paddle, "change_plan", change)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.post("/ui/billing/change", data={"price_id": "pri_studio_m"})
+    assert r.status_code == 502
 
 
 @pytest.mark.asyncio

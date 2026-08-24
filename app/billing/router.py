@@ -7,6 +7,9 @@ into our database is a pending cancellation that can go stale.
 
 import logging
 import re
+import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, Response
@@ -136,6 +139,23 @@ async def _resolve_target(price_id: str) -> paddle.PlanPrice:
     raise HTTPException(status_code=400, detail="unknown price")
 
 
+@contextmanager
+def _paddle_outage_is_502(action: str, account_id: uuid.UUID) -> Iterator[None]:
+    """One posture for one dependency: every billing action answers a Paddle
+    outage the same way, wherever in the interaction it happens.
+
+    HTTPException is deliberately not caught. `_resolve_target` raises 400 for a
+    price that is not in the catalog, and an unknown price is a bad request, not
+    a provider outage; reporting it as 502 would tell the owner to come back
+    later for something that will never work.
+    """
+    try:
+        yield
+    except paddle.PaddleError as exc:
+        logger.warning("%s failed for account %s: %s", action, account_id, exc)
+        raise HTTPException(status_code=502, detail="billing_provider_error") from exc
+
+
 @router.get("/ui/billing/confirm", response_class=HTMLResponse)
 async def billing_confirm(
     request: Request,
@@ -147,12 +167,13 @@ async def billing_confirm(
     if subscription is None or not subscription.paddle_subscription_id:
         raise HTTPException(status_code=400, detail="no subscription to change")
 
-    target = await _resolve_target(price_id)
-    current = await paddle.get_subscription(subscription.paddle_subscription_id)
-    proration = billing_service.proration_for(current, target)
-    preview = await paddle.preview_change(
-        subscription.paddle_subscription_id, target.price_id, proration
-    )
+    with _paddle_outage_is_502("plan preview", user.account_id):
+        target = await _resolve_target(price_id)
+        current = await paddle.get_subscription(subscription.paddle_subscription_id)
+        proration = billing_service.proration_for(current, target)
+        preview = await paddle.preview_change(
+            subscription.paddle_subscription_id, target.price_id, proration
+        )
 
     return templates.TemplateResponse(request, "billing_confirm.html", {
         "user": user,
@@ -181,16 +202,13 @@ async def billing_change(
     if subscription is None or not subscription.paddle_subscription_id:
         raise HTTPException(status_code=400, detail="no subscription to change")
 
-    target = await _resolve_target(price_id)
-    current = await paddle.get_subscription(subscription.paddle_subscription_id)
-    proration = billing_service.proration_for(current, target)
-    try:
+    with _paddle_outage_is_502("plan change", user.account_id):
+        target = await _resolve_target(price_id)
+        current = await paddle.get_subscription(subscription.paddle_subscription_id)
+        proration = billing_service.proration_for(current, target)
         await paddle.change_plan(
             subscription.paddle_subscription_id, target.price_id, proration
         )
-    except paddle.PaddleError as exc:
-        logger.warning("plan change failed for account %s: %s", user.account_id, exc)
-        raise HTTPException(status_code=502, detail="billing_provider_error") from exc
 
     # Deliberately not the new plan name: the webhook has not landed yet and
     # painting it now would contradict itself if the change did not stick.
@@ -213,11 +231,8 @@ async def billing_cancel(
     subscription = await plans.subscription_for(db, user.account_id)
     if subscription is None or not subscription.paddle_subscription_id:
         raise HTTPException(status_code=400, detail="no subscription to cancel")
-    try:
+    with _paddle_outage_is_502("cancellation", user.account_id):
         await paddle.cancel_subscription(subscription.paddle_subscription_id)
-    except paddle.PaddleError as exc:
-        logger.warning("cancellation failed for account %s: %s", user.account_id, exc)
-        raise HTTPException(status_code=502, detail="billing_provider_error") from exc
 
     flash_success(request, message=_t("billing.cancel_submitted", resolve_lang(request)))
     return Response(status_code=204, headers={"HX-Refresh": "true"})
