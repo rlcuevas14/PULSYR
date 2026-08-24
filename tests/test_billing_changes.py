@@ -319,6 +319,11 @@ async def test_member_cannot_cancel(client: AsyncClient, db, monkeypatch):
         name="Member", password="secret-password",
     )
     await db.commit()
+
+    async def cancel(subscription_id):
+        raise AssertionError("a member must never reach the Paddle call")
+
+    monkeypatch.setattr(paddle, "cancel_subscription", cancel)
     await client.post("/login", data={"email": member.email, "password": "secret-password"})
 
     r = await client.post("/ui/billing/cancel")
