@@ -192,3 +192,28 @@ async def billing_change(
     # painting it now would contradict itself if the change did not stick.
     flash_success(request, message=_t("billing.change_submitted", resolve_lang(request)))
     return Response(status_code=204, headers={"HX-Refresh": "true"})
+
+
+@router.post("/ui/billing/cancel")
+async def billing_cancel(
+    request: Request,
+    user: User = Depends(require_owner),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Schedule a cancellation for the end of the paid period.
+
+    Paddle does not flip the subscription to canceled immediately; it keeps it
+    active and records a scheduled change, and only the webhook writes the
+    eventual status. Nothing here touches the local mirror.
+    """
+    subscription = await plans.subscription_for(db, user.account_id)
+    if subscription is None or not subscription.paddle_subscription_id:
+        raise HTTPException(status_code=400, detail="no subscription to cancel")
+    try:
+        await paddle.cancel_subscription(subscription.paddle_subscription_id)
+    except paddle.PaddleError as exc:
+        logger.warning("cancellation failed for account %s: %s", user.account_id, exc)
+        raise HTTPException(status_code=502, detail="billing_provider_error") from exc
+
+    flash_success(request, message=_t("billing.cancel_submitted", resolve_lang(request)))
+    return Response(status_code=204, headers={"HX-Refresh": "true"})

@@ -277,3 +277,49 @@ async def test_a_declined_change_is_reported_not_swallowed(client: AsyncClient, 
 
     r = await client.post("/ui/billing/change", data={"price_id": "pri_studio_m"})
     assert r.status_code >= 400
+
+
+@pytest.mark.asyncio
+async def test_cancel_schedules_and_keeps_access(client: AsyncClient, db, monkeypatch):
+    """Cancelling is not losing access today. The Terms promise the paid period."""
+    from app.accounts.plans import subscription_for
+
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    account, owner = await _paid_owner(db, monkeypatch)
+    # Captured now, before db.expire_all() below expires it: reading an expired
+    # attribute as a bare argument (rather than through an awaited SQLAlchemy
+    # call) crashes with MissingGreenlet, same as the account_id parameter
+    # pattern already used above in test_change_calls_paddle_and_writes_nothing_locally.
+    account_id = account.id
+    called = {}
+
+    async def cancel(subscription_id):
+        called["id"] = subscription_id
+
+    monkeypatch.setattr(paddle, "cancel_subscription", cancel)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.post("/ui/billing/cancel")
+    assert r.status_code in (200, 204)
+    assert called["id"].startswith("sub_")
+
+    db.expire_all()
+    row = await subscription_for(db, account_id)
+    assert (row.plan_code, row.status) == ("solo", "active")
+
+
+@pytest.mark.asyncio
+async def test_member_cannot_cancel(client: AsyncClient, db, monkeypatch):
+    from app.accounts.members import create_member
+
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    account, _owner = await _paid_owner(db, monkeypatch)
+    member = await create_member(
+        db, account_id=account.id, email=f"m-{uuid.uuid4().hex[:6]}@test.cl",
+        name="Member", password="secret-password",
+    )
+    await db.commit()
+    await client.post("/login", data={"email": member.email, "password": "secret-password"})
+
+    r = await client.post("/ui/billing/cancel")
+    assert r.status_code in (403, 404)
