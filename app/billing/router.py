@@ -99,14 +99,6 @@ async def billing_screen(
     })
 
 
-@router.get("/billing/intent")
-async def billing_intent(request: Request) -> dict[str, str | None]:
-    """What the visitor picked on the public pricing page, if anything. Read by
-    the billing screen to preselect a plan, and by the test suite."""
-    intent = request.session.get("billing_intent") or {}
-    return {"plan": intent.get("plan"), "cycle": intent.get("cycle")}
-
-
 @router.get("/billing/checkout", response_class=HTMLResponse)
 async def billing_checkout(
     request: Request, _ptxn: str = Query(default=""),

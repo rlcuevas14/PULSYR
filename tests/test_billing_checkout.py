@@ -1,8 +1,11 @@
 """Checkout: the CSP it needs, the route Paddle links to, and the signup handoff."""
 
+import base64
+import json
 import uuid
 from datetime import datetime, timezone
 
+import itsdangerous
 import pytest
 from httpx import AsyncClient
 
@@ -210,34 +213,71 @@ async def test_catalog_error_still_renders_plan_and_usage(client: AsyncClient, d
     assert "0.0 MB" in r.text
 
 
-@pytest.mark.asyncio
-async def test_signup_remembers_a_valid_plan_choice(client: AsyncClient, db, monkeypatch):
-    # /signup redirects to /setup with no users at all, and to /login with no OAuth
-    # provider configured: either redirect would skip the intent-storing code below
-    # before it runs, so both preconditions have to be satisfied for this test to
-    # exercise anything.
-    await _owner_account(db)
+def _open_signup(monkeypatch):
+    """/signup redirects to /setup with no users at all, and to /login with no
+    OAuth provider configured: either redirect skips the intent-storing code
+    before it runs, so both preconditions have to hold for the two tests below
+    to exercise anything."""
     monkeypatch.setattr(settings, "public_signup", True)
     monkeypatch.setattr(settings, "oauth_github_client_id", "cid")
     monkeypatch.setattr(settings, "oauth_github_client_secret", "csecret")
+
+
+def _session(client: AsyncClient) -> dict:
+    """Starlette's signed session cookie, read straight from the jar.
+
+    There used to be a `GET /billing/intent` route whose only callers were these
+    tests: an unauthenticated production endpoint that existed to make a session
+    key observable. Reading the cookie here costs one helper and removes the
+    route from the attack surface.
+    """
+    raw = client.cookies.get("pulsyr_session")
+    if raw is None:
+        return {}
+    payload = itsdangerous.TimestampSigner(str(settings.secret_key)).unsign(raw)
+    return dict(json.loads(base64.b64decode(payload)))
+
+
+@pytest.mark.asyncio
+async def test_signup_remembers_a_valid_plan_choice(client: AsyncClient, db, monkeypatch):
+    """The choice made on the public pricing page survives to the billing screen,
+    where it preselects that plan's button rather than any other."""
+    from app.billing import paddle
+
+    _account, owner = await _owner_account(db)
+    _open_signup(monkeypatch)
     await client.get("/signup?plan=solo&cycle=monthly")
-    r = await client.get("/billing/intent")
-    assert r.json() == {"plan": "solo", "cycle": "monthly"}
+
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
+
+    async def prices():
+        return [
+            paddle.PlanPrice("pri_solo_m", "solo", "monthly", "800", "USD"),
+            paddle.PlanPrice("pri_studio_m", "studio", "monthly", "2000", "USD"),
+        ]
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.get("/billing")
+    assert r.status_code == 200
+    solo = r.text.split('data-paddle-price="pri_solo_m"')[1].split("</button>")[0]
+    studio = r.text.split('data-paddle-price="pri_studio_m"')[1].split("</button>")[0]
+    assert "autofocus" in solo
+    assert "autofocus" not in studio
 
 
 @pytest.mark.asyncio
 async def test_signup_ignores_an_unknown_plan(client: AsyncClient, db, monkeypatch):
     """A hand-edited query string must not put an unknown plan in the session.
 
-    Same OAuth/user preconditions as the test above, and for the same reason: without
-    them /signup redirects before the validation runs, and the session key would be
-    absent regardless of whether "enterprise" is actually rejected. That would make
-    this assertion pass even with the `if plan in PAID_LIMITS` check deleted.
+    Asserted on the session rather than on /billing on purpose: the catalog only
+    ever contains plans we enforce, so an "enterprise" intent could never match a
+    price and the rendered page would look identical either way. The session is
+    the only place where storing it and refusing it differ.
     """
     await _owner_account(db)
-    monkeypatch.setattr(settings, "public_signup", True)
-    monkeypatch.setattr(settings, "oauth_github_client_id", "cid")
-    monkeypatch.setattr(settings, "oauth_github_client_secret", "csecret")
+    _open_signup(monkeypatch)
     await client.get("/signup?plan=enterprise&cycle=monthly")
-    r = await client.get("/billing/intent")
-    assert r.json() == {"plan": None, "cycle": None}
+    assert "billing_intent" not in _session(client)
