@@ -149,3 +149,27 @@ async def test_scheduled_cancellation_shows_end_date_not_next_billing(
     assert r.status_code == 200
     assert "Your plan ends on" in r.text
     assert "Next billed on" not in r.text
+
+
+@pytest.mark.asyncio
+async def test_owner_navigation_links_to_billing_when_billing_is_configured(
+    client: AsyncClient, db, monkeypatch
+):
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    _account, owner = await _owner_account(db)
+    await _login(client, owner.email)
+
+    r = await client.get("/backlog")
+    assert 'href="/billing"' in r.text
+
+
+@pytest.mark.asyncio
+async def test_self_hosted_install_never_shows_billing(client: AsyncClient, db, monkeypatch):
+    """No Paddle key means this is somebody's own install. There is nobody to
+    pay, so the entry does not exist."""
+    monkeypatch.setattr(settings, "paddle_api_key", "")
+    _account, owner = await _owner_account(db)
+    await _login(client, owner.email)
+
+    r = await client.get("/backlog")
+    assert 'href="/billing"' not in r.text
