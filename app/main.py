@@ -231,6 +231,7 @@ def create_app() -> FastAPI:
     from app.auth.router import compat_router as auth_compat_router
     from app.auth.router import router as auth_router
     from app.auth.router import setup_router
+    from app.billing.router import router as billing_router
     from app.items.router import router as items_router
     from app.management import models as _management_models  # noqa: F401 — register ORM in Base.metadata
     from app.management.router import router as management_router
@@ -323,6 +324,7 @@ def create_app() -> FastAPI:
     # Webhooks en la raíz (/webhooks/sentry, /webhooks/github) — URLs externas limpias,
     # como /mcp. No van bajo /api/v1 (no son API versionada de cliente).
     app.include_router(webhooks_router)
+    app.include_router(billing_router)
     app.include_router(management_router)
     app.include_router(ui_router)
 
