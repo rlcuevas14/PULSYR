@@ -25,7 +25,7 @@ logger = logging.getLogger("pulsyr.billing")
 
 router = APIRouter(tags=["billing"])
 
-_TXN_RE = re.compile(r"^txn_[a-z0-9]{1,32}$")
+_TXN_RE = re.compile(r"^txn_[a-z0-9]{20,32}$")
 
 
 @router.get("/billing", response_class=HTMLResponse)

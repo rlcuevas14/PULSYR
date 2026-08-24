@@ -53,9 +53,9 @@ async def test_billing_prefix_is_boundary_anchored(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_checkout_page_needs_no_session(client: AsyncClient, monkeypatch):
     monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
-    r = await client.get("/billing/checkout?_ptxn=txn_123")
+    r = await client.get("/billing/checkout?_ptxn=txn_01m0rx2pt08422pp2tpfkw4f60")
     assert r.status_code == 200
-    assert "txn_123" in r.text
+    assert "txn_01m0rx2pt08422pp2tpfkw4f60" in r.text
     assert "test_abc" in r.text
 
 
@@ -63,7 +63,7 @@ async def test_checkout_page_needs_no_session(client: AsyncClient, monkeypatch):
 async def test_checkout_page_never_leaks_the_api_key(client: AsyncClient, monkeypatch):
     monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
     monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_secret")
-    r = await client.get("/billing/checkout?_ptxn=txn_123")
+    r = await client.get("/billing/checkout?_ptxn=txn_01m0rx2pt08422pp2tpfkw4f60")
     assert "pdl_sdbx_apikey_secret" not in r.text
 
 
@@ -72,4 +72,12 @@ async def test_checkout_page_rejects_a_malformed_transaction_id(client: AsyncCli
     """The id goes straight into a script call, so it is validated, not trusted."""
     monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
     r = await client.get("/billing/checkout?_ptxn=<script>alert(1)</script>")
+    assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_checkout_page_rejects_a_too_short_transaction_id(client: AsyncClient, monkeypatch):
+    """Right prefix and charset, wrong length: the bound must still do work."""
+    monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
+    r = await client.get("/billing/checkout?_ptxn=txn_123")
     assert r.status_code == 400
