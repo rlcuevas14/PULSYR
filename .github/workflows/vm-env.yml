@@ -23,6 +23,12 @@ on:
         default: "false"
         type: choice
         options: ["false", "true"]
+      paddle_environment:
+        description: "Which Paddle account the billing keys belong to"
+        required: true
+        default: "sandbox"
+        type: choice
+        options: ["sandbox", "production"]
 
 jobs:
   sync:
@@ -39,11 +45,19 @@ jobs:
           GH_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
           GOOGLE_ID: ${{ secrets.OAUTH_GOOGLE_CLIENT_ID }}
           GOOGLE_SECRET: ${{ secrets.OAUTH_GOOGLE_CLIENT_SECRET }}
+          # Hosted billing. With no PADDLE_API_KEY the app hides every billing
+          # action and loads no Paddle script, so leaving these unset keeps the
+          # instance exactly as it was. PADDLE_ENVIRONMENT is not a secret: it
+          # selects the API host, and a sandbox key cannot reach live regardless.
+          PADDLE_API_KEY_IN: ${{ secrets.PADDLE_API_KEY }}
+          PADDLE_CLIENT_TOKEN_IN: ${{ secrets.PADDLE_CLIENT_TOKEN }}
+          PADDLE_WEBHOOK_SECRET_IN: ${{ secrets.PADDLE_WEBHOOK_SECRET }}
+          PADDLE_ENVIRONMENT_IN: ${{ inputs.paddle_environment }}
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          envs: BASE_URL_IN,PUBLIC_SIGNUP_IN,GH_ID,GH_SECRET,GOOGLE_ID,GOOGLE_SECRET
+          envs: BASE_URL_IN,PUBLIC_SIGNUP_IN,GH_ID,GH_SECRET,GOOGLE_ID,GOOGLE_SECRET,PADDLE_API_KEY_IN,PADDLE_CLIENT_TOKEN_IN,PADDLE_WEBHOOK_SECRET_IN,PADDLE_ENVIRONMENT_IN
           script: |
             set -e
             cd /opt/pulso
@@ -70,6 +84,10 @@ jobs:
             upsert OAUTH_GITHUB_CLIENT_SECRET "$GH_SECRET"
             upsert OAUTH_GOOGLE_CLIENT_ID "$GOOGLE_ID"
             upsert OAUTH_GOOGLE_CLIENT_SECRET "$GOOGLE_SECRET"
+            upsert PADDLE_API_KEY "$PADDLE_API_KEY_IN"
+            upsert PADDLE_CLIENT_TOKEN "$PADDLE_CLIENT_TOKEN_IN"
+            upsert PADDLE_WEBHOOK_SECRET "$PADDLE_WEBHOOK_SECRET_IN"
+            upsert PADDLE_ENVIRONMENT "$PADDLE_ENVIRONMENT_IN"
 
             # Which keys exist now, never their values.
             echo "Keys present in .env:"

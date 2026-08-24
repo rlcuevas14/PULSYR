@@ -430,6 +430,26 @@ async def test_cancel_schedules_and_keeps_access(client: AsyncClient, db, monkey
 
 
 @pytest.mark.asyncio
+async def test_a_network_outage_gives_502_not_500(client: AsyncClient, db, monkeypatch):
+    """End to end for the whole chain: the transport fails, paddle._request turns
+    that into a PaddleError, and the route answers the same 502 it gives for a
+    provider 5xx. Before this the customer got a crash page instead."""
+    import httpx
+
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    _account, owner = await _paid_owner(db, monkeypatch)
+
+    def refuse(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectTimeout("connection timed out", request=request)
+
+    monkeypatch.setattr(paddle, "_transport", httpx.MockTransport(refuse))
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.post("/ui/billing/cancel")
+    assert r.status_code == 502
+
+
+@pytest.mark.asyncio
 async def test_member_cannot_cancel(client: AsyncClient, db, monkeypatch):
     from app.accounts.members import create_member
 

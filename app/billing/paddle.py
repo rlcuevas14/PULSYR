@@ -39,13 +39,21 @@ def _base_url() -> str:
 async def _request(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
     if not configured():
         raise PaddleNotConfigured("PADDLE_API_KEY is not set")
-    async with httpx.AsyncClient(timeout=_TIMEOUT, transport=_transport) as client:
-        response = await client.request(
-            method,
-            f"{_base_url()}{path}",
-            headers={"Authorization": f"Bearer {settings.paddle_api_key}"},
-            json=payload,
-        )
+    try:
+        async with httpx.AsyncClient(timeout=_TIMEOUT, transport=_transport) as client:
+            response = await client.request(
+                method,
+                f"{_base_url()}{path}",
+                headers={"Authorization": f"Bearer {settings.paddle_api_key}"},
+                json=payload,
+            )
+    except httpx.RequestError as exc:
+        # A timeout or a refused connection is a provider outage exactly like a 5xx,
+        # and every caller already knows how to answer one. Left unwrapped it escapes
+        # as a 500, so the customer sees a crash on the screen where they were about
+        # to pay, and the likeliest real outage is this shape rather than a 5xx.
+        # The exception type is named, never the URL: the URL carries the key.
+        raise PaddleError(f"Paddle {method} {path} unreachable: {type(exc).__name__}") from exc
     if response.status_code >= 400:
         raise PaddleError(f"Paddle {method} {path} returned {response.status_code}")
     return response.json().get("data")

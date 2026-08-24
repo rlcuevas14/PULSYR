@@ -186,6 +186,26 @@ async def test_paddle_error_is_raised_on_http_failure(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_a_network_failure_is_a_paddle_error_not_a_crash(monkeypatch):
+    """The likeliest real outage is Paddle being unreachable, not Paddle answering
+    500. Unwrapped, that escapes as a server crash on the screen where a customer
+    was about to pay, bypassing the 502 every billing route already knows how to
+    return."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+
+    def refuse(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectTimeout("connection timed out", request=request)
+
+    monkeypatch.setattr(paddle, "_transport", _mock_transport(refuse))
+    with pytest.raises(paddle.PaddleError) as raised:
+        await paddle.get_subscription("sub_x")
+
+    # The type is useful in a log; the URL is not, because it carries the key.
+    assert "ConnectTimeout" in str(raised.value)
+    assert "pdl_sdbx_apikey_x" not in str(raised.value)
+
+
+@pytest.mark.asyncio
 async def test_preview_returns_paddle_figures_not_ours(monkeypatch):
     """The confirmation screen shows what Paddle says, including tax and any
     credit balance we do not track."""
