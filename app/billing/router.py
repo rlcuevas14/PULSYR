@@ -58,6 +58,17 @@ async def billing_screen(
             detail_failed = True
             logger.warning("billing detail unavailable for account %s", user.account_id)
 
+    intent = request.session.pop("billing_intent", None) or {}
+    preselected_price_id = next(
+        (
+            price.price_id
+            for price in prices
+            if price.plan_code == intent.get("plan")
+            and price.billing_period == intent.get("cycle")
+        ),
+        None,
+    )
+
     return templates.TemplateResponse(request, "billing.html", {
         "user": user,
         "plan_code": plan_code,
@@ -68,12 +79,21 @@ async def billing_screen(
         "detail_failed": detail_failed,
         "actions_available": paddle.configured(),
         "prices": prices,
+        "preselected_price_id": preselected_price_id,
         "account_id": str(user.account_id),
         "user_email": user.email,
         "paddle_token": settings.paddle_client_token,
         "paddle_environment": settings.paddle_environment,
         "transaction_id": "",
     })
+
+
+@router.get("/billing/intent")
+async def billing_intent(request: Request) -> dict[str, str | None]:
+    """What the visitor picked on the public pricing page, if anything. Read by
+    the billing screen to preselect a plan, and by the test suite."""
+    intent = request.session.get("billing_intent") or {}
+    return {"plan": intent.get("plan"), "cycle": intent.get("cycle")}
 
 
 @router.get("/billing/checkout", response_class=HTMLResponse)

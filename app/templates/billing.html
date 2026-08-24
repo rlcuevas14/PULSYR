@@ -62,7 +62,8 @@
         <button type="button" class="p-btn mt-3"
                 data-paddle-price="{{ price.price_id }}"
                 data-account-id="{{ account_id }}"
-                data-email="{{ user_email }}">{{ t("billing.choose_plan") }}</button>
+                data-email="{{ user_email }}"
+                {% if price.price_id == preselected_price_id %}autofocus{% endif %}>{{ t("billing.choose_plan") }}</button>
         {% endif %}
       </article>
       {% endif %}

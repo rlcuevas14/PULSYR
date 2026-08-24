@@ -178,3 +178,36 @@ async def test_catalog_error_still_renders_plan_and_usage(client: AsyncClient, d
     assert r.status_code == 200
     assert "Free" in r.text or "Gratuito" in r.text
     assert "0.0 MB" in r.text
+
+
+@pytest.mark.asyncio
+async def test_signup_remembers_a_valid_plan_choice(client: AsyncClient, db, monkeypatch):
+    # /signup redirects to /setup with no users at all, and to /login with no OAuth
+    # provider configured: either redirect would skip the intent-storing code below
+    # before it runs, so both preconditions have to be satisfied for this test to
+    # exercise anything.
+    await _owner_account(db)
+    monkeypatch.setattr(settings, "public_signup", True)
+    monkeypatch.setattr(settings, "oauth_github_client_id", "cid")
+    monkeypatch.setattr(settings, "oauth_github_client_secret", "csecret")
+    await client.get("/signup?plan=solo&cycle=monthly")
+    r = await client.get("/billing/intent")
+    assert r.json() == {"plan": "solo", "cycle": "monthly"}
+
+
+@pytest.mark.asyncio
+async def test_signup_ignores_an_unknown_plan(client: AsyncClient, db, monkeypatch):
+    """A hand-edited query string must not put an unknown plan in the session.
+
+    Same OAuth/user preconditions as the test above, and for the same reason: without
+    them /signup redirects before the validation runs, and the session key would be
+    absent regardless of whether "enterprise" is actually rejected. That would make
+    this assertion pass even with the `if plan in PAID_LIMITS` check deleted.
+    """
+    await _owner_account(db)
+    monkeypatch.setattr(settings, "public_signup", True)
+    monkeypatch.setattr(settings, "oauth_github_client_id", "cid")
+    monkeypatch.setattr(settings, "oauth_github_client_secret", "csecret")
+    await client.get("/signup?plan=enterprise&cycle=monthly")
+    r = await client.get("/billing/intent")
+    assert r.json() == {"plan": None, "cycle": None}
