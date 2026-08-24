@@ -1,11 +1,12 @@
 """Checkout: the CSP it needs, the route Paddle links to, and the signup handoff."""
 
 import uuid
+from datetime import datetime, timezone
 
 import pytest
 from httpx import AsyncClient
 
-from app.accounts.plans import FREE
+from app.accounts.plans import FREE, apply_paddle_subscription
 from app.accounts.service import create_account
 from app.config import settings
 
@@ -15,6 +16,20 @@ async def _owner_account(db, plan_code=FREE):
     account, owner = await create_account(
         db, f"Chk {suffix}", f"chk-{suffix}@test.cl", "Owner", "secret-password",
         plan_code=plan_code,
+    )
+    await db.commit()
+    return account, owner
+
+
+async def _paid_owner_account(db, plan_code="solo"):
+    """An owner account with a real Paddle subscription id, the way the webhook
+    would leave it. Mirrors tests/test_billing_screen.py's helper of the same
+    name so the router's `subscription.paddle_subscription_id` guard opens."""
+    account, owner = await _owner_account(db)
+    await apply_paddle_subscription(
+        db, account_id=account.id, plan_code=plan_code, paddle_status="active",
+        subscription_id=f"sub_{uuid.uuid4().hex[:12]}", customer_id="ctm_x",
+        occurred_at=datetime(2026, 8, 23, tzinfo=timezone.utc),
     )
     await db.commit()
     return account, owner
@@ -115,3 +130,51 @@ async def test_no_client_token_means_no_buy_buttons(client: AsyncClient, db, mon
     r = await client.get("/billing")
     assert r.status_code == 200
     assert "data-paddle-price" not in r.text
+
+
+@pytest.mark.asyncio
+async def test_paying_account_is_not_offered_a_second_checkout(client: AsyncClient, db, monkeypatch):
+    """The one scenario the guard exists for: a subscription is already active
+    AND the catalog loaded successfully. The plan card still shows (it is
+    informational), the buy button must not."""
+    from app.billing import paddle
+
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
+    _account, owner = await _paid_owner_account(db, plan_code="solo")
+
+    async def prices():
+        return [paddle.PlanPrice("pri_studio_m", "studio", "monthly", "2000", "USD")]
+
+    async def fake_get_subscription(_subscription_id: str) -> paddle.SubscriptionView:
+        return paddle.SubscriptionView(
+            "active", "pri_solo_m", "solo", "monthly", None, None, None, None, None,
+        )
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    monkeypatch.setattr(paddle, "get_subscription", fake_get_subscription)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.get("/billing")
+    assert "Studio" in r.text
+    assert "data-paddle-price" not in r.text
+
+
+@pytest.mark.asyncio
+async def test_catalog_error_still_renders_plan_and_usage(client: AsyncClient, db, monkeypatch):
+    from app.billing import paddle
+
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
+    _account, owner = await _owner_account(db)
+
+    async def boom():
+        raise paddle.PaddleError("down")
+
+    monkeypatch.setattr(paddle, "list_plan_prices", boom)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.get("/billing")
+    assert r.status_code == 200
+    assert "Free" in r.text or "Gratuito" in r.text
+    assert "0.0 MB" in r.text
