@@ -142,6 +142,41 @@ async def test_get_subscription_without_a_scheduled_change(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_get_subscription_without_items_reports_no_plan(monkeypatch):
+    """A subscription response can arrive with no items array at all. The read
+    must not raise: plan_code comes back empty, and proration_for treats an
+    unrecognised plan as a downgrade so nobody is charged on a guess."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    payload = {key: value for key, value in _SUBSCRIPTION.items() if key != "items"}
+
+    monkeypatch.setattr(paddle, "_transport", _mock_transport(
+        lambda r: httpx.Response(200, json={"data": payload})))
+    view = await paddle.get_subscription("sub_x")
+
+    assert view.plan_code == ""
+    assert view.price_id == ""
+    assert view.status == "active"
+
+
+@pytest.mark.asyncio
+async def test_get_subscription_without_management_urls(monkeypatch):
+    """Paddle mints the card-update and cancel URLs, and can answer without
+    them. Both read None so the screen simply does not offer those links."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    payload = {
+        key: value for key, value in _SUBSCRIPTION.items() if key != "management_urls"
+    }
+
+    monkeypatch.setattr(paddle, "_transport", _mock_transport(
+        lambda r: httpx.Response(200, json={"data": payload})))
+    view = await paddle.get_subscription("sub_x")
+
+    assert view.update_payment_method_url is None
+    assert view.cancel_url is None
+    assert view.plan_code == "solo"
+
+
+@pytest.mark.asyncio
 async def test_paddle_error_is_raised_on_http_failure(monkeypatch):
     monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
     monkeypatch.setattr(paddle, "_transport", _mock_transport(
