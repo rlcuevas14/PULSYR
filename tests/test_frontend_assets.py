@@ -38,6 +38,17 @@ def test_paddle_js_partial_references_only_paddles_own_cdn():
     assert all(url.startswith("https://cdn.paddle.com/") for url in urls)
 
 
+def test_paddle_js_partial_is_gated_on_a_configured_token():
+    """The one CDN script tag in the private app must not exist on an install
+    with no Paddle token. The routes guard their own pages, but the partial
+    carries the guard too, so including it from a future template cannot quietly
+    reopen the hole."""
+    paddle_js = Path("app/templates/partials/_paddle_js.html").read_text(encoding="utf-8")
+
+    assert paddle_js.startswith("{% if paddle_token %}")
+    assert paddle_js.rstrip().endswith("{% endif %}")
+
+
 def test_private_templates_have_no_inline_executable_code():
     templates = Path("app/templates")
     source = "\n".join(path.read_text(encoding="utf-8") for path in templates.rglob("*.html"))

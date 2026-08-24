@@ -106,6 +106,11 @@ async def billing_checkout(
     """Paddle's default payment link target. Deliberately session-free: this is
     where a payment-recovery email lands, and the transaction id is the
     capability. The page renders nothing belonging to the account."""
+    # No client token means nobody sells anything from this install. Serving the
+    # page anyway would have a self-hosted deployment fetch a third-party script
+    # on a public URL for a checkout that cannot exist.
+    if not settings.paddle_client_token:
+        raise HTTPException(status_code=404)
     if _ptxn and not _TXN_RE.match(_ptxn):
         raise HTTPException(status_code=400, detail="invalid transaction id")
     return templates.TemplateResponse(request, "billing_checkout.html", {

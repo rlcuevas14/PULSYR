@@ -78,6 +78,18 @@ async def test_checkout_page_needs_no_session(client: AsyncClient, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_keyless_install_has_no_checkout_page(client: AsyncClient, monkeypatch):
+    """With no Paddle keys this is somebody's own install. The feature degrades
+    to nothing, which includes not serving a public page that pulls Paddle's
+    script off their CDN."""
+    monkeypatch.setattr(settings, "paddle_api_key", "")
+    monkeypatch.setattr(settings, "paddle_client_token", "")
+    r = await client.get("/billing/checkout")
+    assert r.status_code == 404
+    assert "cdn.paddle.com" not in r.text
+
+
+@pytest.mark.asyncio
 async def test_checkout_page_never_leaks_the_api_key(client: AsyncClient, monkeypatch):
     monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
     monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_secret")
