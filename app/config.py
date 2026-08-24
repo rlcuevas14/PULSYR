@@ -74,6 +74,14 @@ class Settings(BaseSettings):
     # Paddle notification destination secret. Empty on a self-hosted instance: with no
     # secret the billing webhook answers 503 and no paid plan can ever be granted.
     paddle_webhook_secret: str = ""
+    # Server-side Paddle key. Empty on a self-hosted install: the billing screen
+    # then renders plan and usage and hides every action.
+    paddle_api_key: str = ""
+    # Public by design: this one is embedded in the page for Paddle.js.
+    paddle_client_token: str = ""
+    # Selects both the API host and the Paddle.js environment. Sandbox keys are
+    # prefixed pdl_sdbx_ and cannot reach live even if this is set wrong.
+    paddle_environment: str = "sandbox"
     sentry_api_token: str = ""
     sentry_org: str = ""
 
