@@ -139,8 +139,15 @@ async def apply_paddle_subscription(
     status = PADDLE_STATUS.get(paddle_status)
     if status is None:
         return "ignored:unknown_status"
+
+    mirrored_subscription_id: str | None = subscription_id
     if status == "canceled":
         plan_code, status = FREE, "active"
+        # The subscription is gone at Paddle, so keeping its id would leave the
+        # billing screen offering plan changes and cancellations against a dead
+        # one. The customer id stays: that customer still exists, and a future
+        # purchase reuses it.
+        mirrored_subscription_id = None
 
     subscription = await subscription_for(db, account_id, for_update=True)
     if subscription is None:
@@ -153,7 +160,7 @@ async def apply_paddle_subscription(
 
     subscription.plan_code = plan_code
     subscription.status = status
-    subscription.paddle_subscription_id = subscription_id
+    subscription.paddle_subscription_id = mirrored_subscription_id
     subscription.paddle_customer_id = customer_id
     subscription.paddle_event_at = occurred_at
     await db.flush()

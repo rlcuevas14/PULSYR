@@ -209,6 +209,42 @@ async def test_cancellation_drops_to_free_instead_of_locking_out(
 
 
 @pytest.mark.asyncio
+async def test_cancellation_clears_the_dead_subscription_id(
+    client: AsyncClient, db, monkeypatch
+):
+    """Dropping to Free must not leave the row pointing at a subscription that no
+    longer exists. It did, and every billing route resolves through that column:
+    the free account was offered "Switch to this plan" and the confirm route then
+    called Paddle with a dead id."""
+    monkeypatch.setattr(settings, "paddle_webhook_secret", SECRET)
+    account = await _account(db)
+    # Captured before the first _subscription() call below expires it: reading an
+    # expired attribute as a bare argument crashes with MissingGreenlet, the same
+    # pattern the tests in tests/test_billing_changes.py already follow.
+    account_id = account.id
+    sub = "sub_dead"
+    active = _event(account_id, occurred_at="2026-08-23T12:00:00.000000Z", subscription_id=sub)
+    await client.post("/webhooks/paddle", content=active, headers=_signed(active))
+    assert (await _subscription(db, account_id)).paddle_subscription_id == sub
+
+    canceled = _event(
+        account_id,
+        status="canceled",
+        event_type="subscription.canceled",
+        occurred_at="2026-09-23T12:00:00.000000Z",
+        subscription_id=sub,
+    )
+    r = await client.post("/webhooks/paddle", content=canceled, headers=_signed(canceled))
+    assert r.status_code == 200
+
+    row = await _subscription(db, account_id)
+    assert (row.plan_code, row.status) == (FREE, "active")
+    assert row.paddle_subscription_id is None
+    # The customer still exists at Paddle, and a future purchase reuses it.
+    assert row.paddle_customer_id == "ctm_01test"
+
+
+@pytest.mark.asyncio
 async def test_out_of_order_delivery_cannot_undo_newer_state(
     client: AsyncClient, db, monkeypatch
 ):
