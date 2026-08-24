@@ -142,3 +142,54 @@ async def get_subscription(subscription_id: str) -> SubscriptionView:
         update_payment_method_url=urls.get("update_payment_method"),
         cancel_url=urls.get("cancel"),
     )
+
+
+PRORATION_UPGRADE = "prorated_immediately"
+PRORATION_DOWNGRADE = "prorated_next_billing_period"
+
+
+@dataclass(frozen=True)
+class ChangePreview:
+    immediate_amount: str | None
+    recurring_amount: str
+    currency_code: str
+    next_billed_at: datetime | None
+
+
+def _change_body(price_id: str, proration: str) -> dict[str, Any]:
+    # items is replace, not append: send the complete list the subscription
+    # should end up with. on_payment_failure keeps a declined card from handing
+    # out a plan nobody paid for.
+    return {
+        "items": [{"price_id": price_id, "quantity": 1}],
+        "proration_billing_mode": proration,
+        "on_payment_failure": "prevent_change",
+    }
+
+
+async def preview_change(subscription_id: str, price_id: str, proration: str) -> ChangePreview:
+    data = await _request(
+        "PATCH", f"/subscriptions/{subscription_id}/preview",
+        _change_body(price_id, proration),
+    ) or {}
+    immediate = (data.get("immediate_transaction") or {}).get("details", {}).get("totals", {})
+    recurring = (data.get("recurring_transaction_details") or {}).get("totals", {})
+    return ChangePreview(
+        immediate_amount=immediate.get("grand_total"),
+        recurring_amount=str(recurring.get("total", "0")),
+        currency_code=str(recurring.get("currency_code") or immediate.get("currency_code") or "USD"),
+        next_billed_at=_dt(data.get("next_billed_at")),
+    )
+
+
+async def change_plan(subscription_id: str, price_id: str, proration: str) -> None:
+    """Apply the change. Deliberately returns nothing: the resulting plan state
+    arrives through the webhook, which is the only writer of the local mirror."""
+    await _request("PATCH", f"/subscriptions/{subscription_id}", _change_body(price_id, proration))
+
+
+async def cancel_subscription(subscription_id: str) -> None:
+    await _request(
+        "POST", f"/subscriptions/{subscription_id}/cancel",
+        {"effective_from": "next_billing_period"},
+    )

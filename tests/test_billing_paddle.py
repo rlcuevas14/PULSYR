@@ -1,5 +1,7 @@
 """Paddle client: configuration contract and response mapping."""
 
+import json
+
 import httpx
 import pytest
 
@@ -146,3 +148,88 @@ async def test_paddle_error_is_raised_on_http_failure(monkeypatch):
         lambda r: httpx.Response(500, json={})))
     with pytest.raises(paddle.PaddleError):
         await paddle.get_subscription("sub_x")
+
+
+@pytest.mark.asyncio
+async def test_preview_returns_paddle_figures_not_ours(monkeypatch):
+    """The confirmation screen shows what Paddle says, including tax and any
+    credit balance we do not track."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["path"] = request.url.path
+        seen["method"] = request.method
+        return httpx.Response(200, json={"data": {
+            "next_billed_at": "2026-09-23T12:00:00Z",
+            "immediate_transaction": {"details": {"totals": {
+                "grand_total": "1240", "currency_code": "USD"}}},
+            "recurring_transaction_details": {"totals": {
+                "total": "2000", "currency_code": "USD"}},
+        }})
+
+    monkeypatch.setattr(paddle, "_transport", _mock_transport(handler))
+    preview = await paddle.preview_change("sub_x", "pri_studio_m", paddle.PRORATION_UPGRADE)
+
+    assert seen == {"path": "/subscriptions/sub_x/preview", "method": "PATCH"}
+    assert preview.immediate_amount == "1240"
+    assert preview.recurring_amount == "2000"
+    assert preview.currency_code == "USD"
+
+
+@pytest.mark.asyncio
+async def test_downgrade_preview_charges_nothing_today(monkeypatch):
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    monkeypatch.setattr(paddle, "_transport", _mock_transport(
+        lambda r: httpx.Response(200, json={"data": {
+            "immediate_transaction": None,
+            "recurring_transaction_details": {"totals": {
+                "total": "800", "currency_code": "USD"}},
+        }})))
+
+    preview = await paddle.preview_change("sub_x", "pri_solo_m", paddle.PRORATION_DOWNGRADE)
+    assert preview.immediate_amount is None
+    assert preview.recurring_amount == "800"
+
+
+@pytest.mark.asyncio
+async def test_change_plan_replaces_items_and_prevents_change_on_decline(monkeypatch):
+    """items is replace-not-append, and a declined prorated charge must not
+    hand out the new plan."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    sent = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent["path"] = request.url.path
+        sent["method"] = request.method
+        sent["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"data": {}})
+
+    monkeypatch.setattr(paddle, "_transport", _mock_transport(handler))
+    await paddle.change_plan("sub_x", "pri_studio_m", paddle.PRORATION_UPGRADE)
+
+    assert sent["path"] == "/subscriptions/sub_x"
+    assert sent["method"] == "PATCH"
+    assert sent["body"] == {
+        "items": [{"price_id": "pri_studio_m", "quantity": 1}],
+        "proration_billing_mode": "prorated_immediately",
+        "on_payment_failure": "prevent_change",
+    }
+
+
+@pytest.mark.asyncio
+async def test_cancel_is_scheduled_for_the_end_of_the_paid_period(monkeypatch):
+    """The Terms promise access continues until the end of the paid period."""
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    sent = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent["path"] = request.url.path
+        sent["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"data": {}})
+
+    monkeypatch.setattr(paddle, "_transport", _mock_transport(handler))
+    await paddle.cancel_subscription("sub_x")
+
+    assert sent["path"] == "/subscriptions/sub_x/cancel"
+    assert sent["body"] == {"effective_from": "next_billing_period"}
