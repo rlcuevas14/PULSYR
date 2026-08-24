@@ -111,8 +111,6 @@ Create `app/billing/service.py`:
 """Rules that decide what a plan change costs, kept apart from the HTTP layer
 so they can be read and tested as rules."""
 
-from typing import Protocol
-
 from app.billing import paddle
 
 # Ordered by capacity, not by price. A move up this list is an upgrade.
@@ -120,12 +118,9 @@ PLAN_RANK: dict[str, int] = {"free": 0, "solo": 1, "studio": 2}
 _TERM_RANK: dict[str, int] = {"monthly": 0, "yearly": 1}
 
 
-class _Priced(Protocol):
-    plan_code: str
-    billing_period: str
-
-
-def proration_for(current: _Priced, target: paddle.PlanPrice) -> str:
+def proration_for(
+    current: paddle.PlanPrice | paddle.SubscriptionView, target: paddle.PlanPrice
+) -> str:
     """Charge immediately only when the customer is getting more.
 
     Tier decides first: dropping a tier is a downgrade even when the term also
@@ -420,6 +415,8 @@ Expected: FAIL with 404
 from fastapi import Form
 from fastapi.responses import Response
 
+from app.i18n import resolve_lang
+from app.i18n import t as _t
 from app.ui.flash import flash_success
 
 
@@ -453,7 +450,7 @@ async def billing_change(
 
     # Deliberately not the new plan name: the webhook has not landed yet and
     # painting it now would contradict itself if the change did not stick.
-    flash_success(request, "billing.change_submitted")
+    flash_success(request, message=_t("billing.change_submitted", resolve_lang(request)))
     return Response(status_code=204, headers={"HX-Refresh": "true"})
 ```
 
@@ -555,7 +552,7 @@ async def billing_cancel(
         logger.warning("cancellation failed for account %s: %s", user.account_id, exc)
         raise HTTPException(status_code=502, detail="billing_provider_error") from exc
 
-    flash_success(request, "billing.cancel_submitted")
+    flash_success(request, message=_t("billing.cancel_submitted", resolve_lang(request)))
     return Response(status_code=204, headers={"HX-Refresh": "true"})
 ```
 
