@@ -169,6 +169,20 @@ async def test_past_due_keeps_access_during_dunning(client: AsyncClient, db, mon
 
 
 @pytest.mark.asyncio
+async def test_status_specific_event_types_are_handled(client: AsyncClient, db, monkeypatch):
+    """Paddle signals some states with their own event name rather than
+    subscription.updated. Those must land without anyone ticking a box for them."""
+    monkeypatch.setattr(settings, "paddle_webhook_secret", SECRET)
+    account = await _account(db)
+    body = _event(account.id, status="paused", event_type="subscription.paused")
+    r = await client.post("/webhooks/paddle", content=body, headers=_signed(body))
+    assert r.status_code == 200
+
+    row = await _subscription(db, account.id)
+    assert (row.plan_code, row.status) == ("solo", "suspended")
+
+
+@pytest.mark.asyncio
 async def test_cancellation_drops_to_free_instead_of_locking_out(
     client: AsyncClient, db, monkeypatch
 ):

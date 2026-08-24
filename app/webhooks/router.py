@@ -18,11 +18,13 @@ logger = logging.getLogger("pulsyr.webhooks")
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
-# The three that carry a full subscription entity. Everything else Paddle sends is
-# acknowledged and dropped: billing state lives in these.
-PADDLE_SUBSCRIPTION_EVENTS = frozenset(
-    {"subscription.created", "subscription.updated", "subscription.canceled"}
-)
+# Every `subscription.*` event carries the same full subscription entity, and the
+# handler reads the status off that entity rather than inferring it from the event
+# name. Matching the prefix instead of listing names means a status Paddle signals
+# with a specific event (past_due, paused, resumed, trialing) cannot be missed
+# because nobody ticked its box. Everything else Paddle sends is acknowledged and
+# dropped: billing state lives in these.
+PADDLE_SUBSCRIPTION_PREFIX = "subscription."
 
 
 async def _limited(request: Request) -> JSONResponse | None:
@@ -122,7 +124,7 @@ async def paddle_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
     try:
         event = json.loads(body)
         event_type = event.get("event_type", "")
-        if event_type not in PADDLE_SUBSCRIPTION_EVENTS:
+        if not event_type.startswith(PADDLE_SUBSCRIPTION_PREFIX):
             return JSONResponse({"accepted": True, "status": "ignored", "event": event_type})
         parsed = service.parse_paddle_subscription(event)
         result = await plans.apply_paddle_subscription(
