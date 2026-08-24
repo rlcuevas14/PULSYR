@@ -71,6 +71,13 @@ async def billing_screen(
             detail_failed = True
             logger.warning("billing detail unavailable for account %s", user.account_id)
 
+    # Formatted here rather than in the template so a card and the confirmation
+    # screen state a price the same way, through the one helper that knows how
+    # Paddle sends amounts.
+    price_labels = {
+        price.price_id: _money(price.amount, price.currency_code) for price in prices
+    }
+
     intent = request.session.pop("billing_intent", None) or {}
     preselected_price_id = next(
         (
@@ -93,6 +100,7 @@ async def billing_screen(
         "has_subscription": has_subscription,
         "actions_available": paddle.configured(),
         "prices": prices,
+        "price_labels": price_labels,
         "preselected_price_id": preselected_price_id,
         "account_id": str(user.account_id),
         "user_email": user.email,

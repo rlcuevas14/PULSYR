@@ -133,6 +133,9 @@ async def test_free_account_is_offered_the_paid_prices(client: AsyncClient, db, 
     r = await client.get("/billing")
     assert 'data-paddle-price="pri_solo_m"' in r.text
     assert f'data-account-id="{account.id}"' in r.text
+    # A card that offers a plan has to say what it costs.
+    assert "USD 8.00" in r.text
+    assert "USD 20.00" in r.text
 
 
 @pytest.mark.asyncio

@@ -64,6 +64,9 @@
          how switching monthly to yearly became unreachable. #}
       <article class="p-card p-4">
         <p class="font-semibold">{{ t("plan." ~ price.plan_code) }}</p>
+        {% if price_labels[price.price_id] %}
+        <p class="text-lg">{{ price_labels[price.price_id] }}</p>
+        {% endif %}
         <p class="text-sm opacity-70">{{ t("billing.term." ~ price.billing_period) }}</p>
         {% if detail and price.price_id == detail.price_id %}
         <p class="p-pill mt-3">{{ t("billing.current_plan_badge") }}</p>
