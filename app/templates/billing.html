@@ -48,4 +48,27 @@
     </div>
   </dl>
 </section>
+
+{% if prices %}
+<section class="p-card p-5 mt-6">
+  <h2 class="font-semibold mb-4">{{ t("billing.available_plans") }}</h2>
+  <div class="grid sm:grid-cols-2 gap-4">
+    {% for price in prices %}
+      {% if price.plan_code != plan_code %}
+      <article class="p-card p-4">
+        <p class="font-semibold">{{ t("plan." ~ price.plan_code) }}</p>
+        <p class="text-sm opacity-70">{{ t("billing.term." ~ price.billing_period) }}</p>
+        {% if not detail %}
+        <button type="button" class="p-btn mt-3"
+                data-paddle-price="{{ price.price_id }}"
+                data-account-id="{{ account_id }}"
+                data-email="{{ user_email }}">{{ t("billing.choose_plan") }}</button>
+        {% endif %}
+      </article>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+{% include "partials/_paddle_js.html" %}
+{% endif %}
 {% endblock %}

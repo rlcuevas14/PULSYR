@@ -42,6 +42,13 @@ async def billing_screen(
     limits = plans.limits_for(plan_code)
     usage = await plans.usage_for(db, user.account_id)
 
+    prices: list[paddle.PlanPrice] = []
+    if paddle.configured() and settings.paddle_client_token:
+        try:
+            prices = await paddle.list_plan_prices()
+        except paddle.PaddleError:
+            logger.warning("plan catalog unavailable for account %s", user.account_id)
+
     detail = None
     detail_failed = False
     if paddle.configured() and subscription and subscription.paddle_subscription_id:
@@ -60,6 +67,12 @@ async def billing_screen(
         "detail": detail,
         "detail_failed": detail_failed,
         "actions_available": paddle.configured(),
+        "prices": prices,
+        "account_id": str(user.account_id),
+        "user_email": user.email,
+        "paddle_token": settings.paddle_client_token,
+        "paddle_environment": settings.paddle_environment,
+        "transaction_id": "",
     })
 
 

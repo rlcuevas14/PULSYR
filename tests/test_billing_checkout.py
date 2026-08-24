@@ -81,3 +81,37 @@ async def test_checkout_page_rejects_a_too_short_transaction_id(client: AsyncCli
     monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
     r = await client.get("/billing/checkout?_ptxn=txn_123")
     assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_free_account_is_offered_the_paid_prices(client: AsyncClient, db, monkeypatch):
+    from app.billing import paddle
+
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
+    account, owner = await _owner_account(db)
+
+    async def prices():
+        return [
+            paddle.PlanPrice("pri_solo_m", "solo", "monthly", "800", "USD"),
+            paddle.PlanPrice("pri_studio_m", "studio", "monthly", "2000", "USD"),
+        ]
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.get("/billing")
+    assert 'data-paddle-price="pri_solo_m"' in r.text
+    assert f'data-account-id="{account.id}"' in r.text
+
+
+@pytest.mark.asyncio
+async def test_no_client_token_means_no_buy_buttons(client: AsyncClient, db, monkeypatch):
+    monkeypatch.setattr(settings, "paddle_api_key", "")
+    monkeypatch.setattr(settings, "paddle_client_token", "")
+    _account, owner = await _owner_account(db)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+
+    r = await client.get("/billing")
+    assert r.status_code == 200
+    assert "data-paddle-price" not in r.text
