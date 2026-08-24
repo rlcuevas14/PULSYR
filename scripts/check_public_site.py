@@ -16,11 +16,13 @@ ENGLISH_ROUTES = (
     "/",
     "/producto/",
     "/integraciones/mcp/",
+    "/precios/",
     "/open-source/",
     "/docs/primeros-pasos/",
     "/seguridad/",
     "/privacidad/",
     "/terminos/",
+    "/reembolsos/",
     "/contacto/",
 )
 EXPECTED_ROUTES = ENGLISH_ROUTES + tuple(

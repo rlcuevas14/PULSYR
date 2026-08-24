@@ -13,7 +13,11 @@ from urllib.parse import parse_qs, unquote, urljoin, urlparse
 from urllib.request import Request, urlopen
 
 SITE_ORIGIN = "https://pulsyr.dev"
-ALLOWED_EXTERNAL_HOSTS = {"github.com", "app.pulsyr.dev"}
+# www.paddle.com is here because the Privacy Notice must link to Paddle's own
+# policy: Paddle is an independent controller of billing data, not our
+# subprocessor, so naming it without linking its terms would misstate who
+# answers for that data.
+ALLOWED_EXTERNAL_HOSTS = {"github.com", "app.pulsyr.dev", "www.paddle.com"}
 LANGUAGE_ENDPOINTS = {"/__language/en", "/__language/es"}
 
 

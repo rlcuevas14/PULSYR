@@ -23,8 +23,18 @@ def upgrade() -> None:
         ADD CONSTRAINT account_subscriptions_paddle_sub_uniq UNIQUE(paddle_subscription_id)
         """
     )
+    # v0021 declared this check inline on the column, so Postgres auto-named it
+    # `account_subscriptions_plan_code_check`, while the SQLAlchemy model names it
+    # `account_subscriptions_plan_check`. Which one a given database carries depends
+    # on whether its schema came from the migrations or from create_all, so drop
+    # whichever is there and re-add it under the model's name.
     op.execute(
-        "ALTER TABLE account_subscriptions DROP CONSTRAINT account_subscriptions_plan_check"
+        "ALTER TABLE account_subscriptions "
+        "DROP CONSTRAINT IF EXISTS account_subscriptions_plan_code_check"
+    )
+    op.execute(
+        "ALTER TABLE account_subscriptions "
+        "DROP CONSTRAINT IF EXISTS account_subscriptions_plan_check"
     )
     op.execute(
         """
@@ -51,17 +61,21 @@ def downgrade() -> None:
         """
     )
     op.execute(
-        "ALTER TABLE account_subscriptions DROP CONSTRAINT account_subscriptions_plan_check"
+        "ALTER TABLE account_subscriptions "
+        "DROP CONSTRAINT IF EXISTS account_subscriptions_plan_check"
     )
+    # Restored under the name v0021 actually left behind, so a second upgrade finds
+    # the database in the shape the first one did.
     op.execute(
         """
         ALTER TABLE account_subscriptions
-        ADD CONSTRAINT account_subscriptions_plan_check
+        ADD CONSTRAINT account_subscriptions_plan_code_check
         CHECK (plan_code IN ('free','self_hosted'))
         """
     )
     op.execute(
-        "ALTER TABLE account_subscriptions DROP CONSTRAINT account_subscriptions_paddle_sub_uniq"
+        "ALTER TABLE account_subscriptions "
+        "DROP CONSTRAINT IF EXISTS account_subscriptions_paddle_sub_uniq"
     )
     op.execute("ALTER TABLE account_subscriptions DROP COLUMN paddle_event_at")
     op.execute("ALTER TABLE account_subscriptions DROP COLUMN paddle_subscription_id")
