@@ -39,7 +39,7 @@ jobs:
       - name: Add concise job summary
         run: python scripts/web_baseline.py --summarize web-baseline.json >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: web-baseline-${{ github.run_id }}
           path: web-baseline.json
