@@ -45,6 +45,10 @@ async def test_billing_paths_allow_paddle(client: AsyncClient):
     assert "https://cdn.paddle.com" in csp
     assert "frame-src 'self' https://*.paddle.com" in csp
     assert "connect-src 'self' https://*.paddle.com" in csp
+    # Learned from a real sandbox checkout: the overlay loads its stylesheet from
+    # sandbox-cdn.paddle.com, and a blocked stylesheet degrades silently instead
+    # of failing, so nothing but a browser console would have caught it.
+    assert "style-src 'self' 'unsafe-inline' https://*.paddle.com" in csp
     assert r.headers["permissions-policy"].startswith("camera=(), microphone=()")
     assert "payment=(self" in r.headers["permissions-policy"]
 

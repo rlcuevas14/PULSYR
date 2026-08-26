@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.exceptions import HTTPException
 
 from app.accounts import plans
-from app.auth.deps import require_owner
+from app.auth.deps import require_owner, require_owner_ui
 from app.auth.models import User
 from app.billing import paddle
 from app.billing import service as billing_service
@@ -38,7 +38,7 @@ _TXN_RE = re.compile(r"^txn_[a-z0-9]{20,32}$")
 @router.get("/billing", response_class=HTMLResponse)
 async def billing_screen(
     request: Request,
-    user: User = Depends(require_owner),
+    user: User = Depends(require_owner_ui),
     db: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
     subscription = await plans.subscription_for(db, user.account_id)
@@ -175,7 +175,7 @@ def _paddle_outage_is_502(action: str, account_id: uuid.UUID) -> Iterator[None]:
 async def billing_confirm(
     request: Request,
     price_id: str = Query(...),
-    user: User = Depends(require_owner),
+    user: User = Depends(require_owner_ui),
     db: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
     subscription = await plans.subscription_for(db, user.account_id)

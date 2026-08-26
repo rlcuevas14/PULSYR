@@ -52,6 +52,19 @@ async def test_owner_sees_plan_and_usage(client: AsyncClient, db, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_anonymous_visitor_is_sent_to_login_not_shown_a_401(
+    client: AsyncClient, monkeypatch
+):
+    """Every other rendered screen redirects; billing used the API-flavoured
+    dependency and answered 401, which reads as a broken page rather than as
+    "you are signed out"."""
+    monkeypatch.setattr(settings, "paddle_api_key", "")
+    r = await client.get("/billing", follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == "/login"
+
+
+@pytest.mark.asyncio
 async def test_self_hosted_has_no_billing_screen(client: AsyncClient, db, monkeypatch):
     """A self-hosted install must not show a page about paying us."""
     monkeypatch.setattr(settings, "paddle_api_key", "")

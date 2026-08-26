@@ -88,7 +88,12 @@ def _billing_csp() -> str:
         "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
         f"form-action 'self' {_PADDLE_ORIGINS}; "
         f"script-src 'self' {_PADDLE_SCRIPT}; "
-        "style-src 'self' 'unsafe-inline'; "
+        # Paddle's overlay pulls its own stylesheet from sandbox-cdn.paddle.com in
+        # sandbox and cdn.paddle.com in production, both covered by the wildcard.
+        # This one was missed on the first pass and only surfaced in a browser
+        # console: a blocked stylesheet degrades rather than fails, so the checkout
+        # completed unstyled and every test stayed green.
+        f"style-src 'self' 'unsafe-inline' {_PADDLE_ORIGINS}; "
         f"img-src 'self' data: {_PADDLE_ORIGINS}; "
         "font-src 'self'; "
         f"connect-src 'self' {_PADDLE_ORIGINS}; "

@@ -83,6 +83,20 @@ async def require_owner_session(user: User = Depends(current_user)) -> User:
     return user
 
 
+async def require_owner_ui(user: User = Depends(current_user_ui)) -> User:
+    """Owner check for a rendered screen, not for an API caller.
+
+    Built on `current_user_ui` rather than `current_user` for two reasons a
+    browser notices immediately: an anonymous visitor is redirected to /login
+    instead of being shown a 401 error page, and `user.plan_code` plus the
+    project module context are populated, which `base.html` reads to render the
+    navigation. The API-flavoured `require_owner` provides neither.
+    """
+    if user.account_role != "owner":
+        raise HTTPException(status_code=403, detail="Owner only")
+    return user
+
+
 async def require_superadmin(user: User = Depends(current_user)) -> User:
     if not user.is_superadmin:
         raise HTTPException(status_code=403, detail="Superadmin only")
