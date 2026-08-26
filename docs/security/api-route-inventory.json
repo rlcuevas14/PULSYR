@@ -428,8 +428,8 @@
     "name": "billing_screen",
     "trust_class": "owner_session",
     "dependencies": [
-      "api_or_session_user",
-      "require_owner"
+      "current_user_ui",
+      "require_owner_ui"
     ]
   },
   {
@@ -834,8 +834,8 @@
     "name": "billing_confirm",
     "trust_class": "owner_session",
     "dependencies": [
-      "api_or_session_user",
-      "require_owner"
+      "current_user_ui",
+      "require_owner_ui"
     ]
   },
   {

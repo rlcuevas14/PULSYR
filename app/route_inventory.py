@@ -9,6 +9,7 @@ from fastapi.routing import APIRoute, _iter_routes_with_context
 _DEPENDENCY_CLASSES = {
     "require_superadmin": "superadmin_session",
     "require_owner_session": "owner_session",
+    "require_owner_ui": "owner_session",
     "require_owner": "owner_session",
     "current_user_ui": "browser_session",
     "current_user": "browser_session",
