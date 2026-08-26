@@ -54,33 +54,70 @@
   </dl>
 </section>
 
-{% if prices %}
+{% if tiers %}
 <section class="p-card p-5 mt-6">
   <h2 class="font-semibold mb-4">{{ t("billing.available_plans") }}</h2>
-  <div class="grid sm:grid-cols-2 gap-4">
-    {% for price in prices %}
-      {# The card to skip is the exact price the account is on, not every price of
-         its tier: hiding the tier hid the other billing term with it, which is
-         how switching monthly to yearly became unreachable. #}
-      <article class="p-card p-4">
-        <p class="font-semibold">{{ t("plan." ~ price.plan_code) }}</p>
-        {% if price_labels[price.price_id] %}
-        <p class="text-lg">{{ price_labels[price.price_id] }}</p>
-        {% endif %}
-        <p class="text-sm opacity-70">{{ t("billing.term." ~ price.billing_period) }}</p>
-        {% if detail and price.price_id == detail.price_id %}
-        <p class="p-pill mt-3">{{ t("billing.current_plan_badge") }}</p>
-        {% elif not has_subscription %}
-        <button type="button" class="p-btn mt-3"
-                data-paddle-price="{{ price.price_id }}"
-                data-account-id="{{ account_id }}"
-                data-email="{{ user_email }}"
-                {% if price.price_id == preselected_price_id %}autofocus{% endif %}>{{ t("billing.choose_plan") }}</button>
-        {% else %}
-        <a class="p-btn mt-3" href="/ui/billing/confirm?price_id={{ price.price_id }}">{{ t("billing.switch_to") }}</a>
-        {% endif %}
+
+  {# CSS-only switch. The app's CSP has no inline-script exception and a test
+     forbids inline handlers, so the two radios drive the columns through
+     sibling selectors defined next to the other .p- classes in _head.html. #}
+  <div class="p-cycle">
+    <input type="radio" name="billing-cycle" id="cycle-monthly" class="p-cycle-input" checked>
+    <label for="cycle-monthly" class="p-cycle-option">{{ t("billing.cycle.monthly") }}</label>
+    <input type="radio" name="billing-cycle" id="cycle-yearly" class="p-cycle-input">
+    <label for="cycle-yearly" class="p-cycle-option">
+      {{ t("billing.cycle.yearly") }}
+      {% if months_free.values() | list %}
+      <span class="p-pill bg-success/15 text-success ml-2">{{ tn("billing.months_free", months_free.values() | list | max) }}</span>
+      {% endif %}
+    </label>
+
+    <div class="p-cycle-plans grid sm:grid-cols-3 gap-4 mt-5">
+      {# Free is a tier the customer chooses between, but it is not a Paddle
+         price, so it is rendered here rather than coming from the catalog. It
+         carries no action: leaving a paid plan is cancelling, which has its own
+         control above, and "choosing" Free from here would be a second way to
+         do the same thing. #}
+      <article class="p-card p-4 flex flex-col">
+        <p class="font-semibold">{{ t("plan.free") }}</p>
+        <p class="text-lg font-semibold mt-1">{{ t("billing.free_price") }}</p>
+        <p class="text-sm opacity-70">{{ t("billing.free_terms") }}</p>
+        <div class="mt-auto pt-3">
+          {% if plan_code == "free" %}
+          <p class="p-pill">{{ t("billing.current_plan_badge") }}</p>
+          {% endif %}
+        </div>
       </article>
-    {% endfor %}
+      {% for code, terms in tiers.items() %}
+      <article class="p-card p-4 flex flex-col">
+        <p class="font-semibold">{{ t("plan." ~ code) }}</p>
+        {% for period in ["monthly", "yearly"] %}
+          {% if terms[period] %}
+          {% set price = terms[period] %}
+          <div data-cycle="{{ period }}" class="p-cycle-pane flex flex-col flex-1">
+            {% if price_labels[price.price_id] %}
+            <p class="text-lg font-semibold mt-1">{{ price_labels[price.price_id] }}</p>
+            {% endif %}
+            <p class="text-sm opacity-70">{{ t("billing.term." ~ period) }}</p>
+            <div class="mt-auto pt-3">
+              {% if detail and price.price_id == detail.price_id %}
+              <p class="p-pill">{{ t("billing.current_plan_badge") }}</p>
+              {% elif not has_subscription %}
+              <button type="button" class="p-btn w-full"
+                      data-paddle-price="{{ price.price_id }}"
+                      data-account-id="{{ account_id }}"
+                      data-email="{{ user_email }}"
+                      {% if price.price_id == preselected_price_id %}autofocus{% endif %}>{{ t("billing.choose_plan") }}</button>
+              {% else %}
+              <a class="p-btn w-full" href="/ui/billing/confirm?price_id={{ price.price_id }}">{{ t("billing.switch_to") }}</a>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </article>
+      {% endfor %}
+    </div>
   </div>
 </section>
 {% include "partials/_paddle_js.html" %}

@@ -78,6 +78,31 @@ async def billing_screen(
         price.price_id: _money(price.amount, price.currency_code) for price in prices
     }
 
+    # One entry per tier holding both of its terms, so the screen can show three
+    # plans with a period switch rather than one card per price. Four loose cards
+    # is not how anyone reads a pricing table.
+    tiers: dict[str, dict[str, paddle.PlanPrice]] = {}
+    for price in prices:
+        tiers.setdefault(price.plan_code, {})[price.billing_period] = price
+    # Ordered by the same PLAN_RANK that decides upgrade from downgrade, so the
+    # columns read in capacity order and there is only one place that knows it.
+    tiers = dict(sorted(tiers.items(), key=lambda kv: billing_service.PLAN_RANK.get(kv[0], 0)))
+
+    # Derived from the catalog rather than written as copy: if the yearly price
+    # ever changes, the badge changes with it instead of quietly lying.
+    months_free: dict[str, int] = {}
+    for code, terms in tiers.items():
+        monthly, yearly = terms.get("monthly"), terms.get("yearly")
+        if not monthly or not yearly:
+            continue
+        try:
+            saved = int(monthly.amount) * 12 - int(yearly.amount)
+            free = round(saved / int(monthly.amount))
+        except (ValueError, ZeroDivisionError):
+            continue
+        if free > 0:
+            months_free[code] = free
+
     intent = request.session.pop("billing_intent", None) or {}
     preselected_price_id = next(
         (
@@ -99,6 +124,8 @@ async def billing_screen(
         "detail_failed": detail_failed,
         "has_subscription": has_subscription,
         "prices": prices,
+        "tiers": tiers,
+        "months_free": months_free,
         "price_labels": price_labels,
         "preselected_price_id": preselected_price_id,
         "account_id": str(user.account_id),

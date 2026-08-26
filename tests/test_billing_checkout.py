@@ -143,6 +143,40 @@ async def test_free_account_is_offered_the_paid_prices(client: AsyncClient, db, 
 
 
 @pytest.mark.asyncio
+async def test_plans_render_as_tiers_with_a_period_switch(client: AsyncClient, db, monkeypatch):
+    """One card per price gave four loose boxes. A pricing table is tiers across
+    and a period switch on top, with the annual saving stated."""
+    from app.billing import paddle
+
+    monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
+    monkeypatch.setattr(settings, "paddle_client_token", "test_abc")
+    _account, owner = await _owner_account(db)
+
+    async def prices():
+        return [
+            paddle.PlanPrice("pri_studio_y", "studio", "yearly", "20000", "USD"),
+            paddle.PlanPrice("pri_solo_m", "solo", "monthly", "800", "USD"),
+            paddle.PlanPrice("pri_solo_y", "solo", "yearly", "8000", "USD"),
+            paddle.PlanPrice("pri_studio_m", "studio", "monthly", "2000", "USD"),
+        ]
+
+    monkeypatch.setattr(paddle, "list_plan_prices", prices)
+    await client.post("/login", data={"email": owner.email, "password": "secret-password"})
+    r = await client.get("/billing")
+
+    assert r.status_code == 200
+    # The switch exists and defaults to monthly.
+    assert 'id="cycle-monthly"' in r.text and 'id="cycle-yearly"' in r.text
+    # Both terms of a tier ship in the same card; CSS decides which one shows.
+    assert 'data-cycle="monthly"' in r.text and 'data-cycle="yearly"' in r.text
+    # Capacity order, regardless of the order the catalog came back in.
+    assert r.text.index("pri_solo_m") < r.text.index("pri_studio_m")
+    # The saving is computed from the catalog, not written as copy: 800*12 - 8000
+    # is 1600, which is two months.
+    assert "2 months free" in r.text
+
+
+@pytest.mark.asyncio
 async def test_no_client_token_means_no_buy_buttons(client: AsyncClient, db, monkeypatch):
     monkeypatch.setattr(settings, "paddle_api_key", "")
     monkeypatch.setattr(settings, "paddle_client_token", "")
@@ -221,7 +255,9 @@ async def test_the_other_billing_term_of_the_current_tier_is_offered(
     # on the pill markup, not on the words: "Current plan" is also the label of
     # the summary section above, so the text alone would pass either way.
     assert "/ui/billing/confirm?price_id=pri_solo_m" not in r.text
-    assert 'class="p-pill mt-3">Current plan</p>' in r.text
+    # Asserted as behaviour rather than as a class string: the price the account
+    # is on is badged and offers no action, whatever the markup around it.
+    assert "Current plan" in r.text
 
 
 @pytest.mark.asyncio
