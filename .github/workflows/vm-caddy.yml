@@ -24,6 +24,14 @@ name: VM Caddy site
 # to restore service now, then move the block there so it stops vanishing.
 
 on:
+  # Self-heal every 15 minutes. This is a band-aid over someone else's pipeline
+  # stomping on a shared Caddyfile, and it should be deleted the day the block
+  # moves into the infra stack's own versioned file. Until then it caps the
+  # outage at 15 minutes instead of however long it takes a human to notice a
+  # TLS handshake failing. Cheap in steady state: when the block is already
+  # present the script exits before touching, backing up or reloading anything.
+  schedule:
+    - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
       action:
@@ -50,9 +58,12 @@ jobs:
       - name: Run against the VM
         uses: appleboy/ssh-action@v1
         env:
-          ACTION: ${{ inputs.action }}
-          HOSTNAME_IN: ${{ inputs.hostname }}
-          UPSTREAM: ${{ inputs.upstream }}
+          # A scheduled run carries no inputs, so it falls back to repairing the
+          # one hostname that keeps disappearing. A manual run still decides for
+          # itself, and still defaults to the read-only inspect.
+          ACTION: ${{ inputs.action || 'add' }}
+          HOSTNAME_IN: ${{ inputs.hostname || 'app.pulsyr.dev' }}
+          UPSTREAM: ${{ inputs.upstream || 'pulso-app-1:8000' }}
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
