@@ -144,8 +144,8 @@ async def test_get_subscription_without_a_scheduled_change(monkeypatch):
 @pytest.mark.asyncio
 async def test_get_subscription_without_items_reports_no_plan(monkeypatch):
     """A subscription response can arrive with no items array at all. The read
-    must not raise: plan_code comes back empty, and proration_for treats an
-    unrecognised plan as a downgrade so nobody is charged on a guess."""
+    must not raise: plan_code comes back empty, and is_downgrade treats an
+    unrecognised plan as a downgrade so the customer is warned, not surprised."""
     monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
     payload = {key: value for key, value in _SUBSCRIPTION.items() if key != "items"}
 
@@ -224,7 +224,7 @@ async def test_preview_returns_paddle_figures_not_ours(monkeypatch):
         }})
 
     monkeypatch.setattr(paddle, "_transport", _mock_transport(handler))
-    preview = await paddle.preview_change("sub_x", "pri_studio_m", paddle.PRORATION_UPGRADE)
+    preview = await paddle.preview_change("sub_x", "pri_studio_m")
 
     assert seen == {"path": "/subscriptions/sub_x/preview", "method": "PATCH"}
     assert preview.immediate_amount == "1240"
@@ -242,7 +242,7 @@ async def test_downgrade_preview_charges_nothing_today(monkeypatch):
                 "total": "800", "currency_code": "USD"}},
         }})))
 
-    preview = await paddle.preview_change("sub_x", "pri_solo_m", paddle.PRORATION_DOWNGRADE)
+    preview = await paddle.preview_change("sub_x", "pri_solo_m")
     assert preview.immediate_amount is None
     assert preview.recurring_amount == "800"
 
@@ -260,7 +260,7 @@ async def test_preview_survives_a_null_details_block(monkeypatch):
                 "total": "800", "currency_code": "USD"}},
         }})))
 
-    preview = await paddle.preview_change("sub_x", "pri_solo_m", paddle.PRORATION_DOWNGRADE)
+    preview = await paddle.preview_change("sub_x", "pri_solo_m")
     assert preview.immediate_amount is None
     assert preview.recurring_amount == "800"
 
@@ -278,7 +278,7 @@ async def test_preview_refuses_a_response_with_no_recurring_total(monkeypatch):
         }})))
 
     with pytest.raises(paddle.PaddleError):
-        await paddle.preview_change("sub_x", "pri_solo_m", paddle.PRORATION_DOWNGRADE)
+        await paddle.preview_change("sub_x", "pri_solo_m")
 
 
 @pytest.mark.asyncio
@@ -295,7 +295,7 @@ async def test_change_plan_replaces_items_and_prevents_change_on_decline(monkeyp
         return httpx.Response(200, json={"data": {}})
 
     monkeypatch.setattr(paddle, "_transport", _mock_transport(handler))
-    await paddle.change_plan("sub_x", "pri_studio_m", paddle.PRORATION_UPGRADE)
+    await paddle.change_plan("sub_x", "pri_studio_m")
 
     assert sent["path"] == "/subscriptions/sub_x"
     assert sent["method"] == "PATCH"

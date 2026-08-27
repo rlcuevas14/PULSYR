@@ -212,9 +212,9 @@ async def billing_confirm(
     with _paddle_outage_is_502("plan preview", user.account_id):
         target = await _resolve_target(price_id)
         current = await paddle.get_subscription(subscription.paddle_subscription_id)
-        proration = billing_service.proration_for(current, target)
+        downgrade = billing_service.is_downgrade(current, target)
         preview = await paddle.preview_change(
-            subscription.paddle_subscription_id, target.price_id, proration
+            subscription.paddle_subscription_id, target.price_id
         )
 
     recurring = _money(preview.recurring_amount, preview.currency_code)
@@ -234,7 +234,7 @@ async def billing_confirm(
         "immediate": _money(preview.immediate_amount, preview.currency_code),
         "recurring": recurring,
         "next_billed_at": preview.next_billed_at,
-        "is_downgrade": proration == paddle.PRORATION_DOWNGRADE,
+        "is_downgrade": downgrade,
     })
 
 
@@ -256,12 +256,12 @@ async def billing_change(
         raise HTTPException(status_code=400, detail="no subscription to change")
 
     with _paddle_outage_is_502("plan change", user.account_id):
+        # No subscription read here any more. It existed only to derive the
+        # proration mode, and there is one mode now, so this route makes one
+        # Paddle call instead of two. The confirmation screen still reads the
+        # subscription, because the warning it shows depends on the direction.
         target = await _resolve_target(price_id)
-        current = await paddle.get_subscription(subscription.paddle_subscription_id)
-        proration = billing_service.proration_for(current, target)
-        await paddle.change_plan(
-            subscription.paddle_subscription_id, target.price_id, proration
-        )
+        await paddle.change_plan(subscription.paddle_subscription_id, target.price_id)
 
     # Deliberately not the new plan name: the webhook has not landed yet and
     # painting it now would contradict itself if the change did not stick.

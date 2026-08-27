@@ -1,5 +1,5 @@
-"""Rules that decide what a plan change costs, kept apart from the HTTP layer
-so they can be read and tested as rules."""
+"""Rules about what a plan change means, kept apart from the HTTP layer so they
+can be read and tested as rules."""
 
 from app.billing import paddle
 
@@ -8,27 +8,31 @@ PLAN_RANK: dict[str, int] = {"free": 0, "solo": 1, "studio": 2}
 _TERM_RANK: dict[str, int] = {"monthly": 0, "yearly": 1}
 
 
-def proration_for(
+def is_downgrade(
     current: paddle.PlanPrice | paddle.SubscriptionView, target: paddle.PlanPrice
-) -> str:
-    """Charge immediately only when the customer is getting more.
+) -> bool:
+    """Whether the customer is getting less, which decides what we warn them about.
+
+    It no longer decides what we tell Paddle: both directions bill the same way
+    (see paddle.PRORATION). What it still decides is the sentence the customer
+    reads before confirming, and getting that backwards would be worse than a
+    wrong charge, because the charge is visible and the sentence is trusted.
 
     Tier decides first: dropping a tier is a downgrade even when the term also
-    changes, because charging immediately for a smaller plan would be indefensible.
-    Term is the tiebreaker within the same tier, where moving to a year is the
-    larger payment and belongs today.
+    changes. Term is only the tiebreaker within one tier, where moving to a year
+    is the larger commitment.
     """
     if current.plan_code not in PLAN_RANK:
         # We could not identify what they are on, which happens when Paddle omits
-        # items from a subscription response. Never charge on a guess: credit at
-        # renewal instead, where a wrong call costs nobody money today.
-        return paddle.PRORATION_DOWNGRADE
+        # items from a subscription response. Warn rather than stay silent: an
+        # unnecessary caution costs nothing, a missing one costs their capacity.
+        return True
 
-    current_tier = PLAN_RANK.get(current.plan_code, 0)
+    current_tier = PLAN_RANK[current.plan_code]
     target_tier = PLAN_RANK.get(target.plan_code, 0)
     if target_tier != current_tier:
-        return paddle.PRORATION_UPGRADE if target_tier > current_tier else paddle.PRORATION_DOWNGRADE
+        return target_tier < current_tier
 
     current_term = _TERM_RANK.get(current.billing_period, 0)
     target_term = _TERM_RANK.get(target.billing_period, 0)
-    return paddle.PRORATION_UPGRADE if target_term > current_term else paddle.PRORATION_DOWNGRADE
+    return target_term <= current_term

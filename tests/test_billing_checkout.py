@@ -222,7 +222,7 @@ async def test_the_other_billing_term_of_the_current_tier_is_offered(
 ):
     """Switching Solo monthly to Solo yearly is a supported flow. Filtering the
     cards by tier hid every price of the account's own tier, the other term
-    included, which left proration_for's term tiebreaker unreachable in
+    included, which left is_downgrade's term tiebreaker unreachable in
     production. Only the exact price the account is on is off the table, and it
     is marked rather than hidden."""
     from app.billing import paddle

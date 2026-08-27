@@ -19,49 +19,44 @@ def test_tier_upgrade_charges_the_difference_now():
     """More capacity now means paying for it now."""
     current = _price("solo", "monthly")
     target = _price("studio", "monthly")
-    assert service.proration_for(current, target) == paddle.PRORATION_UPGRADE
+    assert service.is_downgrade(current, target) is False
 
 
-def test_tier_downgrade_credits_at_renewal():
-    """Never refund mid-period for a downgrade: credit it at renewal."""
-    assert service.proration_for(
-        _price("studio", "monthly"), _price("solo", "monthly")
-    ) == paddle.PRORATION_DOWNGRADE
+def test_tier_downgrade_is_recognised():
+    """Dropping a tier is a downgrade, whatever it ends up billing."""
+    assert service.is_downgrade(_price("studio", "monthly"), _price("solo", "monthly")
+    ) is True
 
 
 def test_monthly_to_yearly_charges_now():
     """A year is a much larger payment; charging now is the honest moment."""
-    assert service.proration_for(
-        _price("solo", "monthly"), _price("solo", "yearly")
-    ) == paddle.PRORATION_UPGRADE
+    assert service.is_downgrade(_price("solo", "monthly"), _price("solo", "yearly")
+    ) is False
 
 
-def test_yearly_to_monthly_waits_for_renewal():
-    """Let the paid year run out rather than unwinding it."""
-    assert service.proration_for(
-        _price("solo", "yearly"), _price("solo", "monthly")
-    ) == paddle.PRORATION_DOWNGRADE
+def test_yearly_to_monthly_is_a_downgrade():
+    """A shorter term inside one tier is the smaller commitment."""
+    assert service.is_downgrade(_price("solo", "yearly"), _price("solo", "monthly")
+    ) is True
 
 
 def test_tier_change_wins_over_term_change():
     """Studio yearly to Solo monthly is a downgrade even though the term also
     shortens: the smaller of the two must not be charged immediately."""
-    assert service.proration_for(
-        _price("studio", "yearly"), _price("solo", "monthly")
-    ) == paddle.PRORATION_DOWNGRADE
+    assert service.is_downgrade(_price("studio", "yearly"), _price("solo", "monthly")
+    ) is True
 
 
 def test_tier_upgrade_overrides_term_downgrade():
     """Solo yearly to Studio monthly is an upgrade: tier wins even when the
     term shortens. This proves tier is checked before term in the decision."""
-    assert service.proration_for(
-        _price("solo", "yearly"), _price("studio", "monthly")
-    ) == paddle.PRORATION_UPGRADE
+    assert service.is_downgrade(_price("solo", "yearly"), _price("studio", "monthly")
+    ) is False
 
 
-def test_unknown_plan_code_credits_at_renewal():
-    """When Paddle omits items from the subscription response, plan_code is
-    empty. Never charge on a guess; credit at renewal instead."""
+def test_unknown_plan_code_warns():
+    """When Paddle omits items, plan_code is empty. Warn rather than stay
+    silent: an unnecessary caution costs nothing, a missing one costs capacity."""
     current = paddle.SubscriptionView(
         status="active",
         price_id="pri_current",
@@ -74,7 +69,7 @@ def test_unknown_plan_code_credits_at_renewal():
         cancel_url=None,
     )
     target = _price("studio", "monthly")
-    assert service.proration_for(current, target) == paddle.PRORATION_DOWNGRADE
+    assert service.is_downgrade(current, target) is True
 
 
 async def _paid_owner(db, monkeypatch, plan_code="solo"):
@@ -108,7 +103,7 @@ async def test_confirmation_shows_paddle_figures(client: AsyncClient, db, monkey
 
     async def current_subscription(_subscription_id: str) -> paddle.SubscriptionView:
         # What the account is on today, read live from Paddle: this is what
-        # proration_for compares the target against, independent of the local
+        # is_downgrade compares the target against, independent of the local
         # mirror's plan_code.
         return paddle.SubscriptionView(
             status="active", price_id="pri_solo_m", plan_code="solo",
@@ -116,8 +111,7 @@ async def test_confirmation_shows_paddle_figures(client: AsyncClient, db, monkey
             scheduled_at=None, update_payment_method_url=None, cancel_url=None,
         )
 
-    async def preview(subscription_id, price_id, proration):
-        assert proration == paddle.PRORATION_UPGRADE
+    async def preview(subscription_id, price_id):
         return paddle.ChangePreview("1240", "2000", "USD", None)
 
     monkeypatch.setattr(paddle, "list_plan_prices", prices)
@@ -164,7 +158,7 @@ async def test_confirmation_reports_a_paddle_outage_as_a_provider_error(
         return paddle.SubscriptionView(
             "active", "pri_solo_m", "solo", "monthly", None, None, None, None, None)
 
-    async def boom(subscription_id, price_id, proration):
+    async def boom(subscription_id, price_id):
         raise paddle.PaddleError("down")
 
     monkeypatch.setattr(paddle, "list_plan_prices", prices)
@@ -183,7 +177,7 @@ async def test_confirmation_shows_downgrade_warning_and_no_charge_today(
     """A downgrade must show the capacity-drops-now warning and must not claim a
     charge today: Paddle reports no immediate transaction for a downgrade. The
     proration mode is not hardcoded here; it is left for the route to derive from
-    proration_for and pass through to preview_change."""
+    is_downgrade."""
     monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
     _account, owner = await _paid_owner(db, monkeypatch, plan_code="studio")
 
@@ -197,7 +191,7 @@ async def test_confirmation_shows_downgrade_warning_and_no_charge_today(
             scheduled_at=None, update_payment_method_url=None, cancel_url=None,
         )
 
-    async def preview(subscription_id, price_id, proration):
+    async def preview(subscription_id, price_id):
         return paddle.ChangePreview(None, "800", "USD", None)
 
     monkeypatch.setattr(paddle, "list_plan_prices", prices)
@@ -231,7 +225,7 @@ async def test_confirmation_shows_zero_value_charge_not_no_charge(
             scheduled_at=None, update_payment_method_url=None, cancel_url=None,
         )
 
-    async def preview(subscription_id, price_id, proration):
+    async def preview(subscription_id, price_id):
         return paddle.ChangePreview("0", "2000", "USD", None)
 
     monkeypatch.setattr(paddle, "list_plan_prices", prices)
@@ -263,7 +257,7 @@ async def test_an_unparseable_amount_falls_through_instead_of_erroring(
         return paddle.SubscriptionView(
             "active", "pri_solo_m", "solo", "monthly", None, None, None, None, None)
 
-    async def preview(subscription_id, price_id, proration):
+    async def preview(subscription_id, price_id):
         return paddle.ChangePreview("12.40", "2000", "USD", None)
 
     monkeypatch.setattr(paddle, "list_plan_prices", prices)
@@ -295,7 +289,7 @@ async def test_an_unparseable_recurring_amount_is_a_provider_error(
         return paddle.SubscriptionView(
             "active", "pri_solo_m", "solo", "monthly", None, None, None, None, None)
 
-    async def preview(subscription_id, price_id, proration):
+    async def preview(subscription_id, price_id):
         return paddle.ChangePreview("1240", "not-a-number", "USD", None)
 
     monkeypatch.setattr(paddle, "list_plan_prices", prices)
@@ -330,8 +324,8 @@ async def test_change_calls_paddle_and_writes_nothing_locally(client: AsyncClien
         return paddle.SubscriptionView(
             "active", "pri_solo_m", "solo", "monthly", None, None, None, None, None)
 
-    async def change(subscription_id, price_id, proration):
-        called["args"] = (subscription_id, price_id, proration)
+    async def change(subscription_id, price_id):
+        called["args"] = (subscription_id, price_id)
 
     monkeypatch.setattr(paddle, "list_plan_prices", prices)
     monkeypatch.setattr(paddle, "get_subscription", get_sub)
@@ -340,7 +334,7 @@ async def test_change_calls_paddle_and_writes_nothing_locally(client: AsyncClien
 
     r = await client.post("/ui/billing/change", data={"price_id": "pri_studio_m"})
     assert r.status_code in (200, 204)
-    assert called["args"][1:] == ("pri_studio_m", paddle.PRORATION_UPGRADE)
+    assert called["args"][1:] == ("pri_studio_m",)
 
     db.expire_all()
     row = await subscription_for(db, account_id)
@@ -359,7 +353,7 @@ async def test_a_declined_change_is_reported_not_swallowed(client: AsyncClient, 
         return paddle.SubscriptionView(
             "active", "pri_solo_m", "solo", "monthly", None, None, None, None, None)
 
-    async def boom(subscription_id, price_id, proration):
+    async def boom(subscription_id, price_id):
         raise paddle.PaddleError("card declined")
 
     monkeypatch.setattr(paddle, "list_plan_prices", prices)
@@ -375,24 +369,21 @@ async def test_a_declined_change_is_reported_not_swallowed(client: AsyncClient, 
 async def test_change_reports_an_outage_in_the_reads_it_makes_first(
     client: AsyncClient, db, monkeypatch,
 ):
-    """The change route reads the catalog and the live subscription before it
-    asks Paddle to do anything. Those two calls sat outside the try block, so an
-    outage in them was an unhandled error rather than the 502 the design asks
-    for."""
+    """The change route resolves the target against the catalog before asking
+    Paddle to do anything. That read sat outside the try block once, so an outage
+    in it was an unhandled error rather than the 502 the design asks for. The
+    read it fails on is the catalog: the route no longer reads the subscription,
+    because there is one proration mode and nothing left to derive."""
     monkeypatch.setattr(settings, "paddle_api_key", "pdl_sdbx_apikey_x")
     _account, owner = await _paid_owner(db, monkeypatch)
 
-    async def prices():
-        return [_price("studio", "monthly", "pri_studio_m")]
-
-    async def boom(_subscription_id):
+    async def boom():
         raise paddle.PaddleError("down")
 
-    async def change(subscription_id, price_id, proration):
+    async def change(subscription_id, price_id):
         raise AssertionError("a failed read must never reach the write")
 
-    monkeypatch.setattr(paddle, "list_plan_prices", prices)
-    monkeypatch.setattr(paddle, "get_subscription", boom)
+    monkeypatch.setattr(paddle, "list_plan_prices", boom)
     monkeypatch.setattr(paddle, "change_plan", change)
     await client.post("/login", data={"email": owner.email, "password": "secret-password"})
 

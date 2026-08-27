@@ -73,7 +73,7 @@ def _billing_period(price: dict[str, Any]) -> str:
 
     The final "monthly" is only ever a tiebreaker between two prices of the same
     tier, so guessing wrong there costs a proration mode, never a tier. A
-    subscription with no items at all does not reach that decision: proration_for
+    subscription with no items at all does not reach that decision: is_downgrade
     refuses an unrecognised plan code first and credits at renewal instead.
     """
     stamped = (price.get("custom_data") or {}).get("billing_period")
@@ -166,8 +166,21 @@ async def get_subscription(subscription_id: str) -> SubscriptionView:
     )
 
 
-PRORATION_UPGRADE = "prorated_immediately"
-PRORATION_DOWNGRADE = "prorated_next_billing_period"
+# One mode for every plan change, in both directions. Paddle works out the sign:
+# an upgrade charges the prorated difference today, a downgrade charges nothing
+# and credits the difference to the customer's Paddle balance, which then offsets
+# their future invoices. Verified against the sandbox: a downgrade from an annual
+# plan previewed grand_total 0 with credit_to_balance 19198 and result.action
+# "credit", so nothing is refunded to a card without being asked for.
+#
+# The obvious-looking prorated_next_billing_period is NOT usable for a downgrade.
+# Paddle rejects it with "the new items are not valid for updating this
+# subscription" for every downgrade shape out of an annual subscription: lower
+# tier, shorter term, and both at once. The mode means "bill the adjustment on the
+# next invoice", and an annual plan's next invoice is a year away while the
+# adjustment is a credit, so there is nothing to attach it to. Using it would have
+# left every annual customer unable to change plan at all.
+PRORATION = "prorated_immediately"
 
 
 @dataclass(frozen=True)
@@ -178,21 +191,21 @@ class ChangePreview:
     next_billed_at: datetime | None
 
 
-def _change_body(price_id: str, proration: str) -> dict[str, Any]:
+def _change_body(price_id: str) -> dict[str, Any]:
     # items is replace, not append: send the complete list the subscription
     # should end up with. on_payment_failure keeps a declined card from handing
     # out a plan nobody paid for.
     return {
         "items": [{"price_id": price_id, "quantity": 1}],
-        "proration_billing_mode": proration,
+        "proration_billing_mode": PRORATION,
         "on_payment_failure": "prevent_change",
     }
 
 
-async def preview_change(subscription_id: str, price_id: str, proration: str) -> ChangePreview:
+async def preview_change(subscription_id: str, price_id: str) -> ChangePreview:
     data = await _request(
         "PATCH", f"/subscriptions/{subscription_id}/preview",
-        _change_body(price_id, proration),
+        _change_body(price_id),
     ) or {}
     # `or {}` at every level: Paddle sends an explicit null for a block that does
     # not apply, and a null is not a dict to call .get on.
@@ -220,10 +233,10 @@ async def preview_change(subscription_id: str, price_id: str, proration: str) ->
     )
 
 
-async def change_plan(subscription_id: str, price_id: str, proration: str) -> None:
+async def change_plan(subscription_id: str, price_id: str) -> None:
     """Apply the change. Deliberately returns nothing: the resulting plan state
     arrives through the webhook, which is the only writer of the local mirror."""
-    await _request("PATCH", f"/subscriptions/{subscription_id}", _change_body(price_id, proration))
+    await _request("PATCH", f"/subscriptions/{subscription_id}", _change_body(price_id))
 
 
 async def cancel_subscription(subscription_id: str) -> None:
