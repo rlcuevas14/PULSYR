@@ -17,7 +17,7 @@
 
 <form hx-post="/ui/billing/change" class="mt-4 flex items-center gap-3">
   <input type="hidden" name="price_id" value="{{ target.price_id }}">
-  <button type="submit" class="p-btn-primary">{{ t("billing.confirm_button") }}</button>
-  <a class="p-btn-ghost" href="/billing">{{ t("common.cancel") }}</a>
+  <button type="submit" class="p-btn p-btn-primary">{{ t("billing.confirm_button") }}</button>
+  <a class="p-btn p-btn-ghost" href="/billing">{{ t("common.cancel") }}</a>
 </form>
 {% endblock %}

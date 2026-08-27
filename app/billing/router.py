@@ -12,7 +12,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from fastapi import APIRouter, Depends, Form, Query, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.exceptions import HTTPException
 
@@ -64,12 +64,21 @@ async def billing_screen(
 
     detail = None
     detail_failed = False
+    movements: list[paddle.Movement] = []
     if paddle.configured() and subscription and subscription.paddle_subscription_id:
         try:
             detail = await paddle.get_subscription(subscription.paddle_subscription_id)
         except paddle.PaddleError:
             detail_failed = True
             logger.warning("billing detail unavailable for account %s", user.account_id)
+        # Its own try: history is the least important thing on this screen, and
+        # an outage in it must not take the current plan and the plan grid down
+        # with it. An empty history renders as "nothing yet", which is also the
+        # honest answer for an account that has never been charged.
+        try:
+            movements = await paddle.list_movements(subscription.paddle_subscription_id)
+        except paddle.PaddleError:
+            logger.warning("billing history unavailable for account %s", user.account_id)
 
     # Formatted here rather than in the template so a card and the confirmation
     # screen state a price the same way, through the one helper that knows how
@@ -103,6 +112,14 @@ async def billing_screen(
         if free > 0:
             months_free[code] = free
 
+    # Popped here rather than left to base.html, which renders the shared toast
+    # in the bottom-right corner. Every action on this screen answers with 204 +
+    # HX-Refresh, so the customer lands back on a page that still shows the old
+    # plan while the webhook is in flight: a small corner toast is the only thing
+    # saying anything happened at all, and it is the wrong size for that job.
+    # Popping it here means base.html finds nothing and renders no second copy.
+    flash_message = (request.session.pop("flash_success", None) or {}).get("message", "")
+
     intent = request.session.pop("billing_intent", None) or {}
     preselected_price_id = next(
         (
@@ -123,6 +140,14 @@ async def billing_screen(
         "detail": detail,
         "detail_failed": detail_failed,
         "has_subscription": has_subscription,
+        "flash_message": flash_message,
+        # Pairs rather than a lookup keyed by the movement: an adjustment can
+        # arrive with no credit note number, and two of those would collide on
+        # the same empty key and show each other's amount.
+        "movements": [
+            (movement, _money(movement.amount, movement.currency_code))
+            for movement in movements
+        ],
         "prices": prices,
         "tiers": tiers,
         "months_free": months_free,
@@ -289,3 +314,55 @@ async def billing_cancel(
 
     flash_success(request, message=_t("billing.cancel_submitted", resolve_lang(request)))
     return Response(status_code=204, headers={"HX-Refresh": "true"})
+
+
+@router.post("/ui/billing/resume")
+async def billing_resume(
+    request: Request,
+    user: User = Depends(require_owner),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Undo a scheduled cancellation.
+
+    Without this, cancelling was a one-way door: the screen hid the cancel
+    button, showed an end date, and offered no way back short of writing to
+    support. Nothing is written locally here either, for the same reason as
+    every other action on this screen: the webhook owns the mirror.
+    """
+    subscription = await plans.subscription_for(db, user.account_id)
+    if subscription is None or not subscription.paddle_subscription_id:
+        raise HTTPException(status_code=400, detail="no subscription to resume")
+    with _paddle_outage_is_502("resume", user.account_id):
+        await paddle.resume_plan(subscription.paddle_subscription_id)
+
+    flash_success(request, message=_t("billing.resume_submitted", resolve_lang(request)))
+    return Response(status_code=204, headers={"HX-Refresh": "true"})
+
+
+@router.get("/ui/billing/invoice/{transaction_id}")
+async def billing_invoice(
+    transaction_id: str,
+    user: User = Depends(require_owner_ui),
+    db: AsyncSession = Depends(get_db),
+) -> RedirectResponse:
+    """Redirect to the invoice PDF Paddle signs on demand.
+
+    The id comes from the URL, so it is checked against this account's own
+    subscription before the link is minted, and the shape is checked first so a
+    malformed id never becomes an outbound request at all.
+    """
+    if not _TXN_RE.match(transaction_id):
+        raise HTTPException(status_code=400, detail="invalid transaction id")
+    subscription = await plans.subscription_for(db, user.account_id)
+    if subscription is None or not subscription.paddle_subscription_id:
+        raise HTTPException(status_code=404)
+
+    with _paddle_outage_is_502("invoice", user.account_id):
+        url = await paddle.invoice_url(
+            transaction_id, subscription.paddle_subscription_id
+        )
+    if url is None:
+        raise HTTPException(status_code=404)
+    # 303: the browser arrived by GET and leaves by GET, and the link is
+    # single-use, so it must never be cached as this URL's answer.
+    return RedirectResponse(url, status_code=303)

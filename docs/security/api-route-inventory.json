@@ -839,6 +839,26 @@
     ]
   },
   {
+    "method": "GET",
+    "path": "/ui/billing/invoice/{transaction_id}",
+    "name": "billing_invoice",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "current_user_ui",
+      "require_owner_ui"
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/ui/billing/resume",
+    "name": "billing_resume",
+    "trust_class": "owner_session",
+    "dependencies": [
+      "api_or_session_user",
+      "require_owner"
+    ]
+  },
+  {
     "method": "POST",
     "path": "/ui/incidents/backfill",
     "name": "ui_backfill_sentry",

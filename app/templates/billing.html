@@ -3,12 +3,24 @@
 {% block content %}
 <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-ink mb-6">{{ t("billing.title") }}</h1>
 
+{% if flash_message %}
+<div class="mb-6 bg-success/10 border border-success/30 rounded-xl px-4 py-3 flex items-start gap-3"
+     role="status" aria-live="polite">
+  <svg width="20" height="20" viewBox="0 0 52 52" fill="none" aria-hidden="true" class="shrink-0 mt-0.5">
+    <circle cx="26" cy="26" r="24" stroke="#22c55e" stroke-width="3" opacity=".3"/>
+    <path d="M14 27 L22 35 L38 18" stroke="#22c55e" stroke-width="5"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <p class="text-sm font-medium text-ink">{{ flash_message }}</p>
+</div>
+{% endif %}
+
 {% if status == "active" and detail and detail.status == "past_due" %}
 <div class="mb-6 bg-warning/10 border border-warning/30 text-warning-strong rounded-xl px-4 py-3 text-sm">
   <p class="font-medium">{{ t("billing.past_due_title") }}</p>
   <p>{{ t("billing.past_due_body") }}</p>
   {% if detail.update_payment_method_url %}
-  <a class="p-btn mt-3" href="{{ detail.update_payment_method_url }}">{{ t("billing.update_card") }}</a>
+  <a class="p-btn p-btn-primary p-btn-sm mt-3" href="{{ detail.update_payment_method_url }}">{{ t("billing.update_card") }}</a>
   {% endif %}
 </div>
 {% endif %}
@@ -19,18 +31,41 @@
   {% if detail %}
     <p>{{ t("billing.term." ~ detail.billing_period) }}</p>
     {% if detail.scheduled_action == "cancel" and detail.scheduled_at %}
-      <p>{{ t("billing.cancels_on", date=detail.scheduled_at | fecha) }}</p>
+      <p>{{ t("billing.cancels_on", date=detail.scheduled_at | fecha("%Y-%m-%d")) }}</p>
     {% elif detail.next_billed_at %}
-      <p>{{ t("billing.next_billed_on", date=detail.next_billed_at | fecha) }}</p>
+      <p>{{ t("billing.next_billed_on", date=detail.next_billed_at | fecha("%Y-%m-%d")) }}</p>
     {% endif %}
-    {% if detail.update_payment_method_url %}
-      <a class="p-btn-ghost mt-3" href="{{ detail.update_payment_method_url }}">{{ t("billing.payment_method") }}</a>
+
+    {% if detail.scheduled_action == "cancel" %}
+      {# A scheduled cancellation used to be a one-way door: the screen said when
+         access ends and offered nothing but support to change it. Resuming is
+         the primary action here because someone reading this line is, by
+         definition, reconsidering. #}
+      <div class="mt-4 bg-warning/10 border border-warning/30 rounded-xl px-4 py-3">
+        <p class="text-sm text-warning-strong">{{ t("billing.resume_body") }}</p>
+        <form hx-post="/ui/billing/resume" class="mt-3">
+          <button type="submit" class="p-btn p-btn-primary p-btn-sm">{{ t("billing.resume_plan") }}</button>
+        </form>
+      </div>
     {% endif %}
-    {% if detail.scheduled_action != "cancel" %}
-      <form hx-post="/ui/billing/cancel" class="mt-4">
-        <button type="submit" class="p-btn-ghost">{{ t("billing.cancel_plan") }}</button>
-      </form>
-    {% endif %}
+
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      {% if detail.update_payment_method_url %}
+        <a class="p-btn p-btn-ghost p-btn-sm" href="{{ detail.update_payment_method_url }}">{{ t("billing.payment_method") }}</a>
+      {% endif %}
+      {% if detail.scheduled_action != "cancel" %}
+        {# Cancelling used to fire on a single click. It gets the app's existing
+           data-confirm dialog rather than a confirmation page of its own: the
+           end date is already on this screen, so a page would cost a route, a
+           template and a second read of the subscription to restate it. The
+           sentence names the date because people cancel expecting to lose
+           access now, and are owed the news that they do not. #}
+        <form hx-post="/ui/billing/cancel">
+          <button type="submit" class="p-btn p-btn-ghost p-btn-sm"
+                  data-confirm="{% if detail.next_billed_at %}{{ t('billing.cancel_confirm', date=detail.next_billed_at | fecha("%Y-%m-%d")) }}{% else %}{{ t('billing.cancel_confirm_no_date') }}{% endif %}">{{ t("billing.cancel_plan") }}</button>
+        </form>
+      {% endif %}
+    </div>
   {% elif detail_failed %}
     <p class="opacity-70">{{ t("billing.detail_unavailable") }}</p>
   {% endif %}
@@ -53,6 +88,58 @@
     </div>
   </dl>
 </section>
+
+{% if has_subscription %}
+<section class="p-card p-5 mt-6">
+  <h2 class="font-semibold mb-4">{{ t("billing.history") }}</h2>
+  {% if movements %}
+  {# Its own scroll container: the page body must never scroll sideways, and a
+     four-column money table does not fit a phone. #}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left">
+          <th class="p-label">{{ t("billing.history_date") }}</th>
+          <th class="p-label">{{ t("billing.history_movement") }}</th>
+          <th class="p-label text-right">{{ t("billing.history_amount") }}</th>
+          <th class="p-label text-right">{{ t("billing.history_invoice") }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {# `movement` and `amount`, never `t`: a loop variable of that name
+           shadows the translation global for the whole loop body. #}
+        {% for movement, amount in movements %}
+        <tr class="border-t border-hairline">
+          <td class="py-2 pr-3 whitespace-nowrap">{{ movement.occurred_at | fecha("%Y-%m-%d") }}</td>
+          <td class="py-2 pr-3">
+            {{ t("billing.movement." ~ movement.label) }}
+            {% if movement.state == "pending" %}
+            <span class="p-pill bg-warning/15 text-warning-strong ml-1">{{ t("billing.movement_pending") }}</span>
+            {% elif movement.state == "voided" %}
+            <span class="p-pill bg-error/15 text-error ml-1">{{ t("billing.movement_voided") }}</span>
+            {% endif %}
+          </td>
+          {# A credit is money going back to the customer, so it is signed and
+             coloured. Without the sign a refund reads exactly like a charge. #}
+          <td class="py-2 pr-3 text-right whitespace-nowrap {% if movement.kind == 'credit' %}text-success{% endif %}">
+            {% if movement.kind == "credit" %}-{% endif %}{{ amount }}
+          </td>
+          <td class="py-2 text-right whitespace-nowrap">
+            {% if movement.transaction_id %}
+            <a class="p-btn p-btn-ghost p-btn-sm"
+               href="/ui/billing/invoice/{{ movement.transaction_id }}">{{ movement.reference or t("billing.history_invoice") }}</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-sm text-muted">{{ t("billing.history_empty") }}</p>
+  {% endif %}
+</section>
+{% endif %}
 
 {% if tiers %}
 <section class="p-card p-5 mt-6">
@@ -103,13 +190,13 @@
               {% if detail and price.price_id == detail.price_id %}
               <p class="p-pill">{{ t("billing.current_plan_badge") }}</p>
               {% elif not has_subscription %}
-              <button type="button" class="p-btn w-full"
+              <button type="button" class="p-btn p-btn-primary w-full"
                       data-paddle-price="{{ price.price_id }}"
                       data-account-id="{{ account_id }}"
                       data-email="{{ user_email }}"
                       {% if price.price_id == preselected_price_id %}autofocus{% endif %}>{{ t("billing.choose_plan") }}</button>
               {% else %}
-              <a class="p-btn w-full" href="/ui/billing/confirm?price_id={{ price.price_id }}">{{ t("billing.switch_to") }}</a>
+              <a class="p-btn p-btn-primary w-full" href="/ui/billing/confirm?price_id={{ price.price_id }}">{{ t("billing.switch_to") }}</a>
               {% endif %}
             </div>
           </div>

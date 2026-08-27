@@ -38,6 +38,11 @@ async def _paid_owner_account(db, plan_code="solo"):
     return account, owner
 
 
+async def _no_movements(_subscription_id):
+    """These tests build accounts that have never been charged."""
+    return []
+
+
 @pytest.mark.asyncio
 async def test_billing_paths_allow_paddle(client: AsyncClient):
     r = await client.get("/billing/checkout")
@@ -209,6 +214,7 @@ async def test_paying_account_is_not_offered_a_second_checkout(client: AsyncClie
 
     monkeypatch.setattr(paddle, "list_plan_prices", prices)
     monkeypatch.setattr(paddle, "get_subscription", fake_get_subscription)
+    monkeypatch.setattr(paddle, "list_movements", _no_movements)
     await client.post("/login", data={"email": owner.email, "password": "secret-password"})
 
     r = await client.get("/billing")
@@ -245,6 +251,7 @@ async def test_the_other_billing_term_of_the_current_tier_is_offered(
 
     monkeypatch.setattr(paddle, "list_plan_prices", prices)
     monkeypatch.setattr(paddle, "get_subscription", fake_get_subscription)
+    monkeypatch.setattr(paddle, "list_movements", _no_movements)
     await client.post("/login", data={"email": owner.email, "password": "secret-password"})
 
     r = await client.get("/billing")
@@ -283,6 +290,7 @@ async def test_paying_account_keeps_the_guard_when_the_live_read_fails(
 
     monkeypatch.setattr(paddle, "list_plan_prices", prices)
     monkeypatch.setattr(paddle, "get_subscription", boom)
+    monkeypatch.setattr(paddle, "list_movements", _no_movements)
     await client.post("/login", data={"email": owner.email, "password": "secret-password"})
 
     r = await client.get("/billing")

@@ -7,7 +7,7 @@ handle rather than a scatter of None checks.
 """
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -244,3 +244,120 @@ async def cancel_subscription(subscription_id: str) -> None:
         "POST", f"/subscriptions/{subscription_id}/cancel",
         {"effective_from": "next_billing_period"},
     )
+
+
+async def resume_plan(subscription_id: str) -> None:
+    """Undo a scheduled cancellation.
+
+    Paddle stores a pending cancel as a `scheduled_change` on the subscription,
+    so removing it is a null on that field rather than a delete of anything. The
+    subscription never left `active`, which is why this is a resume and not a
+    re-subscribe: no new checkout, no new card, no gap in access.
+    """
+    await _request("PATCH", f"/subscriptions/{subscription_id}", {"scheduled_change": None})
+
+
+@dataclass(frozen=True)
+class Movement:
+    """One line of billing history, from either side of the money.
+
+    Paddle splits history across two resources and we show one list, because
+    "what happened to my money" is one question. A charge is a transaction; a
+    credit, refund or chargeback is an adjustment. Merging them is the whole
+    point: a downgrade writes a zero-value transaction AND a credit adjustment,
+    and reading only transactions would show the customer a $0.00 line where
+    their money actually moved.
+    """
+    kind: str  # "charge" | "credit": decides the sign the template shows
+    label: str  # already normalised to a key that exists in the catalogs
+    occurred_at: datetime | None
+    amount: str
+    currency_code: str
+    state: str  # "settled" | "pending" | "voided"
+    reference: str
+    transaction_id: str | None  # only a charge has an invoice to download
+
+
+# Normalised here rather than in the template so an origin Paddle adds later
+# falls back to a key that exists, instead of rendering "billing.movement.foo"
+# on the screen through t()'s key-as-fallback.
+_CHARGE_LABELS = {
+    "web": "start",
+    "subscription_recurring": "renewal",
+    "subscription_update": "change",
+    "subscription_charge": "change",
+}
+_CREDIT_LABELS = {"credit": "credit", "refund": "refund", "chargeback": "chargeback"}
+_SETTLED = {"completed", "paid", "billed", "approved"}
+_VOIDED = {"canceled", "cancelled", "rejected", "reversed"}
+
+
+def _state(status: str) -> str:
+    if status in _SETTLED:
+        return "settled"
+    return "voided" if status in _VOIDED else "pending"
+
+
+async def list_movements(subscription_id: str) -> list[Movement]:
+    """The subscription's billing history, newest first.
+
+    Both reads are filtered by subscription id at Paddle rather than here, so a
+    caller can only ever see the history of the subscription it passed in.
+    """
+    charges = await _request(
+        "GET", f"/transactions?subscription_id={subscription_id}&per_page=50",
+    ) or []
+    credits = await _request(
+        "GET", f"/adjustments?subscription_id={subscription_id}&per_page=50",
+    ) or []
+
+    movements: list[Movement] = []
+    for txn in charges:
+        totals = ((txn.get("details") or {}).get("totals") or {})
+        movements.append(Movement(
+            kind="charge",
+            label=_CHARGE_LABELS.get(str(txn.get("origin", "")), "charge"),
+            occurred_at=_dt(txn.get("billed_at") or txn.get("created_at")),
+            amount=str(totals.get("grand_total", "0")),
+            currency_code=str(txn.get("currency_code", "USD")),
+            state=_state(str(txn.get("status", ""))),
+            reference=str(txn.get("invoice_number") or ""),
+            transaction_id=str(txn["id"]),
+        ))
+    for adj in credits:
+        movements.append(Movement(
+            kind="credit",
+            label=_CREDIT_LABELS.get(str(adj.get("action", "")), "credit"),
+            occurred_at=_dt(adj.get("created_at")),
+            amount=str((adj.get("totals") or {}).get("total", "0")),
+            currency_code=str(adj.get("currency_code", "USD")),
+            state=_state(str(adj.get("status", ""))),
+            reference=str(adj.get("credit_note_number") or ""),
+            transaction_id=None,
+        ))
+
+    # datetime.min is only a sort key for a row Paddle sent without any date at
+    # all; it sinks to the bottom rather than crashing the comparison. It is
+    # timezone-aware because every real value here is, and Python refuses to
+    # order aware against naive.
+    floor = datetime.min.replace(tzinfo=UTC)
+    movements.sort(key=lambda m: m.occurred_at or floor, reverse=True)
+    return movements
+
+
+async def invoice_url(transaction_id: str, subscription_id: str) -> str | None:
+    """A signed link to one invoice PDF, or None if it is not this
+    subscription's.
+
+    The transaction id arrives in a URL, so it is attacker-controlled, and the
+    only authority on who owns it is Paddle. Checking here rather than trusting
+    the id keeps one owner's invoice out of another owner's browser, and the
+    link is minted on demand instead of on every render of the history: it is
+    one extra call when someone clicks, rather than N calls for a list nobody
+    may click at all.
+    """
+    txn = await _request("GET", f"/transactions/{transaction_id}") or {}
+    if str(txn.get("subscription_id") or "") != subscription_id:
+        return None
+    data = await _request("GET", f"/transactions/{transaction_id}/invoice") or {}
+    return str(data["url"]) if data.get("url") else None

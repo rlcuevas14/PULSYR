@@ -39,6 +39,11 @@ async def _login(client: AsyncClient, email: str) -> None:
     await client.post("/login", data={"email": email, "password": "secret-password"})
 
 
+async def _no_movements(_subscription_id):
+    """These tests build accounts that have never been charged."""
+    return []
+
+
 @pytest.mark.asyncio
 async def test_owner_sees_plan_and_usage(client: AsyncClient, db, monkeypatch):
     monkeypatch.setattr(settings, "paddle_api_key", "")
@@ -108,6 +113,8 @@ async def test_screen_renders_when_paddle_is_unreachable(client: AsyncClient, db
         raise paddle.PaddleError("down")
 
     monkeypatch.setattr(paddle, "get_subscription", boom)
+
+    monkeypatch.setattr(paddle, "list_movements", _no_movements)
     r = await client.get("/billing")
     assert r.status_code == 200
     assert "Billing detail is temporarily unavailable." in r.text
@@ -130,6 +137,8 @@ async def test_past_due_shows_banner_and_payment_link(client: AsyncClient, db, m
         )
 
     monkeypatch.setattr(paddle, "get_subscription", fake_get_subscription)
+
+    monkeypatch.setattr(paddle, "list_movements", _no_movements)
     r = await client.get("/billing")
     assert r.status_code == 200
     assert "Your last payment failed" in r.text
@@ -158,6 +167,8 @@ async def test_scheduled_cancellation_shows_end_date_not_next_billing(
         )
 
     monkeypatch.setattr(paddle, "get_subscription", fake_get_subscription)
+
+    monkeypatch.setattr(paddle, "list_movements", _no_movements)
     r = await client.get("/billing")
     assert r.status_code == 200
     assert "Your plan ends on" in r.text
