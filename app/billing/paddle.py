@@ -261,12 +261,20 @@ async def resume_plan(subscription_id: str) -> None:
 class Movement:
     """One line of billing history, from either side of the money.
 
-    Paddle splits history across two resources and we show one list, because
-    "what happened to my money" is one question. A charge is a transaction; a
-    credit, refund or chargeback is an adjustment. Merging them is the whole
-    point: a downgrade writes a zero-value transaction AND a credit adjustment,
-    and reading only transactions would show the customer a $0.00 line where
-    their money actually moved.
+    Paddle keeps money in two places and we show one list, because "what
+    happened to my money" is one question. The split is NOT charge-versus-credit,
+    which is the assumption that produced a wrong history on the first attempt:
+
+    - A **transaction** is what the billing engine did at the time. It carries
+      both directions at once: `grand_total` is what the card was charged, and
+      `credit_to_balance` is what a proration credited back. A downgrade is a
+      transaction with `grand_total` "0" and a large `credit_to_balance`.
+    - An **adjustment** is money moved after the fact by a human decision: a
+      refund, a chargeback, a manual credit against an already-billed
+      transaction.
+
+    So a downgrade produces NO adjustment at all, and a history that looked for
+    its credit there found nothing and rendered "USD 0.00".
     """
     kind: str  # "charge" | "credit": decides the sign the template shows
     label: str  # already normalised to a key that exists in the catalogs
@@ -275,7 +283,7 @@ class Movement:
     currency_code: str
     state: str  # "settled" | "pending" | "voided"
     reference: str
-    transaction_id: str | None  # only a charge has an invoice to download
+    transaction_id: str | None  # set only when Paddle issued an invoice number
 
 
 # Normalised here rather than in the template so an origin Paddle adds later
@@ -290,6 +298,19 @@ _CHARGE_LABELS = {
 _CREDIT_LABELS = {"credit": "credit", "refund": "refund", "chargeback": "chargeback"}
 _SETTLED = {"completed", "paid", "billed", "approved"}
 _VOIDED = {"canceled", "cancelled", "rejected", "reversed"}
+
+
+def _cents(value: Any) -> int:
+    """Paddle sends every amount as a string in the lowest denomination.
+
+    Anything unparseable reads as zero, which makes the row invisible rather
+    than making the page raise: a billing screen that cannot render is worse
+    than one missing a line, and the line is still in Paddle either way.
+    """
+    try:
+        return int(str(value))
+    except (TypeError, ValueError):
+        return 0
 
 
 def _state(status: str) -> str:
@@ -314,15 +335,40 @@ async def list_movements(subscription_id: str) -> list[Movement]:
     movements: list[Movement] = []
     for txn in charges:
         totals = ((txn.get("details") or {}).get("totals") or {})
+        charged = _cents(totals.get("grand_total"))
+        credited = _cents(totals.get("credit_to_balance"))
+
+        # Nothing moved either way. A payment-method change writes a
+        # card-verification transaction that sits at zero on both sides and
+        # carries no billed_at, and listing it as "USD 0.00, pending" is noise
+        # on the one screen where every line is supposed to be money.
+        if charged == 0 and credited == 0:
+            continue
+
+        # A proration credit lives HERE, on the transaction, and NOT in
+        # /adjustments. Paddle's proration engine parks it on the customer's
+        # balance at change time and writes no adjustment record; /adjustments
+        # is for money moved after the fact by a human decision, a refund or a
+        # chargeback. Verified against a real sandbox downgrade: grand_total
+        # "0", credit_to_balance "19195", adjustments empty. Reading only
+        # grand_total rendered that change as "USD 0.00" and silently lost the
+        # 191.95 the customer actually got back.
+        is_credit = charged == 0
         movements.append(Movement(
-            kind="charge",
+            kind="credit" if is_credit else "charge",
+            # The origin label survives either way, so a credited downgrade
+            # reads "Plan change, -USD 191.95" rather than a bare "Credit"
+            # that says nothing about why the money moved.
             label=_CHARGE_LABELS.get(str(txn.get("origin", "")), "charge"),
             occurred_at=_dt(txn.get("billed_at") or txn.get("created_at")),
-            amount=str(totals.get("grand_total", "0")),
+            amount=str(credited if is_credit else charged),
             currency_code=str(txn.get("currency_code", "USD")),
             state=_state(str(txn.get("status", ""))),
             reference=str(txn.get("invoice_number") or ""),
-            transaction_id=str(txn["id"]),
+            # Offered only when Paddle actually issued an invoice. Linking a
+            # transaction that has no invoice number sends the owner to a route
+            # that can only fail.
+            transaction_id=str(txn["id"]) if txn.get("invoice_number") else None,
         ))
     for adj in credits:
         movements.append(Movement(

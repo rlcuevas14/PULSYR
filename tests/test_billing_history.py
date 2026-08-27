@@ -129,9 +129,11 @@ async def test_a_movement_without_a_date_sorts_last_instead_of_crashing(monkeypa
         if request.url.path == "/transactions":
             return httpx.Response(200, json={"data": [
                 {"id": "txn_undated", "status": "completed", "origin": "web",
-                 "currency_code": "USD", "details": {"totals": {"grand_total": "800"}}},
+                 "currency_code": "USD", "invoice_number": "1-0002",
+                 "details": {"totals": {"grand_total": "800"}}},
                 {"id": "txn_dated", "status": "completed", "origin": "web",
                  "billed_at": "2026-08-01T10:00:00Z", "currency_code": "USD",
+                 "invoice_number": "1-0001",
                  "details": {"totals": {"grand_total": "800"}}},
             ]})
         return httpx.Response(200, json={"data": []})
@@ -500,3 +502,88 @@ async def test_billing_dates_carry_no_meaningless_time(
     body = (await client.get("/billing")).text
     assert "2027-08-26" in body
     assert "00:00" not in body
+
+
+@pytest.mark.asyncio
+async def test_a_downgrade_credit_is_read_off_the_transaction(monkeypatch):
+    """The bug this test exists for: a proration credit is NOT an adjustment.
+
+    Paddle's proration engine parks it on the customer's balance at change time
+    and writes no adjustment record. Verified against a real sandbox downgrade,
+    which produced exactly this shape and an EMPTY /adjustments list. Reading
+    only grand_total rendered the change as "USD 0.00" and silently dropped the
+    191.95 the customer got back, on the screen whose whole job is to say where
+    their money went."""
+    monkeypatch.setattr(settings, "paddle_api_key", _KEY)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/transactions":
+            return httpx.Response(200, json={"data": [
+                {"id": "txn_down", "status": "completed", "origin": "subscription_update",
+                 "billed_at": "2026-08-27T03:12:07Z", "currency_code": "USD",
+                 "invoice_number": "1-0004",
+                 "details": {"totals": {
+                     "subtotal": "-16131", "tax": "-3064", "total": "-19195",
+                     "grand_total": "0", "credit": "0", "credit_to_balance": "19195",
+                 }}},
+            ]})
+        return httpx.Response(200, json={"data": []})
+
+    monkeypatch.setattr(paddle, "_transport", httpx.MockTransport(handler))
+    movements = await paddle.list_movements("sub_x")
+
+    assert len(movements) == 1
+    assert movements[0].kind == "credit"
+    assert movements[0].amount == "19195"
+    # The origin label survives, so the row says WHY the money moved rather
+    # than a bare "Credit".
+    assert movements[0].label == "change"
+
+
+@pytest.mark.asyncio
+async def test_a_card_verification_transaction_is_not_a_movement(monkeypatch):
+    """Changing a payment method writes a transaction that moves nothing on
+    either side and carries no billed_at. Listed, it reads as "USD 0.00,
+    pending" with a blank date, on a screen where every line is money."""
+    monkeypatch.setattr(settings, "paddle_api_key", _KEY)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/transactions":
+            return httpx.Response(200, json={"data": [
+                {"id": "txn_card", "status": "ready",
+                 "origin": "subscription_payment_method_change",
+                 "billed_at": None, "currency_code": "USD",
+                 "details": {"totals": {"grand_total": "0", "credit_to_balance": "0"}}},
+                {"id": "txn_real", "status": "completed", "origin": "web",
+                 "billed_at": "2026-08-26T21:25:30Z", "currency_code": "USD",
+                 "invoice_number": "1-0001",
+                 "details": {"totals": {"grand_total": "800"}}},
+            ]})
+        return httpx.Response(200, json={"data": []})
+
+    monkeypatch.setattr(paddle, "_transport", httpx.MockTransport(handler))
+    movements = await paddle.list_movements("sub_x")
+
+    assert [m.transaction_id for m in movements] == ["txn_real"]
+
+
+@pytest.mark.asyncio
+async def test_no_invoice_link_when_paddle_issued_no_invoice(monkeypatch):
+    """The invoice route can only fail for a transaction with no invoice, so the
+    row must not offer a link to it."""
+    monkeypatch.setattr(settings, "paddle_api_key", _KEY)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/transactions":
+            return httpx.Response(200, json={"data": [
+                {"id": "txn_no_invoice", "status": "completed", "origin": "web",
+                 "billed_at": "2026-08-26T21:25:30Z", "currency_code": "USD",
+                 "details": {"totals": {"grand_total": "800"}}},
+            ]})
+        return httpx.Response(200, json={"data": []})
+
+    monkeypatch.setattr(paddle, "_transport", httpx.MockTransport(handler))
+    movements = await paddle.list_movements("sub_x")
+
+    assert len(movements) == 1
+    assert movements[0].transaction_id is None
