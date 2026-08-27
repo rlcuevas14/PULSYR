@@ -8,6 +8,18 @@ _INSECURE_SECRET = "dev-secret-change-in-production"
 _PLACEHOLDER_SECRETS = {_INSECURE_SECRET, "change-me"}
 _MIN_SECRET_LENGTH = 32
 
+_PADDLE_ENVIRONMENTS = ("sandbox", "production")
+# Prefixes Paddle actually uses today, per environment. Only these are acted on:
+# an unrecognised prefix passes, because refusing to start over a prefix Paddle
+# introduced later would be a self-inflicted outage over something we do not
+# understand.
+_PADDLE_KEY_ENVIRONMENT = {
+    "pdl_sdbx_": "sandbox",
+    "pdl_live_": "production",
+    "test_": "sandbox",
+    "live_": "production",
+}
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -79,8 +91,11 @@ class Settings(BaseSettings):
     paddle_api_key: str = ""
     # Public by design: this one is embedded in the page for Paddle.js.
     paddle_client_token: str = ""
-    # Selects both the API host and the Paddle.js environment. Sandbox keys are
-    # prefixed pdl_sdbx_ and cannot reach live even if this is set wrong.
+    # Selects both the API host and the Paddle.js environment. The value must be
+    # exactly "sandbox" or "production": every consumer compares against those
+    # strings, so "prod" or "live" would silently mean sandbox. Validated below,
+    # together with the keys, because the dangerous direction is a LIVE key
+    # against the sandbox host.
     paddle_environment: str = "sandbox"
     sentry_api_token: str = ""
     sentry_org: str = ""
@@ -129,6 +144,41 @@ class Settings(BaseSettings):
                 "python -c \"import secrets; print(secrets.token_hex(32))\" "
                 "and set it in the SECRET_KEY environment variable."
             )
+        return self
+
+
+    @model_validator(mode="after")
+    def _paddle_environment_matches_its_keys(self) -> "Settings":
+        """Refuse to start on a Paddle environment that contradicts its keys.
+
+        Both consumers of this setting compare against the exact string
+        "production" (`paddle._base_url`, and `Paddle.Environment.set` in
+        app/static/paddle-checkout.js), so anything else means sandbox. Writing
+        "prod" or "live" therefore sends a LIVE api key to the sandbox host,
+        where every call 403s, and there is no signal anywhere that says why. It
+        is the shape of mistake that only happens on go-live day, which is the
+        worst day to spend debugging a silent misconfiguration.
+
+        A key whose prefix we do not recognise is left alone: acting only on
+        evidence we understand keeps a future Paddle prefix from bricking boot.
+        """
+        if self.paddle_environment not in _PADDLE_ENVIRONMENTS:
+            raise ValueError(
+                f"PADDLE_ENVIRONMENT must be one of {' or '.join(_PADDLE_ENVIRONMENTS)}, "
+                f"got {self.paddle_environment!r}. Any other value silently means "
+                "sandbox, so a live key would never reach Paddle."
+            )
+        for name, value in (
+            ("PADDLE_API_KEY", self.paddle_api_key),
+            ("PADDLE_CLIENT_TOKEN", self.paddle_client_token),
+        ):
+            for prefix, belongs_to in _PADDLE_KEY_ENVIRONMENT.items():
+                if value.startswith(prefix) and belongs_to != self.paddle_environment:
+                    raise ValueError(
+                        f"{name} is a {belongs_to} credential but PADDLE_ENVIRONMENT is "
+                        f"{self.paddle_environment!r}. Refusing to start: the two must "
+                        "match or every billing call fails against the wrong host."
+                    )
         return self
 
 
